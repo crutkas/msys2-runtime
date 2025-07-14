@@ -1613,9 +1613,15 @@ fhandler_pty_slave::tcflush (int queue)
   if (queue == TCIFLUSH || queue == TCIOFLUSH)
     {
       char pipe[MAX_PATH];
+#ifdef __MSYS__
+      __small_sprintf (pipe,
+		       "\\\\.\\pipe\\msys-%S-pty%d-master-ctl",
+		       &cygheap->installation_key, get_minor ());
+#else
       __small_sprintf (pipe,
 		       "\\\\.\\pipe\\cygwin-%S-pty%d-master-ctl",
 		       &cygheap->installation_key, get_minor ());
+#endif
       pipe_request req = { FLUSH_INPUT, GetCurrentProcessId () };
       pipe_reply repl;
       DWORD n;
