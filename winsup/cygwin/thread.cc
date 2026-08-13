@@ -32,6 +32,7 @@ details. */
 #include "ntdll.h"
 #include "cygwait.h"
 #include "exception.h"
+#include "register.h"
 
 /* For Linux compatibility, the length of a thread name is 16 characters. */
 #define THRNAMELEN 16
@@ -643,13 +644,18 @@ pthread::cancel ()
 	     an additional 8 bytes is required to emulate this behaviour.
 	     However, we do not need to push return address itself, because
 	     pthread::static_cancel_self() must not return. */
-	  context.Rsp &= ~0x07UL;
-	  if ((context.Rsp & 8) == 0)
-	    context.Rsp -= 8;
-	  context.Rip = (ULONG_PTR) pthread::static_cancel_self;
+	  context._CX_stackPtr &= ~0x07UL;
+	  if ((context._CX_stackPtr & 8) == 0)
+	    context._CX_stackPtr -= 8;
+#elif defined(__aarch64__)
+	  /* 16 bytes alignment required. Trim stack pointer just in case.
+	     https://learn.microsoft.com/en-us/cpp/build/arm64-windows-abi-conventions?view=msvc-170
+	  */
+	  context._CX_stackPtr &= ~0x0fUL;
 #else
 #error unimplemented for this target
 #endif
+	  context._CX_instPtr = (ULONG_PTR) pthread::static_cancel_self;
 	  SetThreadContext (win32_obj_id, &context);
 	}
       cygheap->unlock_tls (tl_entry);
