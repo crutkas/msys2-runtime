@@ -25,6 +25,15 @@ jobs:
           mkdir -p "$TOOLCHAIN_DIR"
           tar -xzf aarch64-pc-cygwin-toolchain.tar.gz -C "$TOOLCHAIN_DIR"
 
+      - name: Compile AArch64 newlib assembly checks
+        run: |
+          compiler="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-gcc"
+          mkdir aarch64-newlib-assembly
+          for source in "$GITHUB_WORKSPACE"/newlib/libc/machine/aarch64/*.S; do
+            object="aarch64-newlib-assembly/$(basename "${source%.S}").o"
+            "$compiler" -O2 -c "$source" -o "$object"
+          done
+
       - name: Compile AArch64 register context check
         run: |
           "$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-g++" \
