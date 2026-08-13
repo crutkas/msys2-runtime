@@ -344,7 +344,7 @@ jobs:
           git_exe="$(
             cmd //c where git.exe 2>/dev/null \
               | tr -d '\r' \
-              | head -n 1
+              | sed -n '1p'
           )"
           backup="$(mktemp)"
           test -n "$git_exe"
