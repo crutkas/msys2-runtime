@@ -6,6 +6,35 @@ permissions:
   contents: read
 
 jobs:
+  configure-winsup:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - x86_64-pc-cygwin
+          - aarch64-pc-cygwin
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Generate winsup configure
+        working-directory: winsup
+        run: ./autogen.sh
+
+      - name: Configure winsup for ${{ matrix.target }}
+        env:
+          ac_cv_lib_sframe_sframe_decode: "no"
+          ac_cv_lib_zstd_ZSTD_isError: "no"
+        run: |
+          mkdir build-winsup
+          cd build-winsup
+          ../winsup/configure \
+            --target=${{ matrix.target }} \
+            --with-cross-bootstrap \
+            --disable-doc
+
   build:
     runs-on: windows-latest
 
@@ -92,4 +121,3 @@ jobs:
 
       - name: Run tests
         uses: msys2/msys2-tests@main
-
