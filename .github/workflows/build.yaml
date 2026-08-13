@@ -42,6 +42,7 @@ jobs:
             ac_cv_lib_sframe_sframe_decode=no \
             ac_cv_lib_zstd_ZSTD_isError=no \
               ../winsup/configure \
+                --host=aarch64-pc-cygwin \
                 --target=aarch64-pc-cygwin \
                 --with-cross-bootstrap \
                 --disable-doc
