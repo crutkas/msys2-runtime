@@ -130,7 +130,7 @@ jobs:
               aarch64-autoload.dis
           done
           grep -Eq '[[:space:]]blr[[:space:]]+x17' aarch64-autoload.dis
-          grep -Eq '[[:space:]]str[[:space:]]+x0, \[x2, #12\]' \
+          grep -Eq '[[:space:]]stur[[:space:]]+x0, \[x2, #12\]' \
             aarch64-autoload.dis
           grep -Eq '[[:space:]]sub[[:space:]]+x16, x2, #0x34' \
             aarch64-autoload.dis
@@ -341,7 +341,13 @@ jobs:
           )"
           source_file="$PWD/winsup/cygwin/autoload.cc"
           object="$cygwin_build_dir/autoload.o"
+          git_exe="$(
+            cmd //c where git.exe 2>/dev/null \
+              | tr -d '\r' \
+              | head -n 1
+          )"
           backup="$(mktemp)"
+          test -n "$git_exe"
           cp "$source_file" "$backup"
           trap 'cp "$backup" "$source_file"; touch "$source_file"; rm -f "$backup"' EXIT
 
@@ -350,7 +356,7 @@ jobs:
             | sed '1,/Disassembly of section/d' \
             > x86_64-autoload-current.dis
 
-          git show "${base}:winsup/cygwin/autoload.cc" > "$source_file"
+          "$git_exe" show "${base}:winsup/cygwin/autoload.cc" > "$source_file"
           touch "$source_file"
           make -C "$cygwin_build_dir" autoload.o
           objdump -dr "$object" \
