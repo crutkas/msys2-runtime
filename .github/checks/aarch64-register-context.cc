@@ -1,4 +1,9 @@
 #include <stddef.h>
+#include <stdint.h>
+#include <sys/types.h>
+#include <sys/select.h>
+#include <sys/_pthreadtypes.h>
+#include <time.h>
 #include <windows.h>
 #include <cygwin/signal.h>
 #include "register.h"
