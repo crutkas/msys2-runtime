@@ -280,6 +280,13 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Capture x86_64 autoload baseline
+        shell: pwsh
+        run: >-
+          git show
+          5b38980d0c363dd3bdd2f542d64a4e8a38d4d81f:winsup/cygwin/autoload.cc
+          > x86_64-autoload-base.cc
+
       - name: setup-msys2
         uses: msys2/setup-msys2@v2
         with:
@@ -333,7 +340,6 @@ jobs:
       - name: Verify x86_64 autoload assembly is unchanged
         shell: msys2 {0}
         run: |
-          readonly base=5b38980d0c363dd3bdd2f542d64a4e8a38d4d81f
           cygwin_build_dir="$(
             dirname "$(
               find . -path '*/winsup/cygwin/config.h' -print -quit
@@ -341,13 +347,7 @@ jobs:
           )"
           source_file="$PWD/winsup/cygwin/autoload.cc"
           object="$cygwin_build_dir/autoload.o"
-          git_exe="$(
-            cmd //c where git.exe 2>/dev/null \
-              | tr -d '\r' \
-              | sed -n '1p'
-          )"
           backup="$(mktemp)"
-          test -n "$git_exe"
           cp "$source_file" "$backup"
           trap 'cp "$backup" "$source_file"; touch "$source_file"; rm -f "$backup"' EXIT
 
@@ -356,7 +356,7 @@ jobs:
             | sed '1,/Disassembly of section/d' \
             > x86_64-autoload-current.dis
 
-          "$git_exe" show "${base}:winsup/cygwin/autoload.cc" > "$source_file"
+          cp "$PWD/x86_64-autoload-base.cc" "$source_file"
           touch "$source_file"
           make -C "$cygwin_build_dir" autoload.o
           objdump -dr "$object" \
