@@ -7,7 +7,7 @@ permissions:
 
 jobs:
   aarch64-register-context:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     env:
       TOOLCHAIN_DIR: ${{ github.workspace }}/aarch64-pc-cygwin-toolchain
 
