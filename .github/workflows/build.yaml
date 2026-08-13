@@ -15,6 +15,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes autoconf automake gawk make
+
       - name: Download AArch64 Cygwin toolchain
         run: |
           curl --fail --location --retry 3 \
@@ -24,6 +29,51 @@ jobs:
             | sha256sum --check
           mkdir -p "$TOOLCHAIN_DIR"
           tar -xzf aarch64-pc-cygwin-toolchain.tar.gz -C "$TOOLCHAIN_DIR"
+
+      - name: Compile and disassemble AArch64 cygtls lock
+        run: |
+          (cd winsup && ./autogen.sh)
+          mkdir build-cygtls-lock
+          (
+            cd build-cygtls-lock
+            ac_cv_lib_sframe_sframe_decode=no \
+            ac_cv_lib_zstd_ZSTD_isError=no \
+              ../winsup/configure \
+                --target=aarch64-pc-cygwin \
+                --with-cross-bootstrap \
+                --disable-doc
+          )
+          make -C build-cygtls-lock/cygwin globals.h
+
+          compiler="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-g++"
+          objdump="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-objdump"
+          "$compiler" \
+            -DHAVE_CONFIG_H \
+            -I"$GITHUB_WORKSPACE/build-cygtls-lock/cygwin" \
+            -I"$GITHUB_WORKSPACE/winsup/cygwin/local_includes" \
+            -I"$GITHUB_WORKSPACE/winsup/cygwin" \
+            -isystem "$GITHUB_WORKSPACE/winsup/cygwin/include" \
+            -isystem "$TOOLCHAIN_DIR/include" \
+            -isystem "$GITHUB_WORKSPACE/newlib/targ-include" \
+            -isystem "$GITHUB_WORKSPACE/newlib/libc/include" \
+            -fno-rtti \
+            -fno-exceptions \
+            -fno-use-cxa-atexit \
+            -Wall \
+            -Werror \
+            -O2 \
+            -c \
+            "$GITHUB_WORKSPACE/.github/checks/cygtls-lock.cc" \
+            -o aarch64-cygtls-lock.o
+          "$objdump" -d aarch64-cygtls-lock.o | tee aarch64-cygtls-lock.dis
+          grep -Eq '[[:space:]]dmb[[:space:]]+ishst([[:space:]]|$)' \
+            aarch64-cygtls-lock.dis
+          grep -Eq '[[:space:]]yield([[:space:]]|$)' \
+            aarch64-cygtls-lock.dis
+          if grep -Eq '[[:space:]]pause([[:space:]]|$)' \
+              aarch64-cygtls-lock.dis; then
+            exit 1
+          fi
 
       - name: Compile AArch64 newlib assembly checks
         run: |
@@ -147,6 +197,42 @@ jobs:
           (cd winsup && ./autogen.sh)
           ./configure --disable-dependency-tracking --with-msys2-runtime-commit="$GITHUB_SHA"
           make -j8
+
+      - name: Disassemble x86_64 cygtls lock
+        shell: msys2 {0}
+        run: |
+          cygwin_build_dir="$(
+            dirname "$(
+              find . -path '*/winsup/cygwin/config.h' -print -quit
+            )"
+          )"
+          test -f "$cygwin_build_dir/config.h"
+          make -C "$cygwin_build_dir" globals.h
+
+          g++ \
+            -DHAVE_CONFIG_H \
+            -I"$cygwin_build_dir" \
+            -I"$PWD/winsup/cygwin/local_includes" \
+            -I"$PWD/winsup/cygwin" \
+            -isystem "$PWD/winsup/cygwin/include" \
+            -isystem "$PWD/newlib/targ-include" \
+            -isystem "$PWD/newlib/libc/include" \
+            -fno-rtti \
+            -fno-exceptions \
+            -fno-use-cxa-atexit \
+            -Wall \
+            -Werror \
+            -O2 \
+            -c \
+            "$PWD/.github/checks/cygtls-lock.cc" \
+            -o x86_64-cygtls-lock.o
+          objdump -d x86_64-cygtls-lock.o | tee x86_64-cygtls-lock.dis
+          grep -Eq '[[:space:]]pause([[:space:]]|$)' \
+            x86_64-cygtls-lock.dis
+          if grep -Eq '[[:space:]](dmb|yield)([[:space:]]|$)' \
+              x86_64-cygtls-lock.dis; then
+            exit 1
+          fi
 
       - name: Install
         shell: msys2 {0}
