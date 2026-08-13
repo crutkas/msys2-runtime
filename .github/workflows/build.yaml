@@ -169,6 +169,99 @@ jobs:
             | grep -Fq \
                 '436865636b546f6b656e4d656d6265727368697000'
 
+      - name: Compile and inspect AArch64 POSIX thread startup
+        run: |
+          export PATH="$TOOLCHAIN_DIR/bin:$PATH"
+          export CC=aarch64-pc-cygwin-gcc
+          export CXX=aarch64-pc-cygwin-g++
+          make -C build-cygtls-lock/cygwin create_posix_thread.o thread.o
+
+          object=build-cygtls-lock/cygwin/create_posix_thread.o
+          thread_object=build-cygtls-lock/cygwin/thread.o
+          objdump="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-objdump"
+          nm="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-nm"
+          test -f "$object"
+          test -f "$thread_object"
+
+          "$objdump" -h "$object" | tee aarch64-posix-thread.sections
+          "$objdump" -dr "$object" | tee aarch64-posix-thread.dis
+          "$objdump" -r "$object" | tee aarch64-posix-thread.relocs
+          "$nm" -a "$object" | tee aarch64-posix-thread.symbols
+
+          for symbol in \
+              create_new_main_thread_stack \
+              create_posix_thread \
+              pthread_wrapper; do
+            grep -Eq "[[:space:]][Tt] ${symbol}$" \
+              aarch64-posix-thread.symbols
+          done
+          for section in .pdata .xdata; do
+            grep -Fq "$section" aarch64-posix-thread.sections
+          done
+
+          sed -n '/<pthread_wrapper>:/,/^$/p' \
+            aarch64-posix-thread.dis \
+            > aarch64-pthread-wrapper.dis
+          test -s aarch64-pthread-wrapper.dis
+
+          # The accepted fixed sequence saves func/arg before releasing the
+          # temporary OS stack, switches to the 16-byte-aligned Cygwin stack,
+          # then enters the pthread trampoline with its argument in x0.
+          grep -Eq \
+            '[[:space:]]ldp[[:space:]]+x20, x21, \[x[0-9]+\]' \
+            aarch64-pthread-wrapper.dis
+          grep -Eq \
+            '[[:space:]]ldp[[:space:]]+x0, x1, \[x[0-9]+, #16\]' \
+            aarch64-pthread-wrapper.dis
+          grep -Eq \
+            '[[:space:]]sub[[:space:]]+sp, x1, x[0-9]+' \
+            aarch64-pthread-wrapper.dis
+          grep -Eq \
+            '[[:space:]]mov[[:space:]]+x29, xzr' \
+            aarch64-pthread-wrapper.dis
+          grep -Eq \
+            '[[:space:]]mov[[:space:]]+x2, #0x8000' \
+            aarch64-pthread-wrapper.dis
+          grep -Eq \
+            '[[:space:]]mov[[:space:]]+x0, x21' \
+            aarch64-pthread-wrapper.dis
+          grep -Eq \
+            '[[:space:]]blr[[:space:]]+x20' \
+            aarch64-pthread-wrapper.dis
+          awk '
+            /ldp[[:space:]]+x20, x21/ { saved = NR }
+            /VirtualFree/ { released = NR }
+            /mov[[:space:]]+x0, x21/ { argument = NR }
+            /blr[[:space:]]+x20/ { entered = NR }
+            END {
+              exit !(saved && released && argument && entered
+                     && saved < released
+                     && released < argument
+                     && argument < entered)
+            }
+          ' aarch64-pthread-wrapper.dis
+
+          # TEB-backed TLS initialization precedes the stack switch.  The
+          # common allocator path retains guard/reservation and cleanup calls.
+          grep -Eq '\[x18, #8\]' aarch64-pthread-wrapper.dis
+          grep -Eq '\[x18, #16\]' aarch64-pthread-wrapper.dis
+          for relocation in \
+              CreateThread \
+              VirtualAlloc \
+              VirtualAlloc2 \
+              VirtualFree \
+              init_thread \
+              api_fatal; do
+            grep -Fq "$relocation" aarch64-posix-thread.relocs
+          done
+          awk '
+            /init_thread/ { initialized = NR }
+            /sub[[:space:]]+sp, x1, x[0-9]+/ { switched = NR }
+            END {
+              exit !(initialized && switched && initialized < switched)
+            }
+          ' aarch64-pthread-wrapper.dis
+
       - name: Compile AArch64 newlib assembly checks
         run: |
           compiler="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-gcc"
@@ -280,12 +373,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Capture x86_64 autoload baseline
+      - name: Capture x86_64 assembly baselines
         shell: pwsh
-        run: >-
-          git show
-          5b38980d0c363dd3bdd2f542d64a4e8a38d4d81f:winsup/cygwin/autoload.cc
-          > x86_64-autoload-base.cc
+        run: |
+          git show `
+            5b38980d0c363dd3bdd2f542d64a4e8a38d4d81f:winsup/cygwin/autoload.cc `
+            > x86_64-autoload-base.cc
+          git show `
+            37a88c50ccf3bf9afd962055cfcbb8255ae2cda6:winsup/cygwin/create_posix_thread.cc `
+            > x86_64-create-posix-thread-base.cc
 
       - name: setup-msys2
         uses: msys2/setup-msys2@v2
@@ -367,6 +463,41 @@ jobs:
           cp "$backup" "$source_file"
           touch "$source_file"
           make -C "$cygwin_build_dir" autoload.o
+          rm -f "$backup"
+          trap - EXIT
+
+      - name: Verify x86_64 POSIX thread startup is unchanged
+        shell: msys2 {0}
+        run: |
+          cygwin_build_dir="$(
+            dirname "$(
+              find . -path '*/winsup/cygwin/config.h' -print -quit
+            )"
+          )"
+          source_file="$PWD/winsup/cygwin/create_posix_thread.cc"
+          object="$cygwin_build_dir/create_posix_thread.o"
+          backup="$(mktemp)"
+          cp "$source_file" "$backup"
+          trap 'cp "$backup" "$source_file"; touch "$source_file"; rm -f "$backup"' EXIT
+
+          test -f "$object"
+          objdump -dr "$object" \
+            | sed '1,/Disassembly of section/d' \
+            > x86_64-create-posix-thread-current.dis
+
+          cp "$PWD/x86_64-create-posix-thread-base.cc" "$source_file"
+          touch "$source_file"
+          make -C "$cygwin_build_dir" create_posix_thread.o
+          objdump -dr "$object" \
+            | sed '1,/Disassembly of section/d' \
+            > x86_64-create-posix-thread-base.dis
+          cmp \
+            x86_64-create-posix-thread-base.dis \
+            x86_64-create-posix-thread-current.dis
+
+          cp "$backup" "$source_file"
+          touch "$source_file"
+          make -C "$cygwin_build_dir" create_posix_thread.o
           rm -f "$backup"
           trap - EXIT
 

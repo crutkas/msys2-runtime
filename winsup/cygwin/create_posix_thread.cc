@@ -100,7 +100,7 @@ pthread_wrapper (PVOID arg)
 	   : : [WRAPPER_ARG] "o" (wrapper_arg),
 	       [CYGTLS] "i" (__CYGTLS_PADSIZE__));
 #else
-#error unimplemented for this target
+#include "aarch64_pthread_wrapper.h"
 #endif
   /* pthread::thread_init_wrapper calls pthread::exit, which
      in turn calls ExitThread, so we should never arrive here. */
