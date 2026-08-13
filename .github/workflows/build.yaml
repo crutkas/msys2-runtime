@@ -15,11 +15,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
-      - name: Install build tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install --yes autoconf automake gawk make
-
       - name: Download AArch64 Cygwin toolchain
         run: |
           curl --fail --location --retry 3 \
@@ -41,30 +36,6 @@ jobs:
             -I"$GITHUB_WORKSPACE/winsup/cygwin/local_includes" \
             -I"$TOOLCHAIN_DIR/include" \
             "$GITHUB_WORKSPACE/.github/checks/aarch64-register-context.cc"
-
-      - name: Probe the next AArch64 build blocker
-        continue-on-error: true
-        env:
-          CXXFLAGS_FOR_TARGET: -I${{ github.workspace }}/aarch64-pc-cygwin-toolchain/include
-          LDFLAGS_FOR_TARGET: -L${{ github.workspace }}/aarch64-pc-cygwin-toolchain/lib
-          PATH: ${{ github.workspace }}/aarch64-pc-cygwin-toolchain/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-        run: |
-          (cd winsup && ./autogen.sh)
-          mkdir build-aarch64
-          cd build-aarch64
-          ../configure \
-            --target=aarch64-pc-cygwin \
-            --disable-doc \
-            --disable-dumper \
-            --with-cross-bootstrap
-          make V=1 -j2 2>&1 | tee aarch64-build.log
-
-      - name: Upload AArch64 build probe
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: aarch64-build-probe
-          path: build-aarch64/aarch64-build.log
 
   configure-winsup:
     runs-on: ubuntu-latest
