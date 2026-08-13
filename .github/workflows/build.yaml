@@ -49,6 +49,46 @@ jobs:
             "$GITHUB_WORKSPACE/.github/checks/aarch64-getreent.c" \
             -o aarch64-getreent.o
 
+      - name: Compile AArch64 long double checks
+        run: |
+          compiler="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-gcc"
+          printf 'target='
+          "$compiler" -dumpmachine
+          "$compiler" -dM -E -x c /dev/null \
+            | sort \
+            | grep -E '(__aarch64__|__AARCH64EL__|__CYGWIN__|_WIN32|__SIZEOF_(DOUBLE|LONG_DOUBLE)__|__(DBL|LDBL)_(MANT_DIG|MAX_EXP)__|__BYTE_ORDER__|__FLOAT_WORD_ORDER__)'
+          "$compiler" \
+            -std=gnu11 \
+            -O2 \
+            -Wall \
+            -Werror \
+            -fno-builtin \
+            -c \
+            "$GITHUB_WORKSPACE/.github/checks/aarch64-long-double.c" \
+            -o aarch64-long-double.o
+          "$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-nm" -S \
+            aarch64-long-double.o \
+            | grep 'long_double_'
+          "$compiler" \
+            -std=gnu11 \
+            -O2 \
+            -Wall \
+            -Werror \
+            -c \
+            "$GITHUB_WORKSPACE/winsup/cygwin/math/acosl.c" \
+            -o aarch64-acosl.o
+          for source in frexpl remainderl tanl; do
+            "$compiler" \
+              -c \
+              "$GITHUB_WORKSPACE/winsup/cygwin/math/$source.S" \
+              -o "aarch64-$source.o"
+          done
+          "$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-nm" -u \
+            aarch64-acosl.o \
+            aarch64-frexpl.o \
+            aarch64-remainderl.o \
+            aarch64-tanl.o
+
   configure-winsup:
     runs-on: ubuntu-latest
     strategy:
