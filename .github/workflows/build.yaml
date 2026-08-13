@@ -6,6 +6,66 @@ permissions:
   contents: read
 
 jobs:
+  aarch64-register-context:
+    runs-on: ubuntu-24.04-arm
+    env:
+      TOOLCHAIN_DIR: ${{ github.workspace }}/aarch64-pc-cygwin-toolchain
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Download AArch64 Cygwin toolchain
+        run: |
+          curl --fail --location --retry 3 \
+            --output aarch64-pc-cygwin-toolchain.tar.gz \
+            https://github.com/Windows-on-ARM-Experiments/mingw-woarm64-build/releases/download/2025-07-15/aarch64-pc-cygwin-msvcrt-toolchain.tar.gz
+          echo "1ec7c5db7d6f2b9f8c9e9f631b05a5de27b83b98297b3a2043172f569820d1f3  aarch64-pc-cygwin-toolchain.tar.gz" \
+            | sha256sum --check
+          mkdir -p "$TOOLCHAIN_DIR"
+          tar -xzf aarch64-pc-cygwin-toolchain.tar.gz -C "$TOOLCHAIN_DIR"
+
+      - name: Compile AArch64 register context check
+        run: |
+          "$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-g++" \
+            -std=gnu++17 \
+            -Wall \
+            -Werror \
+            -fsyntax-only \
+            -I"$GITHUB_WORKSPACE/winsup/cygwin/include" \
+            -I"$GITHUB_WORKSPACE/winsup/cygwin/local_includes" \
+            -I"$TOOLCHAIN_DIR/include" \
+            "$GITHUB_WORKSPACE/.github/checks/aarch64-register-context.cc"
+
+  configure-winsup:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - x86_64-pc-cygwin
+          - aarch64-pc-cygwin
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Generate winsup configure
+        working-directory: winsup
+        run: ./autogen.sh
+
+      - name: Configure winsup for ${{ matrix.target }}
+        env:
+          ac_cv_lib_sframe_sframe_decode: "no"
+          ac_cv_lib_zstd_ZSTD_isError: "no"
+        run: |
+          mkdir build-winsup
+          cd build-winsup
+          ../winsup/configure \
+            --target=${{ matrix.target }} \
+            --with-cross-bootstrap \
+            --disable-doc
+
   build:
     runs-on: windows-latest
 
@@ -92,4 +152,3 @@ jobs:
 
       - name: Run tests
         uses: msys2/msys2-tests@main
-
