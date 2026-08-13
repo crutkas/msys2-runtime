@@ -6,7 +6,7 @@ permissions:
   contents: read
 
 jobs:
-  aarch64-register-context:
+  aarch64-compiler-checks:
     runs-on: ubuntu-24.04-arm
     env:
       TOOLCHAIN_DIR: ${{ github.workspace }}/aarch64-pc-cygwin-toolchain
@@ -36,6 +36,18 @@ jobs:
             -I"$GITHUB_WORKSPACE/winsup/cygwin/local_includes" \
             -I"$TOOLCHAIN_DIR/include" \
             "$GITHUB_WORKSPACE/.github/checks/aarch64-register-context.cc"
+
+      - name: Compile AArch64 getreent check
+        run: |
+          "$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-gcc" \
+            -std=gnu11 \
+            -O2 \
+            -Wall \
+            -Werror \
+            -c \
+            -I"$GITHUB_WORKSPACE/winsup/cygwin/include" \
+            "$GITHUB_WORKSPACE/.github/checks/aarch64-getreent.c" \
+            -o aarch64-getreent.o
 
   configure-winsup:
     runs-on: ubuntu-latest
