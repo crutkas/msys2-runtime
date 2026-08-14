@@ -29,7 +29,9 @@ details. */
 #include <winioctl.h>
 #include <wchar.h>
 #include <wctype.h>
+#ifdef __x86_64__
 #include "cpuid.h"
+#endif
 #include "mount.h"
 #include <math.h>
 
@@ -624,6 +626,8 @@ format_proc_stat (void *, char *&destbuf)
 #define ftuprint(msg) print (" " msg)
 /* feature test bit position (0-32) and conditional print */
 #define ftcprint(feat,bitno,msg) if ((feat) & (1 << (bitno))) { ftuprint (msg); }
+
+#ifdef __x86_64__
 
 static inline uint32_t
 get_msb (uint32_t in)
@@ -1768,6 +1772,85 @@ format_proc_cpuinfo (void *, char *&destbuf)
   memcpy (destbuf, buf, bufptr - buf);
   return bufptr - buf;
 }
+
+#elif defined (__aarch64__)
+
+/* Processor feature IDs added after the minimum supported w32api headers.
+   They remain runtime queries; defining an ID does not assert support. */
+#ifndef PF_ARM_LSE2_AVAILABLE
+#define PF_ARM_LSE2_AVAILABLE 62
+#endif
+#ifndef PF_ARM_SHA3_INSTRUCTIONS_AVAILABLE
+#define PF_ARM_SHA3_INSTRUCTIONS_AVAILABLE 64
+#endif
+#ifndef PF_ARM_SHA512_INSTRUCTIONS_AVAILABLE
+#define PF_ARM_SHA512_INSTRUCTIONS_AVAILABLE 65
+#endif
+#ifndef PF_ARM_V82_I8MM_INSTRUCTIONS_AVAILABLE
+#define PF_ARM_V82_I8MM_INSTRUCTIONS_AVAILABLE 66
+#endif
+#ifndef PF_ARM_V82_FP16_INSTRUCTIONS_AVAILABLE
+#define PF_ARM_V82_FP16_INSTRUCTIONS_AVAILABLE 67
+#endif
+#ifndef PF_ARM_V86_BF16_INSTRUCTIONS_AVAILABLE
+#define PF_ARM_V86_BF16_INSTRUCTIONS_AVAILABLE 68
+#endif
+
+struct arm64_feature
+{
+  DWORD feature;
+  const char *names;
+};
+
+static const arm64_feature arm64_features[] =
+{
+  { PF_ARM_V8_CRYPTO_INSTRUCTIONS_AVAILABLE, " aes pmull sha1 sha2" },
+  { PF_ARM_V8_CRC32_INSTRUCTIONS_AVAILABLE, " crc32" },
+  { PF_ARM_V81_ATOMIC_INSTRUCTIONS_AVAILABLE, " atomics" },
+  { PF_ARM_V82_FP16_INSTRUCTIONS_AVAILABLE, " fphp asimdhp" },
+  { PF_ARM_V82_DP_INSTRUCTIONS_AVAILABLE, " asimddp" },
+  { PF_ARM_V82_I8MM_INSTRUCTIONS_AVAILABLE, " i8mm" },
+  { PF_ARM_V83_JSCVT_INSTRUCTIONS_AVAILABLE, " jscvt" },
+  { PF_ARM_V83_LRCPC_INSTRUCTIONS_AVAILABLE, " lrcpc" },
+  { PF_ARM_LSE2_AVAILABLE, " uscat" },
+  { PF_ARM_SHA3_INSTRUCTIONS_AVAILABLE, " sha3" },
+  { PF_ARM_SHA512_INSTRUCTIONS_AVAILABLE, " sha512" },
+  { PF_ARM_V86_BF16_INSTRUCTIONS_AVAILABLE, " bf16" },
+  { PF_ARM_SVE_INSTRUCTIONS_AVAILABLE, " sve" },
+  { PF_ARM_SVE2_INSTRUCTIONS_AVAILABLE, " sve2" },
+};
+
+static off_t
+format_proc_cpuinfo (void *, char *&destbuf)
+{
+  long nprocs = get_nprocs ();
+
+  if (nprocs <= 0)
+    return 0;
+
+  size_t bufsize = (size_t) nprocs * 512;
+  destbuf = (char *) crealloc_abort (destbuf, bufsize);
+  char *bufptr = destbuf;
+
+  for (long cpu = 0; cpu < nprocs; ++cpu)
+    {
+      bufptr += __small_sprintf (bufptr, "processor\t: %ld\n", cpu);
+
+      /* FP and Advanced SIMD are Windows ARM64 ABI requirements.  Every
+	 optional feature below is reported from a runtime Windows query. */
+      print ("Features\t: fp asimd");
+      for (const arm64_feature &feature : arm64_features)
+	if (IsProcessorFeaturePresent (feature.feature))
+	  print (feature.names);
+      print ("\nCPU architecture: 8\n\n");
+    }
+
+  return bufptr - destbuf;
+}
+
+#else
+#error unimplemented for this target
+#endif
 
 static off_t
 format_proc_partitions (void *, char *&destbuf)
