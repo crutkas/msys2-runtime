@@ -35,12 +35,16 @@ _Static_assert ((MALLOC_ALIGNMENT & (MALLOC_ALIGNMENT - 1)) == 0,
 		"malloc alignment must be a power of two");
 _Static_assert (sizeof (void *) == 8,
 		"Windows AArch64 pointers must be 64-bit");
-_Static_assert (_Alignof (max_align_t) <= MALLOC_ALIGNMENT,
-		"malloc must satisfy max_align_t");
-_Static_assert (_Alignof (long double) <= MALLOC_ALIGNMENT,
-		"malloc must satisfy long double alignment");
-_Static_assert (_Alignof (vector128) <= MALLOC_ALIGNMENT,
-		"malloc must satisfy 128-bit SIMD alignment");
+_Static_assert (_Alignof (max_align_t) == 8,
+		"Windows AArch64 max_align_t must be 8-byte aligned");
+_Static_assert (_Alignof (long double) == 8,
+		"Windows AArch64 long double must be 8-byte aligned");
+_Static_assert (_Alignof (vector128) == 16,
+		"Windows AArch64 128-bit SIMD must be 16-byte aligned");
+_Static_assert (_Alignof (max_align_t) <= MALLOC_ALIGNMENT
+		&& _Alignof (long double) <= MALLOC_ALIGNMENT
+		&& _Alignof (vector128) <= MALLOC_ALIGNMENT,
+		"malloc must satisfy every target ABI alignment");
 
 unsigned char checked_malloc_alignment[MALLOC_ALIGNMENT];
 unsigned char checked_max_align_t_alignment[_Alignof (max_align_t)];
