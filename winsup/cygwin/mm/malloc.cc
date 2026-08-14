@@ -2222,6 +2222,11 @@ typedef unsigned int flag_t;           /* The type of various bit flag sets */
 /* chunk associated with aligned address A */
 #define align_as_chunk(A)   (mchunkptr)((A) + align_offset(chunk2mem(A)))
 
+static_assert (MALLOC_ALIGNMENT == 16,
+	       "Cygwin malloc must preserve 16-byte ABI alignment");
+static_assert ((MALLOC_ALIGNMENT & CHUNK_ALIGN_MASK) == 0,
+	       "malloc alignment must be a power of two");
+
 /* Bounds on request (not chunk) sizes. */
 #define MAX_REQUEST         ((-MIN_CHUNK_SIZE) << 2)
 #define MIN_REQUEST         (MIN_CHUNK_SIZE - CHUNK_OVERHEAD - SIZE_T_ONE)

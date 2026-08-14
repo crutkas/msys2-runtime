@@ -37,6 +37,7 @@ check_PROGRAMS = \
 	winsup.api/devdsp \
 	winsup.api/devzero \
 	winsup.api/iospeed \
+	winsup.api/malloc_alignment \
 	winsup.api/mmaptest01 \
 	winsup.api/mmaptest02 \
 	winsup.api/mmaptest03 \
