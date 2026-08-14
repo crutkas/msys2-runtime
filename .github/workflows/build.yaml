@@ -32,6 +32,9 @@ jobs:
 
       - name: Compile and disassemble AArch64 cygtls lock
         run: |
+          export PATH="$TOOLCHAIN_DIR/bin:$PATH"
+          export CC=aarch64-pc-cygwin-gcc
+          export CXX=aarch64-pc-cygwin-g++
           (cd winsup && ./autogen.sh)
           mkdir build-cygtls-lock
           (
@@ -39,6 +42,7 @@ jobs:
             ac_cv_lib_sframe_sframe_decode=no \
             ac_cv_lib_zstd_ZSTD_isError=no \
               ../winsup/configure \
+                --host=aarch64-pc-cygwin \
                 --target=aarch64-pc-cygwin \
                 --with-cross-bootstrap \
                 --disable-doc
@@ -74,6 +78,96 @@ jobs:
               aarch64-cygtls-lock.dis; then
             exit 1
           fi
+
+      - name: Compile and inspect AArch64 autoload thunks
+        run: |
+          export PATH="$TOOLCHAIN_DIR/bin:$PATH"
+          export CC=aarch64-pc-cygwin-gcc
+          export CXX=aarch64-pc-cygwin-g++
+          make -C build-cygtls-lock/cygwin autoload.o
+
+          object=build-cygtls-lock/cygwin/autoload.o
+          objdump="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-objdump"
+          objcopy="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-objcopy"
+          nm="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-nm"
+          test -f "$object"
+
+          "$objdump" -h "$object" | tee aarch64-autoload.sections
+          "$objdump" -dr "$object" | tee aarch64-autoload.dis
+          "$objdump" -r "$object" | tee aarch64-autoload.relocs
+          "$nm" -a "$object" | tee aarch64-autoload.symbols
+
+          for section in \
+              .data_cygwin_nocopy \
+              .advapi32_autoload_text \
+              .winmm_autoload_text \
+              .pdata \
+              .xdata; do
+            grep -Fq "$section" aarch64-autoload.sections
+          done
+          for symbol in \
+              CheckTokenMembership \
+              _std_dll_init \
+              _wsock_init \
+              dll_func_load \
+              dll_chain; do
+            grep -Eq "[[:space:]][Tt] ${symbol}$" aarch64-autoload.symbols
+          done
+
+          # LoadDLLfuncEx3 preserves x0-x8 and LR in an aligned 80-byte frame,
+          # calls through dll_info.load_state, and re-enters the patched thunk.
+          grep -Eq '[[:space:]]sub[[:space:]]+sp, sp, #0x50' \
+            aarch64-autoload.dis
+          for pair in \
+              'x0, x1, \[sp\]' \
+              'x2, x3, \[sp, #16\]' \
+              'x4, x5, \[sp, #32\]' \
+              'x6, x7, \[sp, #48\]' \
+              'x8, x30, \[sp, #64\]'; do
+            grep -Eq "[[:space:]]stp[[:space:]]+${pair}" \
+              aarch64-autoload.dis
+            grep -Eq "[[:space:]]ldp[[:space:]]+${pair}" \
+              aarch64-autoload.dis
+          done
+          grep -Eq '[[:space:]]blr[[:space:]]+x17' aarch64-autoload.dis
+          grep -Eq '[[:space:]]stur[[:space:]]+x0, \[x2, #12\]' \
+            aarch64-autoload.dis
+          grep -Eq '[[:space:]]sub[[:space:]]+x16, x2, #0x34' \
+            aarch64-autoload.dis
+          grep -Eq '[[:space:]]br[[:space:]]+x16' aarch64-autoload.dis
+
+          # dll_chain adds one aligned frame.  The resolver's non-fatal path
+          # reports ERROR_PROC_NOT_FOUND; its fatal path calls api_fatal.
+          grep -Eq \
+            '[[:space:]]stp[[:space:]]+x0, xzr, \[sp, #-16\]!' \
+            aarch64-autoload.dis
+          grep -Eq '[[:space:]]br[[:space:]]+x1' aarch64-autoload.dis
+          grep -Fq 'SetLastError' aarch64-autoload.relocs
+          grep -Fq 'api_fatal' aarch64-autoload.relocs
+          grep -Fq 'GetProcAddress' aarch64-autoload.relocs
+
+          # Both INIT_WRAPPER instances carry ARM64 Windows unwind records.
+          test "$(grep -Ec '[[:space:]][Tt] _std_dll_init$|[[:space:]][Tt] _wsock_init$' \
+            aarch64-autoload.symbols)" -eq 2
+          test "$(grep -Ec '[.]pdata|[.]xdata' aarch64-autoload.sections)" -ge 2
+
+          mkdir aarch64-autoload-sections
+          "$objcopy" \
+            --dump-section \
+            .data_cygwin_nocopy=aarch64-autoload-sections/dll-info.bin \
+            "$object"
+          "$objcopy" \
+            --dump-section \
+            .advapi32_autoload_text=aarch64-autoload-sections/advapi32.bin \
+            "$object"
+          od -An -tx1 -v aarch64-autoload-sections/dll-info.bin \
+            | tr -d ' \n' \
+            | grep -Fq \
+                '610064007600610070006900330032002e0064006c006c000000'
+          od -An -tx1 -v aarch64-autoload-sections/advapi32.bin \
+            | tr -d ' \n' \
+            | grep -Fq \
+                '436865636b546f6b656e4d656d6265727368697000'
 
       - name: Compile AArch64 newlib assembly checks
         run: |
@@ -183,6 +277,15 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Capture x86_64 autoload baseline
+        shell: pwsh
+        run: >-
+          git show
+          5b38980d0c363dd3bdd2f542d64a4e8a38d4d81f:winsup/cygwin/autoload.cc
+          > x86_64-autoload-base.cc
 
       - name: setup-msys2
         uses: msys2/setup-msys2@v2
@@ -233,6 +336,39 @@ jobs:
               x86_64-cygtls-lock.dis; then
             exit 1
           fi
+
+      - name: Verify x86_64 autoload assembly is unchanged
+        shell: msys2 {0}
+        run: |
+          cygwin_build_dir="$(
+            dirname "$(
+              find . -path '*/winsup/cygwin/config.h' -print -quit
+            )"
+          )"
+          source_file="$PWD/winsup/cygwin/autoload.cc"
+          object="$cygwin_build_dir/autoload.o"
+          backup="$(mktemp)"
+          cp "$source_file" "$backup"
+          trap 'cp "$backup" "$source_file"; touch "$source_file"; rm -f "$backup"' EXIT
+
+          test -f "$object"
+          objdump -dr "$object" \
+            | sed '1,/Disassembly of section/d' \
+            > x86_64-autoload-current.dis
+
+          cp "$PWD/x86_64-autoload-base.cc" "$source_file"
+          touch "$source_file"
+          make -C "$cygwin_build_dir" autoload.o
+          objdump -dr "$object" \
+            | sed '1,/Disassembly of section/d' \
+            > x86_64-autoload-base.dis
+          cmp x86_64-autoload-base.dis x86_64-autoload-current.dis
+
+          cp "$backup" "$source_file"
+          touch "$source_file"
+          make -C "$cygwin_build_dir" autoload.o
+          rm -f "$backup"
+          trap - EXIT
 
       - name: Install
         shell: msys2 {0}
