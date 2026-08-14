@@ -174,14 +174,12 @@ jobs:
           export PATH="$TOOLCHAIN_DIR/bin:$PATH"
           export CC=aarch64-pc-cygwin-gcc
           export CXX=aarch64-pc-cygwin-g++
-          make -C build-cygtls-lock/cygwin create_posix_thread.o thread.o
+          make -C build-cygtls-lock/cygwin create_posix_thread.o
 
           object=build-cygtls-lock/cygwin/create_posix_thread.o
-          thread_object=build-cygtls-lock/cygwin/thread.o
           objdump="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-objdump"
           nm="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-nm"
           test -f "$object"
-          test -f "$thread_object"
 
           "$objdump" -h "$object" | tee aarch64-posix-thread.sections
           "$objdump" -dr "$object" | tee aarch64-posix-thread.dis
