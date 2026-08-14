@@ -30,6 +30,80 @@ jobs:
           mkdir -p "$TOOLCHAIN_DIR"
           tar -xzf aarch64-pc-cygwin-toolchain.tar.gz -C "$TOOLCHAIN_DIR"
 
+      - name: Verify AArch64 endian primitives
+        run: |
+          compiler="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-gcc"
+          objdump="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-objdump"
+          "$compiler" \
+            -std=gnu11 \
+            -O2 \
+            -Wall \
+            -Wextra \
+            -Werror \
+            -isystem "$GITHUB_WORKSPACE/winsup/cygwin/include" \
+            -isystem "$GITHUB_WORKSPACE/newlib/targ-include" \
+            -isystem "$GITHUB_WORKSPACE/newlib/libc/include" \
+            -isystem "$TOOLCHAIN_DIR/include" \
+            -c \
+            "$GITHUB_WORKSPACE/.github/checks/endian-primitives.c" \
+            -o aarch64-endian-primitives.o
+
+          "$objdump" -dr aarch64-endian-primitives.o \
+            | tee aarch64-endian-primitives.dis
+          for symbol in checked_ntohs checked_htons; do
+            "$objdump" -dr --disassemble="$symbol" \
+              aarch64-endian-primitives.o \
+              > "aarch64-$symbol.dis"
+            grep -Eq '[[:space:]]uxth[[:space:]]+w0, w0' \
+              "aarch64-$symbol.dis"
+            grep -Eq '[[:space:]]rev16[[:space:]]+w0, w0' \
+              "aarch64-$symbol.dis"
+          done
+          for symbol in checked_ntohl checked_htonl; do
+            "$objdump" -dr --disassemble="$symbol" \
+              aarch64-endian-primitives.o \
+              > "aarch64-$symbol.dis"
+            grep -Eq '[[:space:]]rev[[:space:]]+w0, w0' \
+              "aarch64-$symbol.dis"
+          done
+          "$objdump" -dr --disassemble=checked_bswap_16 \
+            aarch64-endian-primitives.o \
+            | grep -Eq '[[:space:]]rev16[[:space:]]+w0, w0'
+          "$objdump" -dr --disassemble=checked_bswap_32 \
+            aarch64-endian-primitives.o \
+            | grep -Eq '[[:space:]]rev[[:space:]]+w0, w0'
+          "$objdump" -dr --disassemble=checked_bswap_64 \
+            aarch64-endian-primitives.o \
+            | grep -Eq '[[:space:]]rev[[:space:]]+x0, x0'
+          "$objdump" -dr --disassemble=checked_constant_ntohs \
+            aarch64-endian-primitives.o \
+            > aarch64-constant-ntohs.dis
+          "$objdump" -dr --disassemble=checked_constant_ntohl \
+            aarch64-endian-primitives.o \
+            > aarch64-constant-ntohl.dis
+
+          if grep -Eq '[[:space:]](bswap|xchg)' \
+              aarch64-endian-primitives.dis; then
+            exit 1
+          fi
+          if grep -Eq '[[:space:]]rev(16)?[[:space:]]' \
+              aarch64-constant-ntohs.dis \
+              aarch64-constant-ntohl.dis; then
+            exit 1
+          fi
+
+          gcc \
+            -std=gnu11 \
+            -O2 \
+            -Wall \
+            -Wextra \
+            -Werror \
+            -I"$GITHUB_WORKSPACE/winsup/cygwin/include" \
+            -I"$GITHUB_WORKSPACE/newlib/libc/include" \
+            "$GITHUB_WORKSPACE/.github/checks/aarch64-endian-runtime.c" \
+            -o aarch64-endian-runtime
+          ./aarch64-endian-runtime
+
       - name: Compile and disassemble AArch64 cygtls lock
         run: |
           export PATH="$TOOLCHAIN_DIR/bin:$PATH"
@@ -662,6 +736,9 @@ jobs:
           git show `
             6357de10efd55101cc1de06fb500eb24b09aa3dc:winsup/cygwin/exceptions.cc `
             > x86_64-exceptions-base.cc
+          git show `
+            a4cf6657c61eb8ae02e5b6839cd34a896d8316d4:winsup/cygwin/include/machine/_endian.h `
+            > x86_64-endian-base.h
           git show HEAD:winsup/cygwin/scripts/gendef > x86_64-gendef-current
 
       - name: setup-msys2
@@ -677,6 +754,67 @@ jobs:
           (cd winsup && ./autogen.sh)
           ./configure --disable-dependency-tracking --with-msys2-runtime-commit="$GITHUB_SHA"
           make -j8
+
+      - name: Verify x86_64 endian primitives
+        shell: msys2 {0}
+        run: |
+          cygwin_build_dir="$(
+            dirname "$(
+              find . -path '*/winsup/cygwin/config.h' -print -quit
+            )"
+          )"
+          source_file="$PWD/winsup/cygwin/include/machine/_endian.h"
+          backup="$(mktemp)"
+          cp "$source_file" "$backup"
+          trap 'cp "$backup" "$source_file"; rm -f "$backup"' EXIT
+
+          compile_endian_check()
+          {
+            gcc \
+              -std=gnu11 \
+              -O2 \
+              -Wall \
+              -Wextra \
+              -Werror \
+              -I"$cygwin_build_dir" \
+              -isystem "$PWD/winsup/cygwin/include" \
+              -isystem "$PWD/newlib/targ-include" \
+              -isystem "$PWD/newlib/libc/include" \
+              "$@"
+          }
+
+          compile_endian_check \
+            "$PWD/.github/checks/endian-primitives.c" \
+            -o x86_64-endian-primitives.exe
+          ./x86_64-endian-primitives.exe
+          compile_endian_check \
+            -c "$PWD/.github/checks/endian-primitives.c" \
+            -o x86_64-endian-current.o
+          objcopy --dump-section .text=x86_64-endian-current.bin \
+            x86_64-endian-current.o
+
+          cp "$PWD/x86_64-endian-base.h" "$source_file"
+          compile_endian_check \
+            -c "$PWD/.github/checks/endian-primitives.c" \
+            -o x86_64-endian-base.o
+          objcopy --dump-section .text=x86_64-endian-base.bin \
+            x86_64-endian-base.o
+
+          cp "$backup" "$source_file"
+          rm -f "$backup"
+          trap - EXIT
+
+          test -s x86_64-endian-current.bin
+          test -s x86_64-endian-base.bin
+          cmp x86_64-endian-base.bin x86_64-endian-current.bin
+          objdump -dr x86_64-endian-current.o \
+            | tee x86_64-endian-primitives.dis
+          objdump -dr --disassemble=checked_ntohs \
+            x86_64-endian-current.o \
+            | grep -Eq '[[:space:]]xchg[[:space:]]+%a[lh], *%a[lh]'
+          objdump -dr --disassemble=checked_ntohl \
+            x86_64-endian-current.o \
+            | grep -Eq '[[:space:]]bswap[[:space:]]+%e[a-z]+'
 
       - name: Verify x86_64 signal stubs are byte-for-byte unchanged
         shell: msys2 {0}
