@@ -383,6 +383,23 @@ jobs:
             aarch64-remainderl.o \
             aarch64-tanl.o
 
+      - name: Compile AArch64 malloc alignment checks
+        run: |
+          compiler="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-gcc"
+          "$compiler" \
+            -std=gnu11 \
+            -O2 \
+            -Wall \
+            -Werror \
+            -I"$GITHUB_WORKSPACE/winsup/cygwin/local_includes" \
+            -isystem "$GITHUB_WORKSPACE/newlib/libc/include" \
+            -c \
+            "$GITHUB_WORKSPACE/.github/checks/aarch64-malloc-alignment.c" \
+            -o aarch64-malloc-alignment.o
+          "$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-nm" -S \
+            aarch64-malloc-alignment.o \
+            | grep 'checked_.*_alignment'
+
   configure-winsup:
     runs-on: ubuntu-latest
     strategy:
