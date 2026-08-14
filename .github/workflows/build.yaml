@@ -590,6 +590,65 @@ jobs:
             aarch64-makecontext.dis
           grep -Fq '__cont_link_context' aarch64-makecontext.dis
 
+      - name: Verify AArch64 processor information
+        run: |
+          export PATH="$TOOLCHAIN_DIR/bin:$PATH"
+          build_dir=build-cygtls-lock/cygwin
+          objdump="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-objdump"
+          nm="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-nm"
+
+          make -C "$build_dir" sysconf.o fhandler/proc.o
+          for object in \
+             "$build_dir/sysconf.o" \
+             "$build_dir/fhandler/proc.o"; do
+           test -f "$object"
+           name="$(basename "$object" .o)"
+           "$objdump" -dr "$object" | tee "aarch64-$name.dis"
+           "$objdump" -r "$object" | tee "aarch64-$name.relocs"
+           "$nm" -u "$object" | tee "aarch64-$name.undefined"
+           if grep -Eq \
+               '(^|[[:space:]])(cpuid|mrs|msr)([[:space:]]|$)' \
+               "aarch64-$name.dis"; then
+             exit 1
+           fi
+          done
+
+          for symbol in \
+             GetCurrentProcessorNumberEx \
+             GetLogicalProcessorInformationEx \
+             GetProcessHeap \
+             HeapAlloc \
+             HeapFree; do
+           grep -Eq "[[:space:]]U ${symbol}$" aarch64-sysconf.undefined
+          done
+          grep -Eq \
+           '[[:space:]]U IsProcessorFeaturePresent$' \
+           aarch64-proc.undefined
+          if grep -Eq '[[:space:]]U cpuid$' \
+             aarch64-sysconf.undefined aarch64-proc.undefined; then
+           exit 1
+          fi
+
+          g++ \
+           -std=gnu++17 \
+           -O2 \
+           -Wall \
+           -Wextra \
+           -Werror \
+           "$GITHUB_WORKSPACE/.github/checks/sysconf-topology-model.cc" \
+           -o sysconf-topology-model
+          ./sysconf-topology-model
+
+          "$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-gcc" \
+           -std=gnu11 \
+           -O2 \
+           -Wall \
+           -Wextra \
+           -Werror \
+           -c \
+           "$GITHUB_WORKSPACE/.github/checks/sysconf-runtime.c" \
+           -o aarch64-sysconf-runtime.o
+
       - name: Compile AArch64 newlib assembly checks
         run: |
           compiler="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-gcc"
@@ -739,6 +798,9 @@ jobs:
           git show `
             a4cf6657c61eb8ae02e5b6839cd34a896d8316d4:winsup/cygwin/include/machine/_endian.h `
             > x86_64-endian-base.h
+          git show `
+            67417ca1f1ec9558d144f295c474d679c28d4a6e:winsup/cygwin/local_includes/cpuid.h `
+            > x86_64-cpuid-base.h
           git show HEAD:winsup/cygwin/scripts/gendef > x86_64-gendef-current
 
       - name: setup-msys2
@@ -754,6 +816,39 @@ jobs:
           (cd winsup && ./autogen.sh)
           ./configure --disable-dependency-tracking --with-msys2-runtime-commit="$GITHUB_SHA"
           make -j8
+
+      - name: Verify x86_64 CPUID helpers are unchanged
+        shell: msys2 {0}
+        run: |
+          work="$(mktemp -d)"
+          trap 'rm -rf "$work"' EXIT
+          mkdir "$work/base"
+          cp "$PWD/x86_64-cpuid-base.h" "$work/base/cpuid.h"
+
+          for version in base current; do
+            include="$PWD/winsup/cygwin/local_includes"
+            if test "$version" = base; then
+              include="$work/base"
+            fi
+            g++ \
+              -std=gnu++17 \
+              -O2 \
+              -Wall \
+              -Wextra \
+              -Werror \
+              -I"$include" \
+              -c \
+              "$PWD/.github/checks/x86-cpuid.cc" \
+              -o "$work/$version.o"
+            objcopy --dump-section .text="$work/$version.bin" \
+              "$work/$version.o"
+          done
+
+          cmp "$work/base.bin" "$work/current.bin"
+          objdump -dr "$work/current.o" | tee x86_64-cpuid.dis
+          grep -Eq '[[:space:]]cpuid([[:space:]]|$)' x86_64-cpuid.dis
+          grep -Eq '[[:space:]]pushf([[:space:]]|$)' x86_64-cpuid.dis
+          grep -Eq '[[:space:]]popf([[:space:]]|$)' x86_64-cpuid.dis
 
       - name: Verify x86_64 endian primitives
         shell: msys2 {0}
@@ -1014,6 +1109,45 @@ jobs:
         shell: msys2 {0}
         run: |
           make DESTDIR="$(pwd)"/_dest install
+
+      - name: Verify native sysconf and getconf
+        shell: msys2 {0}
+        run: |
+          runtime_dir="$PWD/_dest/usr/bin"
+          test -f "$runtime_dir/msys-2.0.dll"
+          test -f "$runtime_dir/getconf.exe"
+
+          gcc \
+            -std=gnu11 \
+            -O2 \
+            -Wall \
+            -Wextra \
+            -Werror \
+            "$PWD/.github/checks/sysconf-runtime.c" \
+            -o "$runtime_dir/sysconf-runtime.exe"
+          "$runtime_dir/sysconf-runtime.exe"
+
+          configured="$("$runtime_dir/getconf.exe" _NPROCESSORS_CONF)"
+          online="$("$runtime_dir/getconf.exe" _NPROCESSORS_ONLN)"
+          page_size="$("$runtime_dir/getconf.exe" PAGESIZE)"
+          test "$configured" -ge "$online"
+          test "$online" -gt 0
+          test "$page_size" -gt 0
+
+          for name in \
+              LEVEL1_ICACHE_SIZE \
+              LEVEL1_ICACHE_LINESIZE \
+              LEVEL1_DCACHE_SIZE \
+              LEVEL1_DCACHE_LINESIZE \
+              LEVEL2_CACHE_SIZE \
+              LEVEL2_CACHE_LINESIZE \
+              LEVEL3_CACHE_SIZE \
+              LEVEL3_CACHE_LINESIZE \
+              LEVEL4_CACHE_SIZE \
+              LEVEL4_CACHE_LINESIZE; do
+            value="$("$runtime_dir/getconf.exe" "$name")"
+            test "$value" -ge 0
+          done
 
       - name: Upload
         uses: actions/upload-artifact@v7
