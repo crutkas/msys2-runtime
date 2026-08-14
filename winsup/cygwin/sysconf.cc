@@ -18,7 +18,9 @@ details. */
 #include "pinfo.h"
 #include "ntdll.h"
 #include "tls_pbuf.h"
+#ifdef __x86_64__
 #include "cpuid.h"
+#endif
 #include "clock.h"
 
 static long
@@ -55,14 +57,14 @@ get_nproc_values (int in)
        size -= plpi->Size, add_size (plpi, plpi->Size))
     if (plpi->Relationship == RelationGroup)
       {
-	for (WORD i = 0; i < plpi->Group.MaximumGroupCount; ++i)
+	for (WORD i = 0; i < plpi->Group.ActiveGroupCount; ++i)
 	  switch (in)
 	    {
 	    case _SC_NPROCESSORS_CONF:
-	      cnt += plpi->Group.GroupInfo[0].MaximumProcessorCount;
+	      cnt += plpi->Group.GroupInfo[i].MaximumProcessorCount;
 	      break;
 	    case _SC_NPROCESSORS_ONLN:
-	      cnt += plpi->Group.GroupInfo[0].ActiveProcessorCount;
+	      cnt += plpi->Group.GroupInfo[i].ActiveProcessorCount;
 	      break;
 	    }
       }
@@ -97,6 +99,8 @@ get_avphys (int in)
   return spi.AvailablePages
 	 / (wincap.allocation_granularity () / wincap.page_size ());
 }
+
+#ifdef __x86_64__
 
 enum cache_level
 {
@@ -472,6 +476,167 @@ get_cpu_cache (int in)
     }
   return 0;
 }
+
+#elif defined (__aarch64__)
+
+static bool
+cache_type_matches (int in, const CACHE_RELATIONSHIP &cache)
+{
+  switch (in)
+    {
+    case _SC_LEVEL1_ICACHE_SIZE:
+    case _SC_LEVEL1_ICACHE_ASSOC:
+    case _SC_LEVEL1_ICACHE_LINESIZE:
+      return cache.Level == 1
+	     && (cache.Type == CacheInstruction || cache.Type == CacheUnified);
+    case _SC_LEVEL1_DCACHE_SIZE:
+    case _SC_LEVEL1_DCACHE_ASSOC:
+    case _SC_LEVEL1_DCACHE_LINESIZE:
+      return cache.Level == 1
+	     && (cache.Type == CacheData || cache.Type == CacheUnified);
+    case _SC_LEVEL2_CACHE_SIZE:
+    case _SC_LEVEL2_CACHE_ASSOC:
+    case _SC_LEVEL2_CACHE_LINESIZE:
+      return cache.Level == 2;
+    case _SC_LEVEL3_CACHE_SIZE:
+    case _SC_LEVEL3_CACHE_ASSOC:
+    case _SC_LEVEL3_CACHE_LINESIZE:
+      return cache.Level == 3;
+    case _SC_LEVEL4_CACHE_SIZE:
+    case _SC_LEVEL4_CACHE_ASSOC:
+    case _SC_LEVEL4_CACHE_LINESIZE:
+      return cache.Level == 4;
+    default:
+      return false;
+    }
+}
+
+static bool
+processor_uses_cache (const CACHE_RELATIONSHIP &cache,
+		      const PROCESSOR_NUMBER &processor, DWORD record_size)
+{
+  const size_t group_masks_offset
+    = offsetof (SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX, Cache)
+      + offsetof (CACHE_RELATIONSHIP, GroupMasks);
+  if (record_size < group_masks_offset + sizeof (GROUP_AFFINITY))
+    return false;
+
+  WORD available_groups
+    = (record_size - group_masks_offset) / sizeof (GROUP_AFFINITY);
+  WORD group_count = cache.GroupCount ? cache.GroupCount : 1;
+  if (group_count > available_groups)
+    return false;
+
+  for (WORD i = 0; i < group_count; ++i)
+    if (cache.GroupMasks[i].Group == processor.Group
+	&& processor.Number < sizeof (KAFFINITY) * NBBY
+	&& (cache.GroupMasks[i].Mask
+	    & ((KAFFINITY) 1 << processor.Number)) != 0)
+      return true;
+  return false;
+}
+
+static long
+cache_property (int in, const CACHE_RELATIONSHIP &cache)
+{
+  switch (in)
+    {
+    case _SC_LEVEL1_ICACHE_SIZE:
+    case _SC_LEVEL1_DCACHE_SIZE:
+    case _SC_LEVEL2_CACHE_SIZE:
+    case _SC_LEVEL3_CACHE_SIZE:
+    case _SC_LEVEL4_CACHE_SIZE:
+      return cache.CacheSize;
+    case _SC_LEVEL1_ICACHE_ASSOC:
+    case _SC_LEVEL1_DCACHE_ASSOC:
+    case _SC_LEVEL2_CACHE_ASSOC:
+    case _SC_LEVEL3_CACHE_ASSOC:
+    case _SC_LEVEL4_CACHE_ASSOC:
+      return cache.Associativity == CACHE_FULLY_ASSOCIATIVE
+	     ? 0x8000 : cache.Associativity;
+    case _SC_LEVEL1_ICACHE_LINESIZE:
+    case _SC_LEVEL1_DCACHE_LINESIZE:
+    case _SC_LEVEL2_CACHE_LINESIZE:
+    case _SC_LEVEL3_CACHE_LINESIZE:
+    case _SC_LEVEL4_CACHE_LINESIZE:
+      return cache.LineSize;
+    default:
+      return 0;
+    }
+}
+
+static bool
+cache_size_query (int in)
+{
+  return in == _SC_LEVEL1_ICACHE_SIZE
+	 || in == _SC_LEVEL1_DCACHE_SIZE
+	 || in == _SC_LEVEL2_CACHE_SIZE
+	 || in == _SC_LEVEL3_CACHE_SIZE
+	 || in == _SC_LEVEL4_CACHE_SIZE;
+}
+
+static long
+get_cpu_cache (int in)
+{
+  DWORD lpi_size = 0;
+  PROCESSOR_NUMBER processor;
+  long ret = 0;
+  bool found = false;
+  bool inconsistent = false;
+
+  GetCurrentProcessorNumberEx (&processor);
+  if (GetLogicalProcessorInformationEx (RelationCache, NULL, &lpi_size)
+      || GetLastError () != ERROR_INSUFFICIENT_BUFFER || lpi_size == 0)
+    return 0;
+
+  PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX lpi
+    = (PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX)
+      HeapAlloc (GetProcessHeap (), 0, lpi_size);
+  if (!lpi)
+    return 0;
+
+  if (GetLogicalProcessorInformationEx (RelationCache, lpi, &lpi_size))
+    {
+      PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX plpi = lpi;
+      const size_t cache_record_size
+	= offsetof (SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX, Cache)
+	  + sizeof (CACHE_RELATIONSHIP);
+
+      for (DWORD size = lpi_size;
+	   size >= cache_record_size
+	   && plpi->Size >= cache_record_size
+	   && plpi->Size <= size;
+	   size -= plpi->Size, add_size (plpi, plpi->Size))
+	if (plpi->Relationship == RelationCache
+	    && cache_type_matches (in, plpi->Cache)
+	    && processor_uses_cache (plpi->Cache, processor, plpi->Size))
+	  {
+	    long value = cache_property (in, plpi->Cache);
+
+	    if (value == 0)
+	      inconsistent = true;
+	    else if (cache_size_query (in))
+	      {
+		ret += value;
+		found = true;
+	      }
+	    else if (!found)
+	      {
+		ret = value;
+		found = true;
+	      }
+	    else if (ret != value)
+	      inconsistent = true;
+	  }
+    }
+
+  HeapFree (GetProcessHeap (), 0, lpi);
+  return found && !inconsistent ? ret : 0;
+}
+
+#else
+#error unimplemented for this target
+#endif
 
 enum sc_type { cons, func };
 
