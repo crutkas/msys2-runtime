@@ -2007,6 +2007,38 @@ _cygtls::call_signal_handler ()
 		       [FUNC]	"o" (thisfunc),
 		       [WRAPPER] "o" (altstack_wrapper)
 		   : "memory");
+#elif defined(__aarch64__)
+	  uintptr_t altstack_call_args[] =
+	    {
+	      new_sp,
+	      (uintptr_t) thissig,
+	      (uintptr_t) &thissi,
+	      (uintptr_t) thiscontext,
+	      (uintptr_t) thisfunc,
+	      (uintptr_t) altstack_wrapper
+	    };
+
+	  /* x18 is reserved for the TEB.  x19 carries the original SP across
+	     the call; declaring it clobbered makes the compiler preserve its
+	     incoming value in the surrounding function's unwindable frame. */
+	  __asm__ __volatile__ ("\n\
+		   mov	x17, %[ARGS]		// Preserve args address		\n\
+		   mov	x19, sp			// Save original stack pointer	\n\
+		   ldp	x9, x0, [x17]		// Alt SP and signal number	\n\
+		   ldp	x1, x2, [x17, #16]	// siginfo and ucontext		\n\
+		   ldp	x3, x16, [x17, #32]	// handler and wrapper		\n\
+		   mov	sp, x9			// Switch to alternate stack	\n\
+		   blr	x16			// Call wrapper			\n\
+		   mov	sp, x19			// Restore original stack	\n"
+		   : : [ARGS] "r" (altstack_call_args)
+		   : "x0", "x1", "x2", "x3", "x4", "x5", "x6", "x7",
+		     "x8", "x9", "x10", "x11", "x12", "x13", "x14",
+		     "x15", "x16", "x17", "x19", "x30",
+		     "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7",
+		     "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15",
+		     "v16", "v17", "v18", "v19", "v20", "v21", "v22",
+		     "v23", "v24", "v25", "v26", "v27", "v28", "v29",
+		     "v30", "v31", "cc", "memory");
 #else
 #error unimplemented for this target
 #endif
@@ -2148,22 +2180,37 @@ __cont_link_context:			\n\
 	.seh_endproc			\n\
 	");
 
+#elif defined(__aarch64__)
+/* _MC_uclinkReg == x19 */
+__asm__ ("				\n\
+	.global	__cont_link_context	\n\
+	.seh_proc __cont_link_context	\n\
+__cont_link_context:			\n\
+	.seh_endprologue		\n\
+	mov	sp, x19			\n\
+	ldr	x0, [x19]		\n\
+	cbz	x0, 1f			\n\
+	bl	setcontext		\n\
+	mov	w0, #0xff		\n\
+1:					\n\
+	bl	cygwin_exit		\n\
+	brk	#0			\n\
+	.seh_endproc			\n\
+	");
+
 #else
 #error unimplemented for this target
 #endif
 
-/* makecontext is modelled after GLibc's makecontext.  The stack from uc_stack
-   is prepared so that it starts with a pointer to the linked context uc_link,
-   followed by the arguments to func, and finally at the bottom the "return"
-   address set to __cont_link_context.  In the ucp context, rbx/ebx is set to
-   point to the stack address where the pointer to uc_link is stored.  The
-   requirement to make this work is that rbx/ebx are callee-saved registers
-   per the ABI.  If any function is called which doesn't follow the ABI
-   conventions, e.g. assembler code, this method will break.  But that's ok. */
+/* makecontext is modelled after Glibc's makecontext.  The address of uc_link
+   is kept in the target's _MC_uclinkReg callee-saved register.  The target
+   function must preserve that register according to its ABI so that returning
+   through __cont_link_context can activate uc_link or exit. */
 extern "C" void
 makecontext (ucontext_t *ucp, void (*func) (void), int argc, ...)
 {
   extern void __cont_link_context (void);
+#ifdef __x86_64__
   uintptr_t *sp;
   va_list ap;
 
@@ -2194,7 +2241,6 @@ makecontext (ucontext_t *ucp, void (*func) (void), int argc, ...)
        providing pointer values to func without additional porting effort. */
   va_start (ap, argc);
   for (int i = 0; i < argc; ++i)
-#ifdef __x86_64__
     switch (i)
       {
       case 0:
@@ -2213,9 +2259,6 @@ makecontext (ucontext_t *ucp, void (*func) (void), int argc, ...)
 	sp[i + 1] = va_arg (ap, uintptr_t);
 	break;
       }
-#else
-#error unimplemented for this target
-#endif
   va_end (ap);
   /* Store pointer to uc_link at the top of the stack. */
   sp[argc + 1] = (uintptr_t) ucp->uc_link;
@@ -2228,4 +2271,35 @@ makecontext (ucontext_t *ucp, void (*func) (void), int argc, ...)
   ucp->uc_mcontext._MC_instPtr = (uint64_t) func;
   ucp->uc_mcontext._MC_stackPtr = (uint64_t) sp;
   ucp->uc_mcontext._MC_uclinkReg = (uint64_t) (sp + argc + 1);
+#elif defined(__aarch64__)
+  constexpr int register_arg_count = 8;
+  size_t stack_arg_count = argc > register_arg_count
+			   ? argc - register_arg_count : 0;
+  size_t stack_arg_size
+    = (stack_arg_count * sizeof (uintptr_t) + 15) & ~(size_t) 15;
+  uintptr_t stack_top
+    = ((uintptr_t) ucp->uc_stack.ss_sp + ucp->uc_stack.ss_size) & ~0xf;
+  uintptr_t *uclink = (uintptr_t *) (stack_top - 16);
+  uintptr_t *sp = (uintptr_t *) ((uintptr_t) uclink - stack_arg_size);
+  va_list ap;
+
+  *uclink = (uintptr_t) ucp->uc_link;
+  va_start (ap, argc);
+  for (int i = 0; i < argc; ++i)
+    {
+      uintptr_t arg = va_arg (ap, uintptr_t);
+      if (i < register_arg_count)
+	ucp->uc_mcontext.x[i] = arg;
+      else
+	sp[i - register_arg_count] = arg;
+    }
+  va_end (ap);
+
+  ucp->uc_mcontext._MC_instPtr = (uint64_t) func;
+  ucp->uc_mcontext._MC_stackPtr = (uint64_t) sp;
+  ucp->uc_mcontext._MC_uclinkReg = (uint64_t) uclink;
+  ucp->uc_mcontext.lr = (uint64_t) __cont_link_context;
+#else
+#error unimplemented for this target
+#endif
 }
