@@ -262,6 +262,54 @@ jobs:
             }
           ' aarch64-pthread-wrapper.dis
 
+      - name: Compile and inspect AArch64 dcrt0 stack switch
+        run: |
+          compiler="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-g++"
+          objdump="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-objdump"
+          nm="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-nm"
+          "$compiler" \
+            -std=gnu++17 \
+            -O2 \
+            -Wall \
+            -Werror \
+            -c \
+            "$GITHUB_WORKSPACE/.github/checks/aarch64-dcrt0-stack-switch.cc" \
+            -o aarch64-dcrt0-stack-switch.o
+          "$objdump" -dr aarch64-dcrt0-stack-switch.o \
+            | tee aarch64-dcrt0-stack-switch.dis
+          "$nm" -a aarch64-dcrt0-stack-switch.o \
+            | tee aarch64-dcrt0-stack-switch.symbols
+
+          grep -Eq \
+            '[[:space:]][Tt] check_dcrt0_stack_switch$' \
+            aarch64-dcrt0-stack-switch.symbols
+          grep -Eq \
+            '[[:space:]]mov[[:space:]]+x29, x[0-9]+' \
+            aarch64-dcrt0-stack-switch.dis
+          grep -Eq \
+            '[[:space:]]mov[[:space:]]+sp, x29' \
+            aarch64-dcrt0-stack-switch.dis
+          awk '
+            /mov[[:space:]]+x29, x[0-9]+/ { frame = NR }
+            /mov[[:space:]]+sp, x29/ { stack = NR }
+            END { exit !(frame && stack && frame < stack) }
+          ' aarch64-dcrt0-stack-switch.dis
+          if grep -Eq \
+              '[[:space:]]sub[[:space:]]+sp, sp, #0x20' \
+              aarch64-dcrt0-stack-switch.dis; then
+            exit 1
+          fi
+
+          grep -Fq '#elif defined(__aarch64__)' \
+            "$GITHUB_WORKSPACE/winsup/cygwin/dcrt0.cc"
+          grep -Fq 'mov fp, %[ADDR]' \
+            "$GITHUB_WORKSPACE/winsup/cygwin/dcrt0.cc"
+          grep -Fq 'mov sp, fp' \
+            "$GITHUB_WORKSPACE/winsup/cygwin/dcrt0.cc"
+          grep -Fq \
+            'return ((PBYTE) allocationbase + stacksize - 16);' \
+            "$GITHUB_WORKSPACE/winsup/cygwin/create_posix_thread.cc"
+
       - name: Compile AArch64 newlib assembly checks
         run: |
           compiler="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-gcc"
@@ -382,6 +430,9 @@ jobs:
           git show `
             37a88c50ccf3bf9afd962055cfcbb8255ae2cda6:winsup/cygwin/create_posix_thread.cc `
             > x86_64-create-posix-thread-base.cc
+          git show `
+            088c23f90d80451379d9a3b16b6598f9e6f10f45:winsup/cygwin/dcrt0.cc `
+            > x86_64-dcrt0-base.cc
 
       - name: setup-msys2
         uses: msys2/setup-msys2@v2
@@ -498,6 +549,39 @@ jobs:
           cp "$backup" "$source_file"
           touch "$source_file"
           make -C "$cygwin_build_dir" create_posix_thread.o
+          rm -f "$backup"
+          trap - EXIT
+
+      - name: Verify x86_64 dcrt0 startup is unchanged
+        shell: msys2 {0}
+        run: |
+          cygwin_build_dir="$(
+            dirname "$(
+              find . -path '*/winsup/cygwin/config.h' -print -quit
+            )"
+          )"
+          source_file="$PWD/winsup/cygwin/dcrt0.cc"
+          object="$cygwin_build_dir/dcrt0.o"
+          backup="$(mktemp)"
+          cp "$source_file" "$backup"
+          trap 'cp "$backup" "$source_file"; touch "$source_file"; rm -f "$backup"' EXIT
+
+          test -f "$object"
+          objdump -dr "$object" \
+            | sed '1,/Disassembly of section/d' \
+            > x86_64-dcrt0-current.dis
+
+          cp "$PWD/x86_64-dcrt0-base.cc" "$source_file"
+          touch "$source_file"
+          make -C "$cygwin_build_dir" dcrt0.o
+          objdump -dr "$object" \
+            | sed '1,/Disassembly of section/d' \
+            > x86_64-dcrt0-base.dis
+          cmp x86_64-dcrt0-base.dis x86_64-dcrt0-current.dis
+
+          cp "$backup" "$source_file"
+          touch "$source_file"
+          make -C "$cygwin_build_dir" dcrt0.o
           rm -f "$backup"
           trap - EXIT
 
