@@ -171,7 +171,6 @@ jobs:
 
       - name: Compile and inspect AArch64 POSIX thread startup
         run: |
-          set -x
           export PATH="$TOOLCHAIN_DIR/bin:$PATH"
           export CC=aarch64-pc-cygwin-gcc
           export CXX=aarch64-pc-cygwin-g++
@@ -234,10 +233,9 @@ jobs:
             /mov[[:space:]]+x0, x21/ { argument = NR }
             /blr[[:space:]]+x20/ { entered = NR }
             END {
-              exit !(saved && released && argument && entered
-                     && saved < released
-                     && released < argument
-                     && argument < entered)
+              exit !(saved && released && argument && entered &&
+                     saved < released && released < argument &&
+                     argument < entered)
             }
           ' aarch64-pthread-wrapper.dis
 
