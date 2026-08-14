@@ -310,6 +310,157 @@ jobs:
             'return ((PBYTE) allocationbase + stacksize - 16);' \
             "$GITHUB_WORKSPACE/winsup/cygwin/create_posix_thread.cc"
 
+      - name: Compile and inspect AArch64 signal and SEH paths
+        run: |
+          export PATH="$TOOLCHAIN_DIR/bin:$PATH"
+          export CC=aarch64-pc-cygwin-gcc
+          export CXX=aarch64-pc-cygwin-g++
+          make -C build-cygtls-lock/cygwin \
+            child_info_magic.h \
+            shared_info_magic.h \
+            globals.h
+
+          (
+            cd build-cygtls-lock/cygwin
+            CXXCOMPILE="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-g++ \
+              -DHAVE_CONFIG_H \
+              -I$GITHUB_WORKSPACE/build-cygtls-lock/cygwin \
+              -I$GITHUB_WORKSPACE/winsup/cygwin/local_includes \
+              -I$GITHUB_WORKSPACE/winsup/cygwin \
+              -isystem $GITHUB_WORKSPACE/winsup/cygwin/include \
+              -isystem $TOOLCHAIN_DIR/include \
+              -isystem $GITHUB_WORKSPACE/newlib/targ-include \
+              -isystem $GITHUB_WORKSPACE/newlib/libc/include \
+              -fno-rtti \
+              -fno-exceptions \
+              -fno-use-cxa-atexit" \
+              "$GITHUB_WORKSPACE/winsup/cygwin/scripts/gentls_offsets" \
+                "$GITHUB_WORKSPACE/winsup/cygwin/local_includes/cygtls.h" \
+                tlsoffsets || true
+            test -s tlsoffsets
+          )
+
+          build_dir=build-cygtls-lock/cygwin
+          compiler="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-gcc"
+          objdump="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-objdump"
+          nm="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-nm"
+          (
+            cd "$build_dir"
+            "$GITHUB_WORKSPACE/winsup/cygwin/scripts/gendef" \
+              --cpu=aarch64 \
+              --output-def=signal-check.def \
+              "$GITHUB_WORKSPACE/winsup/cygwin/cygwin.din"
+            test -s sigfe.s
+          )
+
+          # Three later ucontext/alternate-stack architecture gaps still stop
+          # the complete translation unit.  Replace only those deliberate
+          # guards in a temporary focused compile of the accepted SEH paths.
+          source="$GITHUB_WORKSPACE/winsup/cygwin/exceptions.cc"
+          backup="$(mktemp)"
+          cp "$source" "$backup"
+          trap 'cp "$backup" "$source"; touch "$source"; rm -f "$backup"' EXIT
+          test "$(grep -Fc '#error unimplemented for this target' "$source")" -eq 4
+          sed -i \
+            's/^#error unimplemented for this target$/__asm__ ("");/' \
+            "$source"
+          make -C "$build_dir" \
+            CXXFLAGS="-Wno-error=unused-function" \
+            exceptions.o
+          cp "$backup" "$source"
+          touch "$source"
+          rm -f "$backup"
+          trap - EXIT
+
+          (
+            cd "$build_dir"
+            "$compiler" -c sigfe.s -o aarch64-sigfe.o
+          )
+          exceptions="$build_dir/exceptions.o"
+          sigfe="$build_dir/aarch64-sigfe.o"
+          for object in "$exceptions" "$sigfe"; do
+            test -f "$object"
+          done
+
+          "$objdump" -h "$sigfe" | tee aarch64-sigfe.sections
+          "$objdump" -dr "$sigfe" | tee aarch64-sigfe.dis
+          "$objdump" -r "$sigfe" | tee aarch64-sigfe.relocs
+          "$nm" -a "$sigfe" | tee aarch64-sigfe.symbols
+          "$objdump" -r "$exceptions" | tee aarch64-exceptions.relocs
+          "$nm" -a "$exceptions" | tee aarch64-exceptions.symbols
+
+          for section in .pdata .xdata; do
+            grep -Fq "$section" aarch64-sigfe.sections
+          done
+          for symbol in \
+              _sigfe \
+              _sigfe_maybe \
+              _sigbe \
+              sigdelayed \
+              _sigdelayed_end \
+              stabilize_sig_stack \
+              setjmp \
+              sigsetjmp \
+              longjmp \
+              siglongjmp \
+              _sigfe_read; do
+            grep -Eq "[[:space:]][Tt] ${symbol}$" aarch64-sigfe.symbols
+          done
+
+          # The generated entry stub preserves every register clobbered before
+          # RtlCaptureContext and reserves an aligned ARM64 CONTEXT frame.
+          grep -Eq '[[:space:]]sub[[:space:]]+sp, sp, #0x390' \
+            aarch64-sigfe.dis
+          for pair in \
+              'x0, x30, \[sp, #-16\]!' \
+              'x16, x17, \[sp, #-16\]!'; do
+            grep -Eq "[[:space:]]stp[[:space:]]+${pair}" \
+              aarch64-sigfe.dis
+          done
+          grep -Fq 'RtlCaptureContext' aarch64-sigfe.relocs
+          grep -Fq 'sigdelayed_init' aarch64-sigfe.relocs
+
+          # setjmp/longjmp save and restore the complete nonvolatile integer
+          # and SIMD state while every temporary stack adjustment stays aligned.
+          for pair in \
+              'x19, x20' \
+              'x21, x22' \
+              'x23, x24' \
+              'x25, x26' \
+              'x27, x28' \
+              'x29, x30'; do
+            grep -Eq "[[:space:]]stp[[:space:]]+${pair}," \
+              aarch64-sigfe.dis
+            grep -Eq "[[:space:]]ldp[[:space:]]+${pair}," \
+              aarch64-sigfe.dis
+          done
+          for pair in \
+              'd8, d9' \
+              'd10, d11' \
+              'd12, d13' \
+              'd14, d15'; do
+            grep -Eq "[[:space:]]stp[[:space:]]+${pair}," \
+              aarch64-sigfe.dis
+            grep -Eq "[[:space:]]ldp[[:space:]]+${pair}," \
+              aarch64-sigfe.dis
+          done
+          if grep -Eq '[[:space:]](sub|add)[[:space:]]+sp, sp, #(0x)?[48]([[:space:]]|$)' \
+              aarch64-sigfe.dis; then
+            exit 1
+          fi
+
+          for relocation in \
+              RtlRestoreContext \
+              RtlUnwindEx; do
+            grep -Fq "$relocation" aarch64-exceptions.relocs
+          done
+          for symbol in \
+              sigdelayed_init \
+              _ZN9exception6handleEP17_EXCEPTION_RECORDPvP8_CONTEXTP25_DISPATCHER_CONTEXT_ARM64 \
+              _ZN9exception7myfaultEP17_EXCEPTION_RECORDPvP8_CONTEXTP25_DISPATCHER_CONTEXT_ARM64; do
+            grep -Fq "$symbol" aarch64-exceptions.symbols
+          done
+
       - name: Compile AArch64 newlib assembly checks
         run: |
           compiler="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-gcc"
@@ -450,6 +601,10 @@ jobs:
           git show `
             088c23f90d80451379d9a3b16b6598f9e6f10f45:winsup/cygwin/dcrt0.cc `
             > x86_64-dcrt0-base.cc
+          git show `
+            4705528ab7c32a921a08def1bb8414a31deb75f5:winsup/cygwin/scripts/gendef `
+            > x86_64-gendef-base
+          git show HEAD:winsup/cygwin/scripts/gendef > x86_64-gendef-current
 
       - name: setup-msys2
         uses: msys2/setup-msys2@v2
@@ -464,6 +619,28 @@ jobs:
           (cd winsup && ./autogen.sh)
           ./configure --disable-dependency-tracking --with-msys2-runtime-commit="$GITHUB_SHA"
           make -j8
+
+      - name: Verify x86_64 signal stubs are byte-for-byte unchanged
+        shell: msys2 {0}
+        run: |
+          work="$(mktemp -d)"
+          trap 'rm -rf "$work"' EXIT
+          mkdir "$work/base" "$work/current"
+
+          cp "$GITHUB_WORKSPACE/x86_64-gendef-base" "$work/base/gendef"
+          cp "$GITHUB_WORKSPACE/x86_64-gendef-current" "$work/current/gendef"
+          for version in base current; do
+            (
+              cd "$work/$version"
+              perl ./gendef \
+                --cpu=x86_64 \
+                --output-def=cygwin.def \
+                "$GITHUB_WORKSPACE/winsup/cygwin/cygwin.din"
+            )
+          done
+
+          cmp "$work/base/cygwin.def" "$work/current/cygwin.def"
+          cmp "$work/base/sigfe.s" "$work/current/sigfe.s"
 
       - name: Disassemble x86_64 cygtls lock
         shell: msys2 {0}
