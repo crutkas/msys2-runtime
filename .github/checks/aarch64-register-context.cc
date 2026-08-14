@@ -5,6 +5,7 @@
 #include <sys/select.h>
 #include <sys/_pthreadtypes.h>
 #include <time.h>
+#include <ucontext.h>
 #include <windows.h>
 #include <cygwin/signal.h>
 #include "exception.h"
@@ -38,6 +39,13 @@ static_assert (alignof (__mcontext) == alignof (CONTEXT));
 static_assert (offsetof (__mcontext, oldmask) == sizeof (CONTEXT));
 static_assert (sizeof (__mcontext) == sizeof (CONTEXT) + 16);
 static_assert (sizeof (CONTEXT) == 0x390);
+static_assert (sizeof (int) == 4);
+static_assert (sizeof (uintptr_t) == 8);
+static_assert (sizeof (void *) == 8);
+static_assert (sizeof (ucontext_t) == 0x3d0);
+static_assert (alignof (ucontext_t) == 16);
+static_assert (offsetof (__mcontext, x[19]) == offsetof (__mcontext, x19));
+static_assert (MINSIGSTKSZ == 8192);
 static_assert (std::is_same<PDISPATCHER_CONTEXT,
 			    PDISPATCHER_CONTEXT_ARM64>::value);
 

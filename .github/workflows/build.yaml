@@ -310,6 +310,19 @@ jobs:
             'return ((PBYTE) allocationbase + stacksize - 16);' \
             "$GITHUB_WORKSPACE/winsup/cygwin/create_posix_thread.cc"
 
+      - name: Run AArch64 ucontext ABI model
+        run: |
+          g++ \
+            -std=gnu++17 \
+            -O2 \
+            -Wall \
+            -Wextra \
+            -Werror \
+            -ffixed-x18 \
+            "$GITHUB_WORKSPACE/.github/checks/aarch64-ucontext-model.cc" \
+            -o aarch64-ucontext-model
+          ./aarch64-ucontext-model
+
       - name: Compile and inspect AArch64 signal and SEH paths
         run: |
           export PATH="$TOOLCHAIN_DIR/bin:$PATH"
@@ -353,24 +366,11 @@ jobs:
             test -s sigfe.s
           )
 
-          # Three later ucontext/alternate-stack architecture gaps still stop
-          # the complete translation unit.  Replace only those deliberate
-          # guards in a temporary focused compile of the accepted SEH paths.
           source="$GITHUB_WORKSPACE/winsup/cygwin/exceptions.cc"
-          backup="$(mktemp)"
-          cp "$source" "$backup"
-          trap 'cp "$backup" "$source"; touch "$source"; rm -f "$backup"' EXIT
           test "$(grep -Fc '#error unimplemented for this target' "$source")" -eq 4
-          sed -i \
-            's/^#error unimplemented for this target$/__asm__ ("");/' \
-            "$source"
           make -C "$build_dir" \
             CXXFLAGS="-Wno-error=unused-function" \
             exceptions.o
-          cp "$backup" "$source"
-          touch "$source"
-          rm -f "$backup"
-          trap - EXIT
 
           (
             cd "$build_dir"
@@ -386,6 +386,8 @@ jobs:
           "$objdump" -dr "$sigfe" | tee aarch64-sigfe.dis
           "$objdump" -r "$sigfe" | tee aarch64-sigfe.relocs
           "$nm" -a "$sigfe" | tee aarch64-sigfe.symbols
+          "$objdump" -h "$exceptions" | tee aarch64-exceptions.sections
+          "$objdump" -dr "$exceptions" | tee aarch64-exceptions.dis
           "$objdump" -r "$exceptions" | tee aarch64-exceptions.relocs
           "$nm" -a "$exceptions" | tee aarch64-exceptions.symbols
 
@@ -456,10 +458,63 @@ jobs:
           done
           for symbol in \
               sigdelayed_init \
+              __cont_link_context \
+              makecontext \
               _ZN9exception6handleEP17_EXCEPTION_RECORDPvP8_CONTEXTP25_DISPATCHER_CONTEXT_ARM64 \
               _ZN9exception7myfaultEP17_EXCEPTION_RECORDPvP8_CONTEXTP25_DISPATCHER_CONTEXT_ARM64; do
             grep -Fq "$symbol" aarch64-exceptions.symbols
           done
+
+          # The alternate-stack call reserves the context at the aligned stack
+          # top, switches through x19, and leaves the x18 TEB register alone.
+          grep -B2 -A6 -m1 -E \
+            'ldp[[:space:]]+x9, x0, \[x17\]' \
+            aarch64-exceptions.dis > aarch64-altstack-call.dis
+          test -s aarch64-altstack-call.dis
+          for instruction in \
+              'ldp[[:space:]]+x9, x0, \[x17\]' \
+              'ldp[[:space:]]+x1, x2, \[x17, #16\]' \
+              'ldp[[:space:]]+x3, x16, \[x17, #32\]' \
+              'mov[[:space:]]+sp, x9' \
+              'blr[[:space:]]+x16' \
+              'mov[[:space:]]+sp, x19'; do
+            grep -Eq "[[:space:]]${instruction}" aarch64-altstack-call.dis
+          done
+          if grep -Eq '(^|[^[:alnum:]_])x18([^[:alnum:]_]|$)' \
+              aarch64-altstack-call.dis; then
+            exit 1
+          fi
+
+          # A returned context function enters the terminal x19 trampoline.
+          # Its zero-prologue SEH record covers both setcontext and exit paths.
+          "$objdump" -dr --disassemble=__cont_link_context "$exceptions" \
+            > aarch64-cont-link.dis
+          test -s aarch64-cont-link.dis
+          for instruction in \
+              'mov[[:space:]]+sp, x19' \
+              'ldr[[:space:]]+x0, \[x19\]' \
+              'cbz[[:space:]]+x0' \
+              'mov[[:space:]]+w0, #0xff' \
+              'brk[[:space:]]+#(0x)?0'; do
+            grep -Eq "[[:space:]]${instruction}" aarch64-cont-link.dis
+          done
+          grep -Fq 'setcontext' aarch64-cont-link.dis
+          grep -Fq 'cygwin_exit' aarch64-cont-link.dis
+          grep -Fq '__cont_link_context' aarch64-exceptions.relocs
+          for section in .pdata .xdata; do
+            grep -Fq "$section" aarch64-exceptions.sections
+          done
+
+          # The real makecontext object retains 64-bit variadic loads, an
+          # eight-register boundary, aligned stack arguments, and LR setup.
+          "$objdump" -dr --disassemble=makecontext "$exceptions" \
+            > aarch64-makecontext.dis
+          test -s aarch64-makecontext.dis
+          grep -Eq '[[:space:]]cmp[[:space:]]+w[0-9]+, #0x7' \
+            aarch64-makecontext.dis
+          grep -Eq '[[:space:]]and[[:space:]]+x[0-9]+, x[0-9]+, #0xfffffffffffffff0' \
+            aarch64-makecontext.dis
+          grep -Fq '__cont_link_context' aarch64-makecontext.dis
 
       - name: Compile AArch64 newlib assembly checks
         run: |
@@ -604,6 +659,9 @@ jobs:
           git show `
             4705528ab7c32a921a08def1bb8414a31deb75f5:winsup/cygwin/scripts/gendef `
             > x86_64-gendef-base
+          git show `
+            6357de10efd55101cc1de06fb500eb24b09aa3dc:winsup/cygwin/exceptions.cc `
+            > x86_64-exceptions-base.cc
           git show HEAD:winsup/cygwin/scripts/gendef > x86_64-gendef-current
 
       - name: setup-msys2
@@ -641,6 +699,41 @@ jobs:
 
           cmp "$work/base/cygwin.def" "$work/current/cygwin.def"
           cmp "$work/base/sigfe.s" "$work/current/sigfe.s"
+
+      - name: Verify x86_64 exception code is unchanged
+        shell: msys2 {0}
+        run: |
+          cygwin_build_dir="$(
+            dirname "$(
+              find . -path '*/winsup/cygwin/config.h' -print -quit
+            )"
+          )"
+          source_file="$PWD/winsup/cygwin/exceptions.cc"
+          object="$cygwin_build_dir/exceptions.o"
+          backup="$(mktemp)"
+          cp "$source_file" "$backup"
+          trap 'cp "$backup" "$source_file"; touch "$source_file"; rm -f "$backup"' EXIT
+
+          test -f "$object"
+          objdump -dr "$object" \
+            | sed '1,/Disassembly of section/d' \
+            | sed -E '/c7 44 24 28/{ s/(c7 44 24 28) [0-9a-f]{2} [0-9a-f]{2} [0-9a-f]{2}/\1 XX XX XX/; s/[$]0x[0-9a-f]+/LINE/; }' \
+            > x86_64-exceptions-current.dis
+
+          cp "$PWD/x86_64-exceptions-base.cc" "$source_file"
+          touch "$source_file"
+          make -C "$cygwin_build_dir" exceptions.o
+          objdump -dr "$object" \
+            | sed '1,/Disassembly of section/d' \
+            | sed -E '/c7 44 24 28/{ s/(c7 44 24 28) [0-9a-f]{2} [0-9a-f]{2} [0-9a-f]{2}/\1 XX XX XX/; s/[$]0x[0-9a-f]+/LINE/; }' \
+            > x86_64-exceptions-base.dis
+          cmp x86_64-exceptions-base.dis x86_64-exceptions-current.dis
+
+          cp "$backup" "$source_file"
+          touch "$source_file"
+          make -C "$cygwin_build_dir" exceptions.o
+          rm -f "$backup"
+          trap - EXIT
 
       - name: Disassemble x86_64 cygtls lock
         shell: msys2 {0}
