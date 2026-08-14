@@ -107,3 +107,4 @@ then
   rm "${output_file}"
   exit 1
 fi
+exit 0
