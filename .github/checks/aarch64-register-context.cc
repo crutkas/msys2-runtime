@@ -1,11 +1,13 @@
 #include <stddef.h>
 #include <stdint.h>
+#include <type_traits>
 #include <sys/types.h>
 #include <sys/select.h>
 #include <sys/_pthreadtypes.h>
 #include <time.h>
 #include <windows.h>
 #include <cygwin/signal.h>
+#include "exception.h"
 #include "register.h"
 
 #if !defined(__aarch64__)
@@ -35,6 +37,9 @@ CHECK_CONTEXT_OFFSET (wvr, Wvr);
 static_assert (alignof (__mcontext) == alignof (CONTEXT));
 static_assert (offsetof (__mcontext, oldmask) == sizeof (CONTEXT));
 static_assert (sizeof (__mcontext) == sizeof (CONTEXT) + 16);
+static_assert (sizeof (CONTEXT) == 0x390);
+static_assert (std::is_same<PDISPATCHER_CONTEXT,
+			    PDISPATCHER_CONTEXT_ARM64>::value);
 
 void
 check_register_aliases (CONTEXT &context, __mcontext &mcontext)
