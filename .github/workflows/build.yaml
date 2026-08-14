@@ -739,6 +739,64 @@ jobs:
             aarch64-malloc-alignment.o \
             | grep 'checked_.*_alignment'
 
+  aarch64-linker-script:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: setup-msys2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MSYS
+          update: true
+          install: base-devel gcc git gmp isl libiconv libintl libzstd mpc mpfr zlib
+
+      - name: Install fork-local AArch64 probe toolchain
+        shell: msys2 {0}
+        run: |
+          release_url="https://github.com/crutkas/msys2-runtime/releases/download/aarch64-linker-probe-toolchain-20260814"
+          packages=(
+            mingw-w64-cross-cygwinarm64-binutils-2.44.50-1-x86_64.pkg.tar.zst
+            mingw-w64-cross-cygwinarm64-gcc-stage1-15.0.1dev-1-x86_64.pkg.tar.zst
+            mingw-w64-cross-cygwinarm64-headers-3.6.10.r0.gee50e0223-1-x86_64.pkg.tar.zst
+            mingw-w64-cross-cygwinarm64-sysroot-3.6.10.r0.gee50e0223-1-x86_64.pkg.tar.zst
+            mingw-w64-cross-cygwinarm64-w32api-runtime-14.0.0.r0.g9b3dd0125-1-x86_64.pkg.tar.zst
+            mingw-w64-cross-cygwinarm64-windows-default-manifest-3.6.10.r0.gee50e0223-1-x86_64.pkg.tar.zst
+          )
+          for package in "${packages[@]}"; do
+            curl --fail --location --retry 3 \
+              --remote-name "$release_url/$package"
+          done
+
+          printf '%s\n' \
+            '8908cb690952788153b60bc4fb659826bbd8a03a26c1073f76c0be7ed6f97518  mingw-w64-cross-cygwinarm64-binutils-2.44.50-1-x86_64.pkg.tar.zst' \
+            'f6260f3190fd602a5311c0c4cc47381405e96d9d049a679589f0b5c7be25fffe  mingw-w64-cross-cygwinarm64-gcc-stage1-15.0.1dev-1-x86_64.pkg.tar.zst' \
+            '5266346cc10b142f871704ce4277699b1a5daa3121dc869990b4bedce69c0611  mingw-w64-cross-cygwinarm64-headers-3.6.10.r0.gee50e0223-1-x86_64.pkg.tar.zst' \
+            '4ed8a30f592317bf7e4def6f3c773139f2565b0f8afaedd820f7ee46d33cad20  mingw-w64-cross-cygwinarm64-sysroot-3.6.10.r0.gee50e0223-1-x86_64.pkg.tar.zst' \
+            '53478f9a60e2fdad7d3b4357fa4fb937a1afab16af16a55e5a25ae9fac308fa7  mingw-w64-cross-cygwinarm64-w32api-runtime-14.0.0.r0.g9b3dd0125-1-x86_64.pkg.tar.zst' \
+            'cc089511fede6042a25f83fcb5903fddeede89ddd9655360741513ee9015e3dc  mingw-w64-cross-cygwinarm64-windows-default-manifest-3.6.10.r0.gee50e0223-1-x86_64.pkg.tar.zst' \
+            > aarch64-linker-probe-SHA256SUMS
+          sha256sum --check aarch64-linker-probe-SHA256SUMS
+          pacman --noconfirm -U "${packages[@]}"
+
+      - name: Validate AArch64 linker script and PE image
+        shell: msys2 {0}
+        run: |
+          export PATH="/opt/bin:$PATH"
+          ./.github/checks/validate-aarch64-linker-script.sh \
+            aarch64-linker-validation
+
+      - name: Upload AArch64 linker validation
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: aarch64-linker-validation
+          path: aarch64-linker-validation/
+
   configure-winsup:
     runs-on: ubuntu-latest
     strategy:
@@ -767,6 +825,29 @@ jobs:
             --target=${{ matrix.target }} \
             --with-cross-bootstrap \
             --disable-doc
+
+          case "${{ matrix.target }}" in
+            aarch64-*)
+              cppflags="-D__aarch64__ -U__x86_64__"
+              format=pei-aarch64-little
+              ;;
+            x86_64-*)
+              cppflags="-D__x86_64__ -U__aarch64__"
+              format=pei-x86-64
+              ;;
+          esac
+
+          make -C cygwin cygwin.sc CC="gcc $cppflags -U__MSYS__"
+          mv cygwin/cygwin.sc cygwin/cygwin-cygwin.sc
+          make -C cygwin cygwin.sc CC="gcc $cppflags -D__MSYS__"
+          mv cygwin/cygwin.sc cygwin/cygwin-msys.sc
+
+          cmp cygwin/cygwin-cygwin.sc cygwin/cygwin-msys.sc
+          grep -Fxq "OUTPUT_FORMAT($format)" cygwin/cygwin-cygwin.sc
+          test "$(
+            grep -Fxc 'SEARCH_DIR("=/usr/lib/w32api")' \
+              cygwin/cygwin-cygwin.sc
+          )" -eq 1
 
   build:
     runs-on: windows-latest

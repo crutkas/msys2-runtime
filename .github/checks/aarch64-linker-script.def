@@ -1,0 +1,3 @@
+LIBRARY "aarch64-linker-probe.dll"
+EXPORTS
+    probe_entry
