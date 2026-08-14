@@ -197,8 +197,9 @@ jobs:
             grep -Fq "$section" aarch64-posix-thread.sections
           done
 
-          sed -n '/<pthread_wrapper>:/,/^$/p' \
+          sed -n '/<pthread_wrapper>:/,/<create_new_main_thread_stack>:/p' \
             aarch64-posix-thread.dis \
+            | sed '$d' \
             > aarch64-pthread-wrapper.dis
           test -s aarch64-pthread-wrapper.dis
 
@@ -241,8 +242,10 @@ jobs:
 
           # TEB-backed TLS initialization precedes the stack switch.  The
           # common allocator path retains guard/reservation and cleanup calls.
+          grep -Eq '[[:space:]]mov[[:space:]]+x0, x18' \
+            aarch64-pthread-wrapper.dis
           grep -Eq '\[x18, #8\]' aarch64-pthread-wrapper.dis
-          grep -Eq '\[x18, #16\]' aarch64-pthread-wrapper.dis
+          grep -Eq '\[x0, #16\]' aarch64-pthread-wrapper.dis
           for relocation in \
               CreateThread \
               VirtualAlloc \
