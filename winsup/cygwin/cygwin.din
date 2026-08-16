@@ -1,6 +1,3 @@
-LIBRARY "msys-2.0.dll" BASE=0x180040000
-
-EXPORTS
 # Exported variables
 __argc DATA
 __argv DATA
@@ -12,10 +9,8 @@ __progname DATA
 __rcmd_errstr DATA
 __stack_chk_guard DATA
 _check_for_executable DATA
-_ctype_ DATA
 _daylight DATA
 _fe_dfl_env DATA
-_fe_nomask_env DATA
 _impure_ptr DATA
 _sys_errlist DATA
 _sys_nerr DATA
@@ -135,7 +130,6 @@ __xdrrec_getrec SIGFE
 __xdrrec_setnonblock SIGFE
 __xpg_sigpause SIGFE
 __xpg_strerror_r SIGFE
-_alloca = __alloca NOSIGFE
 _dll_crt0 NOSIGFE
 _Exit SIGFE
 _exit SIGFE
@@ -527,12 +521,8 @@ fdiml NOSIGFE
 fdopen SIGFE
 fdopendir SIGFE
 feclearexcept NOSIGFE
-fedisableexcept NOSIGFE
-feenableexcept SIGFE
 fegetenv NOSIGFE
-fegetexcept NOSIGFE
 fegetexceptflag NOSIGFE
-fegetprec NOSIGFE
 fegetround NOSIGFE
 feholdexcept SIGFE
 feof SIGFE
@@ -542,7 +532,6 @@ ferror SIGFE
 ferror_unlocked SIGFE
 fesetenv SIGFE
 fesetexceptflag SIGFE
-fesetprec NOSIGFE
 fesetround NOSIGFE
 fetestexcept NOSIGFE
 feupdateenv SIGFE

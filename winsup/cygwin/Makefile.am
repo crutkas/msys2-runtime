@@ -604,10 +604,15 @@ LDSCRIPT=cygwin.sc
 $(LDSCRIPT): $(LDSCRIPT).in
 	$(AM_V_GEN)$(CC) -E - -P < $^ -o $@
 
+if TARGET_AARCH64
+DEFAULT_MANIFEST=$(shell $(CC) -print-file-name=default-manifest.o)
+endif
+
 # msys-2.0 dll
 # Set PE and export table header timestamps to zero for reproducible builds.
 $(NEW_DLL_NAME): $(LDSCRIPT) libdll.a $(VERSION_OFILES) $(LIBSERVER)\
-		  $(newlib_build)/libm.a $(newlib_build)/libc.a
+		  $(newlib_build)/libm.a $(newlib_build)/libc.a \
+		  $(DEFAULT_MANIFEST)
 	$(AM_V_CXXLD)$(CXX) $(CXXFLAGS) \
 	-mno-use-libstdc-wrappers \
 	-Wl,--gc-sections -nostdlib -Wl,-T$(LDSCRIPT) -static \
@@ -619,6 +624,7 @@ $(NEW_DLL_NAME): $(LDSCRIPT) libdll.a $(VERSION_OFILES) $(LIBSERVER)\
 	$(LIBSERVER) \
 	$(newlib_build)/libm.a \
 	$(newlib_build)/libc.a \
+	$(DEFAULT_MANIFEST) \
 	-lgcc -lkernel32 -lntdll -Wl,-Map,msys.map
 	@$(MKDIR_P) ${target_builddir}/winsup/testsuite/testinst/bin/
 	$(AM_V_at)$(INSTALL_PROGRAM) $(NEW_DLL_NAME) ${target_builddir}/winsup/testsuite/testinst/bin/$(DLL_NAME)
@@ -626,8 +632,12 @@ $(NEW_DLL_NAME): $(LDSCRIPT) libdll.a $(VERSION_OFILES) $(LIBSERVER)\
 # msys-2.0 import library
 toolopts=--cpu=@target_cpu@ --ar=@AR@ --as=@AS@ --nm=@NM@ --objcopy=@OBJCOPY@
 
-$(DEF_FILE): scripts/gendef cygwin.din
-	$(AM_V_GEN)$(srcdir)/scripts/gendef --cpu=@target_cpu@ --output-def=$(DEF_FILE) $(srcdir)/cygwin.din
+# Architecture-specific .din files
+ARCH_DIN = $(srcdir)/@target_cpu@/cygwin.din
+
+$(DEF_FILE): scripts/gendef cygwin.din $(wildcard $(ARCH_DIN))
+	$(AM_V_GEN)$(srcdir)/scripts/gendef --cpu=@target_cpu@ --output-def=$(DEF_FILE) \
+	  $(wildcard $(ARCH_DIN)) $(srcdir)/cygwin.din
 
 sigfe.s: $(DEF_FILE) tlsoffsets
 	@[ -s $@ ] || \
