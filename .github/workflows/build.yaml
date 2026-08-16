@@ -753,35 +753,65 @@ jobs:
         with:
           msystem: MSYS
           update: true
-          install: base-devel gcc git gmp isl libiconv libintl libzstd mpc mpfr zlib
+          install: base-devel cocom gcc git gmp isl libiconv libintl libzstd mpc mpfr zlib
 
-      - name: Install fork-local AArch64 probe toolchain
+      - name: Install fork-local AArch64 runtime toolchain
         shell: msys2 {0}
         run: |
-          release_url="https://github.com/crutkas/msys2-runtime/releases/download/aarch64-linker-probe-toolchain-20260814"
-          packages=(
-            mingw-w64-cross-cygwinarm64-binutils-2.44.50-1-x86_64.pkg.tar.zst
-            mingw-w64-cross-cygwinarm64-gcc-stage1-15.0.1dev-1-x86_64.pkg.tar.zst
-            mingw-w64-cross-cygwinarm64-headers-3.6.10.r0.gee50e0223-1-x86_64.pkg.tar.zst
-            mingw-w64-cross-cygwinarm64-sysroot-3.6.10.r0.gee50e0223-1-x86_64.pkg.tar.zst
-            mingw-w64-cross-cygwinarm64-w32api-runtime-14.0.0.r0.g9b3dd0125-1-x86_64.pkg.tar.zst
-            mingw-w64-cross-cygwinarm64-windows-default-manifest-3.6.10.r0.gee50e0223-1-x86_64.pkg.tar.zst
-          )
-          for package in "${packages[@]}"; do
+          probe_release="https://github.com/crutkas/msys2-runtime/releases/download/aarch64-linker-probe-toolchain-20260814"
+          package_release="https://github.com/crutkas/MSYS2-packages/releases/download"
+          static_release="$package_release/cygwinarm64-gcc-static-runtime-20260815"
+          sysroot_release="$package_release/cygwinarm64-sysroot-pr3-20260813"
+          w32api_release="$package_release/cygwinarm64-w32api-20260813"
+          libstdcxx_release="$package_release/cygwinarm64-libstdcxx-headers-pr7-20260815"
+
+          download()
+          {
             curl --fail --location --retry 3 \
-              --remote-name "$release_url/$package"
-          done
+              --remote-name "$1/$2"
+          }
+
+          binutils=mingw-w64-cross-cygwinarm64-binutils-2.44.50-1-x86_64.pkg.tar.zst
+          headers=mingw-w64-cross-cygwinarm64-headers-3.6.10.r0.gee50e0223-1-x86_64.pkg.tar.zst
+          manifest=mingw-w64-cross-cygwinarm64-windows-default-manifest-3.6.10.r0.gee50e0223-1-x86_64.pkg.tar.zst
+          w32api=mingw-w64-cross-cygwinarm64-w32api-runtime-14.0.0.r0.g9b3dd0125-1-x86_64.pkg.tar.zst
+          sysroot=mingw-w64-cross-cygwinarm64-sysroot-3.6.10.r0.gee50e0223-1-x86_64.pkg.tar.zst
+          gcc_stage0=mingw-w64-cross-cygwinarm64-gcc-stage1-15.0.1dev-1-x86_64.pkg.tar.zst
+          libstdcxx=mingw-w64-cross-cygwinarm64-libstdc++-headers-15.0.1dev-1-x86_64.pkg.tar.zst
+          gcc_libs=mingw-w64-cross-cygwinarm64-gcc-libs-stage1-15.0.1dev-2-x86_64.pkg.tar.zst
+          gcc=mingw-w64-cross-cygwinarm64-gcc-stage1-15.0.1dev-2-x86_64.pkg.tar.zst
+
+          download "$static_release" "$binutils"
+          download "$sysroot_release" "$headers"
+          download "$sysroot_release" "$manifest"
+          download "$w32api_release" "$w32api"
+          download "$sysroot_release" "$sysroot"
+          download "$probe_release" "$gcc_stage0"
+          download "$libstdcxx_release" "$libstdcxx"
+          download "$static_release" "$gcc_libs"
+          download "$static_release" "$gcc"
 
           printf '%s\n' \
-            '8908cb690952788153b60bc4fb659826bbd8a03a26c1073f76c0be7ed6f97518  mingw-w64-cross-cygwinarm64-binutils-2.44.50-1-x86_64.pkg.tar.zst' \
-            'f6260f3190fd602a5311c0c4cc47381405e96d9d049a679589f0b5c7be25fffe  mingw-w64-cross-cygwinarm64-gcc-stage1-15.0.1dev-1-x86_64.pkg.tar.zst' \
-            '5266346cc10b142f871704ce4277699b1a5daa3121dc869990b4bedce69c0611  mingw-w64-cross-cygwinarm64-headers-3.6.10.r0.gee50e0223-1-x86_64.pkg.tar.zst' \
-            '4ed8a30f592317bf7e4def6f3c773139f2565b0f8afaedd820f7ee46d33cad20  mingw-w64-cross-cygwinarm64-sysroot-3.6.10.r0.gee50e0223-1-x86_64.pkg.tar.zst' \
-            '53478f9a60e2fdad7d3b4357fa4fb937a1afab16af16a55e5a25ae9fac308fa7  mingw-w64-cross-cygwinarm64-w32api-runtime-14.0.0.r0.g9b3dd0125-1-x86_64.pkg.tar.zst' \
-            'cc089511fede6042a25f83fcb5903fddeede89ddd9655360741513ee9015e3dc  mingw-w64-cross-cygwinarm64-windows-default-manifest-3.6.10.r0.gee50e0223-1-x86_64.pkg.tar.zst' \
-            > aarch64-linker-probe-SHA256SUMS
-          sha256sum --check aarch64-linker-probe-SHA256SUMS
-          pacman --noconfirm -U "${packages[@]}"
+            "8908cb690952788153b60bc4fb659826bbd8a03a26c1073f76c0be7ed6f97518  $binutils" \
+            "5266346cc10b142f871704ce4277699b1a5daa3121dc869990b4bedce69c0611  $headers" \
+            "cc089511fede6042a25f83fcb5903fddeede89ddd9655360741513ee9015e3dc  $manifest" \
+            "53478f9a60e2fdad7d3b4357fa4fb937a1afab16af16a55e5a25ae9fac308fa7  $w32api" \
+            "4ed8a30f592317bf7e4def6f3c773139f2565b0f8afaedd820f7ee46d33cad20  $sysroot" \
+            "f6260f3190fd602a5311c0c4cc47381405e96d9d049a679589f0b5c7be25fffe  $gcc_stage0" \
+            "1e018d384e5e16b76524b69677819b660e6611480a85a7f7b8a412403bf15ea6  $libstdcxx" \
+            "17a8fbc22227c541ff3179179d307045302f6b18fbc6207cf9d863a9e4dad98c  $gcc_libs" \
+            "063579211851ed69370a6362f2795e39d9be0235a2bfe2f58da1bbd73a1d108e  $gcc" \
+            > aarch64-runtime-SHA256SUMS
+          sha256sum --check aarch64-runtime-SHA256SUMS
+
+          pacman --noconfirm -U "$binutils"
+          pacman --noconfirm -U "$headers"
+          pacman --noconfirm -U "$manifest"
+          pacman --noconfirm -U "$w32api"
+          pacman --noconfirm -U "$sysroot"
+          pacman --noconfirm -U "$gcc_stage0"
+          pacman --noconfirm -U "$libstdcxx"
+          pacman --noconfirm -U "$gcc_libs" "$gcc"
 
       - name: Validate AArch64 linker script and PE image
         shell: msys2 {0}
@@ -790,12 +820,118 @@ jobs:
           ./.github/checks/validate-aarch64-linker-script.sh \
             aarch64-linker-validation
 
-      - name: Upload AArch64 linker validation
+      - name: Build and validate AArch64 MSYS runtime
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          export PATH="/opt/bin:$PATH"
+          export SOURCE_DATE_EPOCH="$(git show -s --format=%ct HEAD)"
+          export ac_cv_lib_sframe_sframe_decode=no
+          export ac_cv_lib_zstd_ZSTD_isError=no
+
+          (cd winsup && ./autogen.sh)
+          mkdir build-aarch64-runtime
+          (
+            cd build-aarch64-runtime
+            ../configure \
+              --target=aarch64-pc-cygwin \
+              --prefix="$PWD/install" \
+              --with-cross-bootstrap \
+              --disable-doc \
+              CFLAGS_FOR_TARGET="-O2 -g -D__MSYS__" \
+              CXXFLAGS_FOR_TARGET="-O2 -g -D__MSYS__"
+          )
+          make -C build-aarch64-runtime -j"$(nproc)" all-target-newlib
+          make -C build-aarch64-runtime configure-target-winsup
+          make -C build-aarch64-runtime/aarch64-pc-cygwin/winsup/cygwin \
+            -j"$(nproc)"
+
+          cygwin_build="$PWD/build-aarch64-runtime/aarch64-pc-cygwin/winsup/cygwin"
+          gccdir="$(aarch64-pc-cygwin-gcc -print-file-name=libgcc.a)"
+          gccdir="$(dirname "$gccdir")"
+          aarch64-pc-cygwin-gcc \
+            -D__MSYS__ \
+            -O2 \
+            -g \
+            -Wall \
+            -Werror \
+            -c .github/checks/aarch64-runtime-smoke.c \
+            -o "$cygwin_build/aarch64-runtime-smoke.o"
+          aarch64-pc-cygwin-gcc \
+            -nostdlib \
+            -Wl,--no-insert-timestamp \
+            -Wl,--subsystem,console \
+            -Wl,-e,mainCRTStartup \
+            -o "$cygwin_build/aarch64-runtime-smoke.exe" \
+            "$cygwin_build/crt0.o" \
+            "$gccdir/crtbegin.o" \
+            "$cygwin_build/aarch64-runtime-smoke.o" \
+            -L"$cygwin_build" \
+            -Wl,--start-group \
+            -lmsys-2.0 \
+            -lgcc \
+            -Wl,--end-group \
+            "$gccdir/crtend.o" \
+            /opt/aarch64-pc-cygwin/lib/default-manifest.o \
+            -lkernel32 \
+            -lntdll
+
+          cp "$cygwin_build/new-msys-2.0.dll" \
+            "$cygwin_build/new-msys-2.0.first.dll"
+          cp "$cygwin_build/libmsys-2.0.a" \
+            "$cygwin_build/libmsys-2.0.first.a"
+          rm "$cygwin_build/new-msys-2.0.dll" \
+            "$cygwin_build/msysdll.a" \
+            "$cygwin_build/libmsys-2.0.a"
+          make -C "$cygwin_build" -j"$(nproc)"
+          cmp "$cygwin_build/new-msys-2.0.first.dll" \
+            "$cygwin_build/new-msys-2.0.dll"
+          cmp "$cygwin_build/libmsys-2.0.first.a" \
+            "$cygwin_build/libmsys-2.0.a"
+
+          ./.github/checks/validate-aarch64-runtime.sh \
+            build-aarch64-runtime \
+            aarch64-runtime-validation
+          cp "$cygwin_build/new-msys-2.0.dll" \
+            aarch64-runtime-validation/msys-2.0.dll
+          cp "$cygwin_build/libmsys-2.0.a" \
+            aarch64-runtime-validation/libmsys-2.0.a
+          cp "$cygwin_build/aarch64-runtime-smoke.exe" \
+            aarch64-runtime-validation/
+
+      - name: Upload AArch64 runtime validation
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: aarch64-linker-validation
-          path: aarch64-linker-validation/
+          name: aarch64-runtime-validation
+          path: |
+            aarch64-linker-validation/
+            aarch64-runtime-validation/
+
+  aarch64-runtime-smoke:
+    needs: aarch64-linker-script
+    runs-on: windows-11-arm
+
+    steps:
+      - name: Download AArch64 runtime
+        uses: actions/download-artifact@v8
+        with:
+          name: aarch64-runtime-validation
+          path: aarch64-runtime-validation
+
+      - name: Run AArch64 runtime startup smoke test
+        shell: pwsh
+        run: |
+          if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture -ne
+              [System.Runtime.InteropServices.Architecture]::Arm64) {
+            throw "A native Windows ARM64 runner is required"
+          }
+          $runtime = (Resolve-Path `
+            aarch64-runtime-validation/aarch64-runtime-validation).Path
+          & (Join-Path $runtime "aarch64-runtime-smoke.exe")
+          if ($LASTEXITCODE -ne 0) {
+            throw "AArch64 runtime smoke test failed with exit code $LASTEXITCODE"
+          }
 
   configure-winsup:
     runs-on: ubuntu-latest
