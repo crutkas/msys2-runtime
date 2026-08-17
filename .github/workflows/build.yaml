@@ -862,6 +862,36 @@ jobs:
     runs-on: windows-11-arm
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: setup-msys2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: CLANGARM64
+          update: true
+          install: mingw-w64-clang-aarch64-clang
+
+      - name: Verify and run native AArch64 endian runtime
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = aarch64
+          clang -dumpmachine | grep -Eq '^aarch64-'
+          clang -dM -E -x c /dev/null | grep -Eq '__aarch64__'
+          clang \
+            -std=gnu11 \
+            -O2 \
+            -Wall \
+            -Wextra \
+            -Werror \
+            -isystem "$GITHUB_WORKSPACE/winsup/cygwin/include" \
+            -isystem "$GITHUB_WORKSPACE/newlib/targ-include" \
+            -isystem "$GITHUB_WORKSPACE/newlib/libc/include" \
+            "$GITHUB_WORKSPACE/.github/checks/aarch64-endian-runtime.c" \
+            -o aarch64-endian-runtime.exe
+          ./aarch64-endian-runtime.exe
+
       - name: Download AArch64 runtime
         shell: pwsh
         env:
