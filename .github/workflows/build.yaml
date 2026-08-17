@@ -90,18 +90,23 @@ jobs:
             exit 1
           fi
 
-          gcc \
+          compiler="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-gcc"
+          "$compiler" \
             -std=gnu11 \
             -O2 \
             -Wall \
             -Wextra \
             -Werror \
-            -I"$GITHUB_WORKSPACE/winsup/cygwin/include" \
-            -I"$GITHUB_WORKSPACE/newlib/libc/include" \
+            -isystem "$GITHUB_WORKSPACE/winsup/cygwin/include" \
+            -isystem "$GITHUB_WORKSPACE/newlib/targ-include" \
+            -isystem "$GITHUB_WORKSPACE/newlib/libc/include" \
+            -isystem "$TOOLCHAIN_DIR/include" \
+            -c \
             "$GITHUB_WORKSPACE/.github/checks/aarch64-endian-runtime.c" \
-            -o aarch64-endian-runtime
-          ./aarch64-endian-runtime
+            -o aarch64-endian-runtime.o
 
+          "$objdump" -dr aarch64-endian-runtime.o \
+            | tee aarch64-endian-runtime.dis
       - name: Compile and disassemble AArch64 cygtls lock
         run: |
           export PATH="$TOOLCHAIN_DIR/bin:$PATH"
@@ -751,7 +756,7 @@ jobs:
         with:
           msystem: MSYS
           update: true
-          install: base-devel cocom gcc git gmp isl libiconv libintl libzstd mpc mpfr zlib
+          install: base-devel cocom gcc git gmp isl libiconv libintl libzstd mpc mpfr automake zlib
 
       - name: Install fork-local AArch64 runtime toolchain
         shell: msys2 {0}
