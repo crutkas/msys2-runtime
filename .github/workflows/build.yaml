@@ -23,7 +23,7 @@ jobs:
         with:
           msystem: MSYS
           update: true
-          install: base-devel cocom gcc git gmp isl libiconv libintl libzstd mpc mpfr zlib
+          install: base-devel cocom gcc git gmp isl libiconv libintl libzstd mpc mpfr autotools zlib
 
       - name: Install fork-local AArch64 runtime toolchain
         run: ./.github/checks/install-aarch64-runtime-toolchain.sh
@@ -756,7 +756,7 @@ jobs:
         with:
           msystem: MSYS
           update: true
-          install: base-devel cocom gcc git gmp isl libiconv libintl libzstd mpc mpfr automake zlib
+          install: base-devel cocom gcc git gmp isl libiconv libintl libzstd mpc mpfr autotools zlib
 
       - name: Install fork-local AArch64 runtime toolchain
         shell: msys2 {0}
