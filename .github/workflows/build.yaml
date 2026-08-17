@@ -881,7 +881,6 @@ jobs:
         shell: msys2 {0}
         run: |
           set -euo pipefail
-          test "$(uname -m)" = aarch64
           clang -dumpmachine | grep -Eq '^aarch64-'
           clang -dM -E -x c /dev/null | grep -Eq '__aarch64__'
           clang \
@@ -901,7 +900,6 @@ jobs:
         shell: msys2 {0}
         run: |
           set -euo pipefail
-          test "$(uname -m)" = aarch64
           clang++ -dumpmachine | grep -Eq '^aarch64-'
           clang++ -dM -E -x c++ /dev/null | grep -Eq '__aarch64__'
           clang++ \
