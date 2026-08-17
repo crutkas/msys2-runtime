@@ -387,18 +387,37 @@ jobs:
             'return ((PBYTE) allocationbase + stacksize - 16);' \
             "$GITHUB_WORKSPACE/winsup/cygwin/create_posix_thread.cc"
 
-      - name: Run AArch64 ucontext ABI model
+      - name: Compile and inspect AArch64 ucontext ABI model
         run: |
-          g++ \
+          compiler="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-g++"
+          objdump="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-objdump"
+          nm="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-nm"
+          "$compiler" \
             -std=gnu++17 \
             -O2 \
             -Wall \
             -Wextra \
             -Werror \
             -ffixed-x18 \
+            -c \
             "$GITHUB_WORKSPACE/.github/checks/aarch64-ucontext-model.cc" \
-            -o aarch64-ucontext-model
-          ./aarch64-ucontext-model
+            -o aarch64-ucontext-model.o
+          "$objdump" -f aarch64-ucontext-model.o | tee aarch64-ucontext-model.format
+          "$objdump" -dr aarch64-ucontext-model.o | tee aarch64-ucontext-model.dis
+          "$nm" -a aarch64-ucontext-model.o | tee aarch64-ucontext-model.symbols
+
+          grep -Fq 'file format pe-aarch64-little' aarch64-ucontext-model.format
+          grep -Eq '[[:space:]][Tt] (main|probe_altstack|run_on_altstack)$' \
+            aarch64-ucontext-model.symbols
+          grep -Eq '[[:space:]]mov[[:space:]]+x0, x18' aarch64-ucontext-model.dis
+          grep -Eq '[[:space:]]mov[[:space:]]+x17, x[0-9]+' aarch64-ucontext-model.dis
+          grep -Eq '[[:space:]]ldp[[:space:]]+x9, x0, \[x17\]' \
+            aarch64-ucontext-model.dis
+          grep -Eq '[[:space:]]ldr[[:space:]]+x16, \[x17, #16\]' \
+            aarch64-ucontext-model.dis
+          grep -Eq '[[:space:]]mov[[:space:]]+sp, x9' aarch64-ucontext-model.dis
+          grep -Eq '[[:space:]]blr[[:space:]]+x16' aarch64-ucontext-model.dis
+          grep -Eq '[[:space:]]mov[[:space:]]+sp, x19' aarch64-ucontext-model.dis
 
       - name: Compile and inspect AArch64 signal and SEH paths
         run: |
@@ -891,6 +910,24 @@ jobs:
             "$GITHUB_WORKSPACE/.github/checks/aarch64-endian-runtime.c" \
             -o aarch64-endian-runtime.exe
           ./aarch64-endian-runtime.exe
+
+      - name: Verify and run native AArch64 ucontext ABI model
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = aarch64
+          clang++ -dumpmachine | grep -Eq '^aarch64-'
+          clang++ -dM -E -x c++ /dev/null | grep -Eq '__aarch64__'
+          clang++ \
+            -std=gnu++17 \
+            -O2 \
+            -Wall \
+            -Wextra \
+            -Werror \
+            -ffixed-x18 \
+            "$GITHUB_WORKSPACE/.github/checks/aarch64-ucontext-model.cc" \
+            -o aarch64-ucontext-model.exe
+          ./aarch64-ucontext-model.exe
 
       - name: Download AArch64 runtime
         shell: pwsh
