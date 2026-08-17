@@ -802,32 +802,43 @@ jobs:
           cygwin_build="$PWD/build-aarch64-runtime/aarch64-pc-cygwin/winsup/cygwin"
           gccdir="$(aarch64-pc-cygwin-gcc -print-file-name=libgcc.a)"
           gccdir="$(dirname "$gccdir")"
-          aarch64-pc-cygwin-gcc \
-            -D__MSYS__ \
-            -O2 \
-            -g \
-            -Wall \
-            -Werror \
-            -c .github/checks/aarch64-runtime-smoke.c \
-            -o "$cygwin_build/aarch64-runtime-smoke.o"
-          aarch64-pc-cygwin-gcc \
-            -nostdlib \
-            -Wl,--no-insert-timestamp \
-            -Wl,--subsystem,console \
-            -Wl,-e,mainCRTStartup \
-            -o "$cygwin_build/aarch64-runtime-smoke.exe" \
-            "$cygwin_build/crt0.o" \
-            "$gccdir/crtbegin.o" \
-            "$cygwin_build/aarch64-runtime-smoke.o" \
-            -L"$cygwin_build" \
-            -Wl,--start-group \
-            -lmsys-2.0 \
-            -lgcc \
-            -Wl,--end-group \
-            "$gccdir/crtend.o" \
-            /opt/aarch64-pc-cygwin/lib/default-manifest.o \
-            -lkernel32 \
-            -lntdll
+          build_runtime_probe()
+          {
+            probe="$1"
+            source=".github/checks/aarch64-runtime-$probe.c"
+            object="$cygwin_build/aarch64-runtime-$probe.o"
+            output="$cygwin_build/aarch64-runtime-$probe.exe"
+            aarch64-pc-cygwin-gcc \
+              -D__MSYS__ \
+              -O2 \
+              -g \
+              -Wall \
+              -Werror \
+              -c "$source" \
+              -o "$object"
+            aarch64-pc-cygwin-gcc \
+              -nostdlib \
+              -Wl,--no-insert-timestamp \
+              -Wl,--subsystem,console \
+              -Wl,-e,mainCRTStartup \
+              -o "$output" \
+              "$cygwin_build/crt0.o" \
+              "$gccdir/crtbegin.o" \
+              "$object" \
+              -L"$cygwin_build" \
+              -Wl,--start-group \
+              -lmsys-2.0 \
+              -lgcc \
+              -Wl,--end-group \
+              "$gccdir/crtend.o" \
+              /opt/aarch64-pc-cygwin/lib/default-manifest.o \
+              -lkernel32 \
+              -lntdll
+          }
+
+          for probe in minimal tls smoke; do
+            build_runtime_probe "$probe"
+          done
 
           cp "$cygwin_build/new-msys-2.0.dll" \
             "$cygwin_build/new-msys-2.0.first.dll"
@@ -849,8 +860,10 @@ jobs:
             aarch64-runtime-validation/msys-2.0.dll
           cp "$cygwin_build/libmsys-2.0.a" \
             aarch64-runtime-validation/libmsys-2.0.a
-          cp "$cygwin_build/aarch64-runtime-smoke.exe" \
-            aarch64-runtime-validation/
+          for probe in minimal tls smoke; do
+            cp "$cygwin_build/aarch64-runtime-$probe.exe" \
+              aarch64-runtime-validation/
+          done
 
       - name: Upload AArch64 runtime validation
         if: always()
@@ -923,7 +936,7 @@ jobs:
             --name aarch64-runtime-validation `
             --dir aarch64-runtime-validation
 
-      - name: Run AArch64 runtime startup smoke test
+      - name: Run AArch64 runtime startup probes
         shell: pwsh
         run: |
           if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture -ne
@@ -932,10 +945,67 @@ jobs:
           }
           $runtime = (Resolve-Path `
             aarch64-runtime-validation/aarch64-runtime-validation).Path
-          & (Join-Path $runtime "aarch64-runtime-smoke.exe")
-          if ($LASTEXITCODE -ne 0) {
-            throw "AArch64 runtime smoke test failed with exit code $LASTEXITCODE"
+          function Show-RecentFaultEvents {
+            param([string]$ProcessName)
+            $since = (Get-Date).AddHours(-2)
+            $logs = @(
+              'Application',
+              'Microsoft-Windows-WER-Diag/Operational',
+              'Microsoft-Windows-WER-SystemErrorReporting/Operational'
+            )
+            foreach ($log in $logs) {
+              try {
+                $events = Get-WinEvent -FilterHashtable @{
+                  LogName = $log
+                  StartTime = $since
+                  Id = 1000, 1001
+                } -ErrorAction Stop | Where-Object {
+                  $_.Message -match [regex]::Escape($ProcessName) -or
+                  $_.Message -match 'Faulting module|faulting module|Fault offset|fault offset'
+                } | Select-Object -First 3
+              } catch {
+                continue
+              }
+              foreach ($event in $events) {
+                Write-Host "--- $log / $($event.ProviderName) event $($event.Id) ---"
+                $event.Message -split "`r?`n" | ForEach-Object {
+                  if ($_ -match '^(Faulting application name|Faulting module name|Faulting module path|Fault offset|Exception code):\s*(.+)$') {
+                    Write-Host $_
+                  }
+                }
+                Write-Host ""
+              }
+            }
           }
+
+          function Invoke-Aarch64RuntimeProbe {
+            param(
+              [Parameter(Mandatory = $true)][string]$Label,
+              [Parameter(Mandatory = $true)][string]$Path
+            )
+            Write-Host "==> Running $Label"
+            & $Path
+            $code = $LASTEXITCODE
+            $unsigned = [uint32]$code
+            $hex = ('0x{0:X8}' -f $unsigned)
+            Write-Host "<== $Label exit code signed=$code hex=$hex"
+            if ($code -ne 0) {
+              if ($unsigned -eq [uint32]0xC0000005) {
+                Show-RecentFaultEvents -ProcessName (Split-Path -Leaf $Path)
+              }
+              throw "$Label failed with signed exit code $code and hex $hex"
+            }
+          }
+
+          Invoke-Aarch64RuntimeProbe `
+            -Label 'aarch64-runtime-minimal.exe' `
+            -Path (Join-Path $runtime 'aarch64-runtime-minimal.exe')
+          Invoke-Aarch64RuntimeProbe `
+            -Label 'aarch64-runtime-tls.exe' `
+            -Path (Join-Path $runtime 'aarch64-runtime-tls.exe')
+          Invoke-Aarch64RuntimeProbe `
+            -Label 'aarch64-runtime-smoke.exe' `
+            -Path (Join-Path $runtime 'aarch64-runtime-smoke.exe')
 
   configure-winsup:
     runs-on: ubuntu-latest
