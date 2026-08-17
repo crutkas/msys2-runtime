@@ -874,6 +874,7 @@ jobs:
         with:
           msystem: CLANGARM64
           update: true
+          cache: false
           install: mingw-w64-clang-aarch64-clang
 
       - name: Verify and run native AArch64 endian runtime
