@@ -431,22 +431,10 @@ jobs:
 
           (
             cd build-cygtls-lock/cygwin
-            CXXCOMPILE="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-g++ \
-              -DHAVE_CONFIG_H \
-              -I$GITHUB_WORKSPACE/build-cygtls-lock/cygwin \
-              -I$GITHUB_WORKSPACE/winsup/cygwin/local_includes \
-              -I$GITHUB_WORKSPACE/winsup/cygwin \
-              -isystem $GITHUB_WORKSPACE/winsup/cygwin/include \
-              -isystem $TOOLCHAIN_DIR/include \
-              -isystem $GITHUB_WORKSPACE/newlib/targ-include \
-              -isystem $GITHUB_WORKSPACE/newlib/libc/include \
-              -fno-rtti \
-              -fno-exceptions \
-              -fno-use-cxa-atexit" \
-              "$GITHUB_WORKSPACE/winsup/cygwin/scripts/gentls_offsets" \
-                "$GITHUB_WORKSPACE/winsup/cygwin/local_includes/cygtls.h" \
-                tlsoffsets || true
+            make tlsoffsets
             test -s tlsoffsets
+            grep -Eq '^\.equ _cygtls\.(start_offset|context_p|thread_id_p),' \
+              tlsoffsets
           )
 
           build_dir=build-cygtls-lock/cygwin
@@ -455,10 +443,7 @@ jobs:
           nm="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-nm"
           (
             cd "$build_dir"
-            "$GITHUB_WORKSPACE/winsup/cygwin/scripts/gendef" \
-              --cpu=aarch64 \
-              --output-def=signal-check.def \
-              "$GITHUB_WORKSPACE/winsup/cygwin/cygwin.din"
+            make DEF_FILE=signal-check.def sigfe.s
             test -s sigfe.s
           )
 
