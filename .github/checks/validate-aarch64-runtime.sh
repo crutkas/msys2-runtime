@@ -196,6 +196,26 @@ if grep -Eiq 'cygwin1\.dll|msys-2\.0\.dll' "$report/imported-dlls.txt"; then
   exit 1
 fi
 
+smoke="$cygwin/aarch64-runtime-smoke.exe"
+
+audit_runtime_executable()
+{
+  exe="$1"
+  name="$(basename "$exe")"
+  test -f "$exe"
+  "$objdump" -f -h -p "$exe" > "$report/$name.txt"
+  grep -Fq 'file format pei-aarch64-little' "$report/$name.txt"
+  grep -Fq 'DLL Name: msys-2.0.dll' "$report/$name.txt"
+  sha256sum "$exe" >> "$report/SHA256SUMS"
+}
+
+for probe in \
+    "$cygwin/aarch64-runtime-minimal.exe" \
+    "$cygwin/aarch64-runtime-tls.exe" \
+    "$smoke"; do
+  audit_runtime_executable "$probe"
+done
+
 grep -Eq '[[:space:]]__CTOR_LIST__$' "$symbols"
 grep -Eq '[[:space:]]__DTOR_LIST__$' "$symbols"
 grep -Eq '[[:space:]]_cygtls' "$symbols"
@@ -238,15 +258,6 @@ selected_arm64="$(grep -Fc 'file format pe-aarch64-little' \
 test "$selected" -eq "$selected_arm64"
 rm -f "$report"/selected-*.o
 
-smoke="$cygwin/aarch64-runtime-smoke.exe"
-if test -f "$smoke"; then
-  "$objdump" -f -h -p "$smoke" > "$report/aarch64-runtime-smoke.txt"
-  grep -Fq 'file format pei-aarch64-little' \
-    "$report/aarch64-runtime-smoke.txt"
-  grep -Fq 'DLL Name: msys-2.0.dll' "$report/aarch64-runtime-smoke.txt"
-  sha256sum "$smoke" >> "$report/SHA256SUMS"
-fi
-
 {
   printf 'objects\t%s\n' "$object_count"
   printf 'selected_archive_members\t%s\n' "$selected"
@@ -254,4 +265,5 @@ fi
   printf 'entry_symbol\t0x%s\n' "$entry_symbol"
   printf 'image_base\t0x%s\n' "$image_base"
   printf 'pe_tls_directory\tcustom-cygtls-no-pe-directory\n'
+  printf 'runtime_probes\t3\n'
 } > "$report/summary.txt"

@@ -23,7 +23,7 @@ jobs:
         with:
           msystem: MSYS
           update: true
-          install: base-devel cocom gcc git gmp isl libiconv libintl libzstd mpc mpfr zlib
+          install: base-devel cocom gcc git gmp isl libiconv libintl libzstd mpc mpfr autotools zlib
 
       - name: Install fork-local AArch64 runtime toolchain
         run: ./.github/checks/install-aarch64-runtime-toolchain.sh
@@ -90,18 +90,23 @@ jobs:
             exit 1
           fi
 
-          gcc \
+          compiler="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-gcc"
+          "$compiler" \
             -std=gnu11 \
             -O2 \
             -Wall \
             -Wextra \
             -Werror \
-            -I"$GITHUB_WORKSPACE/winsup/cygwin/include" \
-            -I"$GITHUB_WORKSPACE/newlib/libc/include" \
+            -isystem "$GITHUB_WORKSPACE/winsup/cygwin/include" \
+            -isystem "$GITHUB_WORKSPACE/newlib/targ-include" \
+            -isystem "$GITHUB_WORKSPACE/newlib/libc/include" \
+            -isystem "$TOOLCHAIN_DIR/include" \
+            -c \
             "$GITHUB_WORKSPACE/.github/checks/aarch64-endian-runtime.c" \
-            -o aarch64-endian-runtime
-          ./aarch64-endian-runtime
+            -o aarch64-endian-runtime.o
 
+          "$objdump" -dr aarch64-endian-runtime.o \
+            | tee aarch64-endian-runtime.dis
       - name: Compile and disassemble AArch64 cygtls lock
         run: |
           export PATH="$TOOLCHAIN_DIR/bin:$PATH"
@@ -382,18 +387,37 @@ jobs:
             'return ((PBYTE) allocationbase + stacksize - 16);' \
             "$GITHUB_WORKSPACE/winsup/cygwin/create_posix_thread.cc"
 
-      - name: Run AArch64 ucontext ABI model
+      - name: Compile and inspect AArch64 ucontext ABI model
         run: |
-          g++ \
+          compiler="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-g++"
+          objdump="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-objdump"
+          nm="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-nm"
+          "$compiler" \
             -std=gnu++17 \
             -O2 \
             -Wall \
             -Wextra \
             -Werror \
             -ffixed-x18 \
+            -c \
             "$GITHUB_WORKSPACE/.github/checks/aarch64-ucontext-model.cc" \
-            -o aarch64-ucontext-model
-          ./aarch64-ucontext-model
+            -o aarch64-ucontext-model.o
+          "$objdump" -f aarch64-ucontext-model.o | tee aarch64-ucontext-model.format
+          "$objdump" -dr aarch64-ucontext-model.o | tee aarch64-ucontext-model.dis
+          "$nm" -a aarch64-ucontext-model.o | tee aarch64-ucontext-model.symbols
+
+          grep -Fq 'file format pe-aarch64-little' aarch64-ucontext-model.format
+          grep -Eq '[[:space:]][Tt] (main|probe_altstack|run_on_altstack)$' \
+            aarch64-ucontext-model.symbols
+          grep -Eq '[[:space:]]mov[[:space:]]+x0, x18' aarch64-ucontext-model.dis
+          grep -Eq '[[:space:]]mov[[:space:]]+x17, x[0-9]+' aarch64-ucontext-model.dis
+          grep -Eq '[[:space:]]ldp[[:space:]]+x9, x0, \[x17\]' \
+            aarch64-ucontext-model.dis
+          grep -Eq '[[:space:]]ldr[[:space:]]+x16, \[x17, #16\]' \
+            aarch64-ucontext-model.dis
+          grep -Eq '[[:space:]]mov[[:space:]]+sp, x9' aarch64-ucontext-model.dis
+          grep -Eq '[[:space:]]blr[[:space:]]+x16' aarch64-ucontext-model.dis
+          grep -Eq '[[:space:]]mov[[:space:]]+sp, x19' aarch64-ucontext-model.dis
 
       - name: Compile and inspect AArch64 signal and SEH paths
         run: |
@@ -407,22 +431,10 @@ jobs:
 
           (
             cd build-cygtls-lock/cygwin
-            CXXCOMPILE="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-g++ \
-              -DHAVE_CONFIG_H \
-              -I$GITHUB_WORKSPACE/build-cygtls-lock/cygwin \
-              -I$GITHUB_WORKSPACE/winsup/cygwin/local_includes \
-              -I$GITHUB_WORKSPACE/winsup/cygwin \
-              -isystem $GITHUB_WORKSPACE/winsup/cygwin/include \
-              -isystem $TOOLCHAIN_DIR/include \
-              -isystem $GITHUB_WORKSPACE/newlib/targ-include \
-              -isystem $GITHUB_WORKSPACE/newlib/libc/include \
-              -fno-rtti \
-              -fno-exceptions \
-              -fno-use-cxa-atexit" \
-              "$GITHUB_WORKSPACE/winsup/cygwin/scripts/gentls_offsets" \
-                "$GITHUB_WORKSPACE/winsup/cygwin/local_includes/cygtls.h" \
-                tlsoffsets || true
+            make tlsoffsets
             test -s tlsoffsets
+            grep -Eq '^\.equ _cygtls\.(start_offset|context_p|thread_id_p),' \
+              tlsoffsets
           )
 
           build_dir=build-cygtls-lock/cygwin
@@ -431,10 +443,7 @@ jobs:
           nm="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-nm"
           (
             cd "$build_dir"
-            "$GITHUB_WORKSPACE/winsup/cygwin/scripts/gendef" \
-              --cpu=aarch64 \
-              --output-def=signal-check.def \
-              "$GITHUB_WORKSPACE/winsup/cygwin/cygwin.din"
+            make DEF_FILE=signal-check.def sigfe.s
             test -s sigfe.s
           )
 
@@ -751,7 +760,7 @@ jobs:
         with:
           msystem: MSYS
           update: true
-          install: base-devel cocom gcc git gmp isl libiconv libintl libzstd mpc mpfr zlib
+          install: base-devel cocom gcc git gmp isl libiconv libintl libzstd mpc mpfr autotools zlib
 
       - name: Install fork-local AArch64 runtime toolchain
         shell: msys2 {0}
@@ -793,32 +802,43 @@ jobs:
           cygwin_build="$PWD/build-aarch64-runtime/aarch64-pc-cygwin/winsup/cygwin"
           gccdir="$(aarch64-pc-cygwin-gcc -print-file-name=libgcc.a)"
           gccdir="$(dirname "$gccdir")"
-          aarch64-pc-cygwin-gcc \
-            -D__MSYS__ \
-            -O2 \
-            -g \
-            -Wall \
-            -Werror \
-            -c .github/checks/aarch64-runtime-smoke.c \
-            -o "$cygwin_build/aarch64-runtime-smoke.o"
-          aarch64-pc-cygwin-gcc \
-            -nostdlib \
-            -Wl,--no-insert-timestamp \
-            -Wl,--subsystem,console \
-            -Wl,-e,mainCRTStartup \
-            -o "$cygwin_build/aarch64-runtime-smoke.exe" \
-            "$cygwin_build/crt0.o" \
-            "$gccdir/crtbegin.o" \
-            "$cygwin_build/aarch64-runtime-smoke.o" \
-            -L"$cygwin_build" \
-            -Wl,--start-group \
-            -lmsys-2.0 \
-            -lgcc \
-            -Wl,--end-group \
-            "$gccdir/crtend.o" \
-            /opt/aarch64-pc-cygwin/lib/default-manifest.o \
-            -lkernel32 \
-            -lntdll
+          build_runtime_probe()
+          {
+            probe="$1"
+            source=".github/checks/aarch64-runtime-$probe.c"
+            object="$cygwin_build/aarch64-runtime-$probe.o"
+            output="$cygwin_build/aarch64-runtime-$probe.exe"
+            aarch64-pc-cygwin-gcc \
+              -D__MSYS__ \
+              -O2 \
+              -g \
+              -Wall \
+              -Werror \
+              -c "$source" \
+              -o "$object"
+            aarch64-pc-cygwin-gcc \
+              -nostdlib \
+              -Wl,--no-insert-timestamp \
+              -Wl,--subsystem,console \
+              -Wl,-e,mainCRTStartup \
+              -o "$output" \
+              "$cygwin_build/crt0.o" \
+              "$gccdir/crtbegin.o" \
+              "$object" \
+              -L"$cygwin_build" \
+              -Wl,--start-group \
+              -lmsys-2.0 \
+              -lgcc \
+              -Wl,--end-group \
+              "$gccdir/crtend.o" \
+              /opt/aarch64-pc-cygwin/lib/default-manifest.o \
+              -lkernel32 \
+              -lntdll
+          }
+
+          for probe in minimal tls smoke; do
+            build_runtime_probe "$probe"
+          done
 
           cp "$cygwin_build/new-msys-2.0.dll" \
             "$cygwin_build/new-msys-2.0.first.dll"
@@ -840,8 +860,10 @@ jobs:
             aarch64-runtime-validation/msys-2.0.dll
           cp "$cygwin_build/libmsys-2.0.a" \
             aarch64-runtime-validation/libmsys-2.0.a
-          cp "$cygwin_build/aarch64-runtime-smoke.exe" \
-            aarch64-runtime-validation/
+          for probe in minimal tls smoke; do
+            cp "$cygwin_build/aarch64-runtime-$probe.exe" \
+              aarch64-runtime-validation/
+          done
 
       - name: Upload AArch64 runtime validation
         if: always()
@@ -857,6 +879,53 @@ jobs:
     runs-on: windows-11-arm
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: setup-msys2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: CLANGARM64
+          update: true
+          cache: false
+          install: mingw-w64-clang-aarch64-clang
+
+      - name: Verify and run native AArch64 endian runtime
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          clang -dumpmachine | grep -Eq '^aarch64-'
+          clang -dM -E -x c /dev/null | grep -Eq '__aarch64__'
+          clang \
+            -std=gnu11 \
+            -O2 \
+            -Wall \
+            -Wextra \
+            -Werror \
+            -isystem "$GITHUB_WORKSPACE/winsup/cygwin/include" \
+            -isystem "$GITHUB_WORKSPACE/newlib/targ-include" \
+            -isystem "$GITHUB_WORKSPACE/newlib/libc/include" \
+            "$GITHUB_WORKSPACE/.github/checks/aarch64-endian-runtime.c" \
+            -o aarch64-endian-runtime.exe
+          ./aarch64-endian-runtime.exe
+
+      - name: Verify and run native AArch64 ucontext ABI model
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          clang++ -dumpmachine | grep -Eq '^aarch64-'
+          clang++ -dM -E -x c++ /dev/null | grep -Eq '__aarch64__'
+          clang++ \
+            -std=gnu++17 \
+            -O2 \
+            -Wall \
+            -Wextra \
+            -Werror \
+            -ffixed-x18 \
+            "$GITHUB_WORKSPACE/.github/checks/aarch64-ucontext-model.cc" \
+            -o aarch64-ucontext-model.exe
+          ./aarch64-ucontext-model.exe
+
       - name: Download AArch64 runtime
         shell: pwsh
         env:
@@ -867,7 +936,7 @@ jobs:
             --name aarch64-runtime-validation `
             --dir aarch64-runtime-validation
 
-      - name: Run AArch64 runtime startup smoke test
+      - name: Run AArch64 runtime startup probes
         shell: pwsh
         run: |
           if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture -ne
@@ -876,10 +945,85 @@ jobs:
           }
           $runtime = (Resolve-Path `
             aarch64-runtime-validation/aarch64-runtime-validation).Path
-          & (Join-Path $runtime "aarch64-runtime-smoke.exe")
-          if ($LASTEXITCODE -ne 0) {
-            throw "AArch64 runtime smoke test failed with exit code $LASTEXITCODE"
+          function Get-UnsignedExitCode {
+            param([int]$Code)
+            return [BitConverter]::ToUInt32(
+              [BitConverter]::GetBytes([int32]$Code),
+              0)
           }
+          $werAccessViolation = [Convert]::ToUInt32('C0000005', 16)
+
+          function Show-RecentFaultEvents {
+            param([string]$ProcessName)
+            $since = (Get-Date).AddHours(-2)
+            $logs = @(
+              'Application',
+              'Microsoft-Windows-WER-Diag/Operational',
+              'Microsoft-Windows-WER-SystemErrorReporting/Operational'
+            )
+            $deadline = (Get-Date).AddSeconds(5)
+            $events = @()
+            do {
+              $events = foreach ($log in $logs) {
+                try {
+                  Get-WinEvent -FilterHashtable @{
+                    LogName = $log
+                    StartTime = $since
+                    Id = 1000, 1001
+                  } -ErrorAction Stop | Where-Object {
+                    $_.Message -match [regex]::Escape($ProcessName) -or
+                    $_.Message -match 'Faulting module|faulting module|Fault offset|fault offset'
+                  } | Select-Object -First 3
+                } catch {
+                  continue
+                }
+              }
+              $events = $events | Sort-Object TimeCreated -Descending | Select-Object -First 3
+              if ($events) {
+                break
+              }
+              Start-Sleep -Milliseconds 500
+            } while ((Get-Date) -lt $deadline)
+
+            foreach ($event in $events) {
+              Write-Host "--- $($event.LogName) / $($event.ProviderName) event $($event.Id) ---"
+              $event.Message -split "`r?`n" | ForEach-Object {
+                if ($_ -match '^(Faulting application name|Faulting module name|Faulting module path|Fault offset|Exception code):\s*(.+)$') {
+                  Write-Host $_
+                }
+              }
+              Write-Host ""
+            }
+          }
+
+          function Invoke-Aarch64RuntimeProbe {
+            param(
+              [Parameter(Mandatory = $true)][string]$Label,
+              [Parameter(Mandatory = $true)][string]$Path
+            )
+            Write-Host "==> Running $Label"
+            & $Path
+            $code = $LASTEXITCODE
+            $unsigned = Get-UnsignedExitCode -Code $code
+            $hex = ('0x{0:X8}' -f $unsigned)
+            Write-Host "<== $Label exit code signed=$code hex=$hex"
+            if ($code -ne 0) {
+              if ($unsigned -eq $werAccessViolation) {
+                Show-RecentFaultEvents -ProcessName (Split-Path -Leaf $Path)
+              }
+              throw "$Label failed with signed exit code $code and hex $hex"
+            }
+          }
+
+          Invoke-Aarch64RuntimeProbe `
+            -Label 'aarch64-runtime-minimal.exe' `
+            -Path (Join-Path $runtime 'aarch64-runtime-minimal.exe')
+          Invoke-Aarch64RuntimeProbe `
+            -Label 'aarch64-runtime-tls.exe' `
+            -Path (Join-Path $runtime 'aarch64-runtime-tls.exe')
+          Invoke-Aarch64RuntimeProbe `
+            -Label 'aarch64-runtime-smoke.exe' `
+            -Path (Join-Path $runtime 'aarch64-runtime-smoke.exe')
 
   configure-winsup:
     runs-on: ubuntu-latest
