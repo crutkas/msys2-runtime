@@ -951,6 +951,7 @@ jobs:
               [BitConverter]::GetBytes([int32]$Code),
               0)
           }
+          $werAccessViolation = [Convert]::ToUInt32('C0000005', 16)
 
           function Show-RecentFaultEvents {
             param([string]$ProcessName)
@@ -1007,7 +1008,7 @@ jobs:
             $hex = ('0x{0:X8}' -f $unsigned)
             Write-Host "<== $Label exit code signed=$code hex=$hex"
             if ($code -ne 0) {
-              if ($unsigned -eq [uint32]0xC0000005) {
+              if ($unsigned -eq $werAccessViolation) {
                 Show-RecentFaultEvents -ProcessName (Split-Path -Leaf $Path)
               }
               throw "$Label failed with signed exit code $code and hex $hex"
