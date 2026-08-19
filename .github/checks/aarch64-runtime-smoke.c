@@ -76,8 +76,8 @@ main (void)
   ino_t server_ino;
   ino_t client_ino;
   ino_t accepted_ino;
-  struct sockaddr_in server_addr = {};
-  struct sockaddr_in peer = {};
+  struct sockaddr_in6 server_addr = {};
+  struct sockaddr_in6 peer = {};
   socklen_t server_addrlen = sizeof (server_addr);
   socklen_t addrlen = sizeof (peer);
   char buf[8] = {};
@@ -109,8 +109,8 @@ main (void)
   if (raise (SIGUSR1) != 0 || signal_seen != SIGUSR1)
     return 10;
 
-  server = socket (AF_INET, SOCK_STREAM, 0);
-  client = socket (AF_INET, SOCK_STREAM, 0);
+  server = socket (AF_INET6, SOCK_STREAM, 0);
+  client = socket (AF_INET6, SOCK_STREAM, 0);
   if (server < 0 || client < 0)
     return 11;
 
@@ -119,9 +119,9 @@ main (void)
       || server_ino == client_ino)
     return 12;
 
-  server_addr.sin_family = AF_INET;
-  server_addr.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
-  server_addr.sin_port = 0;
+  server_addr.sin6_family = AF_INET6;
+  server_addr.sin6_addr = in6addr_loopback;
+  server_addr.sin6_port = 0;
   if (bind (server, (struct sockaddr *) &server_addr,
 	    (socklen_t) sizeof (server_addr)) != 0)
     return fail_socket (13, "bind");
