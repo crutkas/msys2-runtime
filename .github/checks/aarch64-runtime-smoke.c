@@ -12,6 +12,7 @@
 #include <ucontext.h>
 #include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 static __thread int tls_value = 17;
 static volatile sig_atomic_t signal_seen;
@@ -55,6 +56,17 @@ wait_readable (int sock)
 }
 
 static int
+wait_writable (int sock)
+{
+  fd_set wfds;
+  struct timeval tv = { 5, 0 };
+
+  FD_ZERO (&wfds);
+  FD_SET (sock, &wfds);
+  return select (sock + 1, NULL, &wfds, NULL, &tv);
+}
+
+static int
 fail_socket (int code, const char *stage)
 {
   fprintf (stderr, "%s failed: errno %d\n", stage, errno);
@@ -81,6 +93,9 @@ main (void)
   int client;
   int accepted;
   int rc;
+  int flags;
+  int so_error;
+  socklen_t so_error_len = sizeof (so_error);
   ino_t server_ino;
   ino_t client_ino;
   ino_t accepted_ino;
@@ -198,16 +213,41 @@ main (void)
       freeaddrinfo (resolved);
       return fail_socket (19, "listen");
     }
-  if (connect (client, ai->ai_addr, (socklen_t) ai->ai_addrlen) != 0)
+  flags = fcntl (client, F_GETFL, 0);
+  if (flags < 0 || fcntl (client, F_SETFL, flags | O_NONBLOCK) != 0)
     {
       freeaddrinfo (resolved);
-      return fail_socket (20, "connect");
+      return fail_socket (20, "fcntl O_NONBLOCK");
+    }
+  if (connect (client, ai->ai_addr, (socklen_t) ai->ai_addrlen) != 0
+      && errno != EINPROGRESS && errno != EWOULDBLOCK)
+    {
+      freeaddrinfo (resolved);
+      return fail_socket (21, "connect");
+    }
+  rc = wait_writable (client);
+  if (rc != 1)
+    {
+      freeaddrinfo (resolved);
+      return fail_socket (22, "select client connect");
+    }
+  if (getsockopt (client, SOL_SOCKET, SO_ERROR, (char *) &so_error,
+                  &so_error_len) != 0 || so_error != 0)
+    {
+      errno = so_error;
+      freeaddrinfo (resolved);
+      return fail_socket (23, "connect completion");
+    }
+  if (fcntl (client, F_SETFL, flags) != 0)
+    {
+      freeaddrinfo (resolved);
+      return fail_socket (24, "fcntl restore");
     }
   accepted = accept (server, (struct sockaddr *) &peer, &addrlen);
   if (accepted < 0)
     {
       freeaddrinfo (resolved);
-      return fail_socket (21, "accept");
+      return fail_socket (25, "accept");
     }
   if (!socket_ino (accepted, &accepted_ino)
       || !socket_ino (server, &server_ino)
@@ -217,67 +257,67 @@ main (void)
       || client_ino == accepted_ino)
     {
       freeaddrinfo (resolved);
-      return 22;
+      return 26;
     }
 
   if (send (client, ping, sizeof (ping), 0) != (int) sizeof (ping))
     {
       freeaddrinfo (resolved);
-      return fail_socket (23, "send ping");
+      return fail_socket (27, "send ping");
     }
   rc = wait_readable (accepted);
   if (rc != 1)
     {
       freeaddrinfo (resolved);
-      return fail_socket (24, "select accepted");
+      return fail_socket (28, "select accepted");
     }
   if (recv (accepted, buf, sizeof (ping), 0) != (int) sizeof (ping))
     {
       freeaddrinfo (resolved);
-      return fail_socket (25, "recv ping");
+      return fail_socket (29, "recv ping");
     }
   if (memcmp (buf, ping, sizeof (ping)) != 0)
-    {
-      freeaddrinfo (resolved);
-      return 26;
-    }
-
-  if (send (accepted, pong, sizeof (pong), 0) != (int) sizeof (pong))
-    {
-      freeaddrinfo (resolved);
-      return fail_socket (27, "send pong");
-    }
-  rc = wait_readable (client);
-  if (rc != 1)
-    {
-      freeaddrinfo (resolved);
-      return fail_socket (28, "select client");
-    }
-  if (recv (client, buf, sizeof (pong), 0) != (int) sizeof (pong))
-    {
-      freeaddrinfo (resolved);
-      return fail_socket (29, "recv pong");
-    }
-  if (memcmp (buf, pong, sizeof (pong)) != 0)
     {
       freeaddrinfo (resolved);
       return 30;
     }
 
+  if (send (accepted, pong, sizeof (pong), 0) != (int) sizeof (pong))
+    {
+      freeaddrinfo (resolved);
+      return fail_socket (31, "send pong");
+    }
+  rc = wait_readable (client);
+  if (rc != 1)
+    {
+      freeaddrinfo (resolved);
+      return fail_socket (32, "select client");
+    }
+  if (recv (client, buf, sizeof (pong), 0) != (int) sizeof (pong))
+    {
+      freeaddrinfo (resolved);
+      return fail_socket (33, "recv pong");
+    }
+  if (memcmp (buf, pong, sizeof (pong)) != 0)
+    {
+      freeaddrinfo (resolved);
+      return 34;
+    }
+
   if (close (accepted) != 0)
     {
       freeaddrinfo (resolved);
-      return 31;
+      return 35;
     }
   if (close (client) != 0)
     {
       freeaddrinfo (resolved);
-      return 32;
+      return 36;
     }
   if (close (server) != 0)
     {
       freeaddrinfo (resolved);
-      return 33;
+      return 37;
     }
   freeaddrinfo (resolved);
 
