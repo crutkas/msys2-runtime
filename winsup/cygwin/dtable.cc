@@ -28,6 +28,23 @@ details. */
 #include "ntdll.h"
 #include "shared_info.h"
 
+#if defined(__aarch64__)
+extern "C" void arm64_startup_trace (const char *stage);
+
+extern "C" void
+arm64_startup_trace (const char *stage)
+{
+  static bool initialized;
+  static bool enabled;
+
+  if (!initialized)
+    enabled = GetEnvironmentVariableA ("CYGWIN_ARM64_STARTUP_TRACE", NULL, 0) > 0;
+  initialized = true;
+  if (enabled)
+    small_printf ("AArch64 startup: %s\r\n", stage);
+}
+#endif
+
 static const DWORD std_consts[] = {STD_INPUT_HANDLE, STD_OUTPUT_HANDLE,
 				   STD_ERROR_HANDLE};
 
@@ -147,19 +164,35 @@ dtable::get_debugger_info ()
 void
 dtable::stdio_init ()
 {
+#if defined(__aarch64__)
+  arm64_startup_trace ("stdio_init: entered");
+#endif
   if (myself->cygstarted || ISSTATE (myself, PID_CYGPARENT))
     {
+#if defined(__aarch64__)
+      arm64_startup_trace ("stdio_init: cygstarted or cygparent");
+#endif
       tty_min *t = cygwin_shared->tty.get_cttyp ();
       if (t && t->is_console)
 	init_console_handler (true);
       return;
     }
 
+#if defined(__aarch64__)
+  arm64_startup_trace ("stdio_init: before GetStdHandle");
+#endif
   HANDLE in = GetStdHandle (STD_INPUT_HANDLE);
   HANDLE out = GetStdHandle (STD_OUTPUT_HANDLE);
   HANDLE err = GetStdHandle (STD_ERROR_HANDLE);
 
+#if defined(__aarch64__)
+  arm64_startup_trace ("stdio_init: before stdin init");
+#endif
   init_std_file_from_handle (0, in);
+#if defined(__aarch64__)
+  arm64_startup_trace ("stdio_init: after stdin init");
+  arm64_startup_trace ("stdio_init: before stderr/stdout handling");
+#endif
 
   /* STD_ERROR_HANDLE has been observed to be the same as
      STD_OUTPUT_HANDLE.  We need separate handles (e.g. using pipes
@@ -172,6 +205,9 @@ dtable::stdio_init ()
     {
       /* Since this code is not invoked for forked tasks, we don't have
 	 to worry about the close-on-exec flag here.  */
+#if defined(__aarch64__)
+      arm64_startup_trace ("stdio_init: duplicating stderr");
+#endif
       if (!DuplicateHandle (GetCurrentProcess (), out,
 			    GetCurrentProcess (), &err,
 			    0, TRUE, DUPLICATE_SAME_ACCESS))
@@ -182,8 +218,18 @@ dtable::stdio_init ()
 	}
     }
 
+#if defined(__aarch64__)
+  arm64_startup_trace ("stdio_init: before stdout init");
+#endif
   init_std_file_from_handle (1, out);
+#if defined(__aarch64__)
+  arm64_startup_trace ("stdio_init: after stdout init");
+  arm64_startup_trace ("stdio_init: before stderr init");
+#endif
   init_std_file_from_handle (2, err);
+#if defined(__aarch64__)
+  arm64_startup_trace ("stdio_init: after stderr init");
+#endif
 }
 
 const int dtable::initial_archetype_size;
@@ -278,6 +324,9 @@ cygwin_attach_handle_to_fd (char *name, int fd, HANDLE handle, mode_t bin,
 void
 dtable::init_std_file_from_handle (int fd, HANDLE handle)
 {
+#if defined(__aarch64__)
+  arm64_startup_trace ("init_std_file_from_handle: entered");
+#endif
   tmp_pathbuf tp;
   CONSOLE_SCREEN_BUFFER_INFO buf;
   DCB dcb;
@@ -292,16 +341,44 @@ dtable::init_std_file_from_handle (int fd, HANDLE handle)
   SetLastError (0);
   DWORD access = 0;
   DWORD ft = GetFileType (handle);
+#if defined(__aarch64__)
+  arm64_startup_trace ("init_std_file_from_handle: after GetFileType");
+#endif
   char *name = tp.c_get ();
+#if defined(__aarch64__)
+  arm64_startup_trace ("init_std_file_from_handle: after tp.c_get");
+#endif
   name[0] = '\0';
+#if defined(__aarch64__)
+  arm64_startup_trace ("init_std_file_from_handle: after name reset");
+#endif
+#if defined(__aarch64__)
+  arm64_startup_trace ("init_std_file_from_handle: before file type branch");
+#endif
   if (ft == FILE_TYPE_UNKNOWN && GetLastError () == ERROR_INVALID_HANDLE)
-    /* can't figure out what this is */;
+    {
+#if defined(__aarch64__)
+      arm64_startup_trace ("init_std_file_from_handle: invalid handle");
+#endif
+      /* can't figure out what this is */;
+    }
   else if (ft == FILE_TYPE_PIPE)
     {
+#if defined(__aarch64__)
+      arm64_startup_trace ("init_std_file_from_handle: pipe branch");
+#endif
       int rcv = 0, len = sizeof (int);
 
+#if defined(__aarch64__)
+      arm64_startup_trace ("init_std_file_from_handle: before handle_to_fn");
+#endif
       if (handle_to_fn (handle, name))
-	dev.parse (name);
+	{
+#if defined(__aarch64__)
+	  arm64_startup_trace ("init_std_file_from_handle: handle_to_fn matched tty");
+#endif
+	  dev.parse (name);
+	}
       else if (strcmp (name, ":sock:") == 0
 	       /* NtQueryObject returns an error when called on an LSP socket
 		  handle.  fhandler_socket::set_socket_handle tries to fetch
@@ -310,18 +387,37 @@ dtable::init_std_file_from_handle (int fd, HANDLE handle)
 		   && !::getsockopt ((SOCKET) handle, SOL_SOCKET, SO_RCVBUF,
 				     (char *) &rcv, &len)))
 	{
+#if defined(__aarch64__)
+	  arm64_startup_trace ("init_std_file_from_handle: socket branch");
+#endif
 	  /* socket */
 	  dev = *af_inet_dev;
 	  name[0] = '\0';
 	}
       else if (fd == 0)
-	dev = *piper_dev;
+	{
+#if defined(__aarch64__)
+	  arm64_startup_trace ("init_std_file_from_handle: stdin pipe branch");
+#endif
+	  dev = *piper_dev;
+	}
       else
-	dev = *pipew_dev;
+	{
+#if defined(__aarch64__)
+	  arm64_startup_trace ("init_std_file_from_handle: stdout pipe branch");
+#endif
+	  dev = *pipew_dev;
+	}
+#if defined(__aarch64__)
+      arm64_startup_trace ("init_std_file_from_handle: after pipe branch classification");
+#endif
     }
   else if (GetConsoleScreenBufferInfo (handle, &buf)
 	   || GetNumberOfConsoleInputEvents (handle, (DWORD *) &buf))
     {
+#if defined(__aarch64__)
+      arm64_startup_trace ("init_std_file_from_handle: console branch");
+#endif
       /* Console I/O */
       if (CTTY_IS_VALID (myself->ctty))
 	dev.parse (myself->ctty);
@@ -333,17 +429,30 @@ dtable::init_std_file_from_handle (int fd, HANDLE handle)
 	}
     }
   else if (GetCommState (handle, &dcb))
-    /* FIXME: Not right - assumes ttyS0 */
-    dev.parse (DEV_SERIAL_MAJOR, 0);
+    {
+#if defined(__aarch64__)
+      arm64_startup_trace ("init_std_file_from_handle: serial branch");
+#endif
+      /* FIXME: Not right - assumes ttyS0 */
+      dev.parse (DEV_SERIAL_MAJOR, 0);
+    }
   else
-    /* Try to figure it out from context - probably a disk file */
-    handle_to_fn (handle, name);
+    {
+#if defined(__aarch64__)
+      arm64_startup_trace ("init_std_file_from_handle: fallback branch");
+#endif
+      /* Try to figure it out from context - probably a disk file */
+      handle_to_fn (handle, name);
+    }
 
   if (!name[0] && !dev)
     fds[fd] = NULL;
   else
     {
       fhandler_base *fh;
+#if defined(__aarch64__)
+      arm64_startup_trace ("init_std_file_from_handle: before fhandler build");
+#endif
 
       if (dev)
 	fh = build_fh_dev (dev);
@@ -406,6 +515,9 @@ dtable::init_std_file_from_handle (int fd, HANDLE handle)
 	}
       if (!fh->init (handle, access, bin))
 	api_fatal ("couldn't initialize fd %d for %s", fd, fh->get_name ());
+#if defined(__aarch64__)
+      arm64_startup_trace ("init_std_file_from_handle: after fh->init");
+#endif
       if (fh->ispipe ())
 	{
 	  fhandler_pipe *fhp = (fhandler_pipe *) fh;
@@ -416,10 +528,16 @@ dtable::init_std_file_from_handle (int fd, HANDLE handle)
 
       if (!fh->open_setup (openflags))
 	api_fatal ("open_setup failed, %E");
+#if defined(__aarch64__)
+      arm64_startup_trace ("init_std_file_from_handle: after open_setup");
+#endif
       fh->usecount = 0;
       cygheap->fdtab[fd] = fh;
       cygheap->fdtab[fd]->inc_refcnt ();
       set_std_handle (fd);
+#if defined(__aarch64__)
+      arm64_startup_trace ("init_std_file_from_handle: after set_std_handle");
+#endif
       paranoid_printf ("fd %d, handle %p", fd, handle);
       fh->post_open_setup (fd);
     }
@@ -970,14 +1088,34 @@ handle_to_fn (HANDLE h, char *posix_fn)
   int maxmatchlen = 0;
   OBJECT_NAME_INFORMATION *ntfn = (OBJECT_NAME_INFORMATION *) tp.w_get ();
 
+#if defined(__aarch64__)
+  arm64_startup_trace ("handle_to_fn: before NtQueryObject");
+#endif
   NTSTATUS status = NtQueryObject (h, ObjectNameInformation, ntfn, 65536, &len);
+#if defined(__aarch64__)
+  arm64_startup_trace ("handle_to_fn: after NtQueryObject");
   if (!NT_SUCCESS (status))
-    debug_printf ("NtQueryObject failed, %y", status);
+    arm64_startup_trace ("handle_to_fn: NtQueryObject failure branch");
+  else
+    arm64_startup_trace ("handle_to_fn: NtQueryObject success branch");
+#endif
+  if (!NT_SUCCESS (status))
+    {
+#if defined(__aarch64__)
+      arm64_startup_trace ("handle_to_fn: NtQueryObject failed");
+      return false;
+#else
+      debug_printf ("NtQueryObject failed, %y", status);
+#endif
+    }
   // NT seems to do this on an unopened file
   else if (!ntfn->Name.Buffer)
     debug_printf ("nt->Name.Buffer == NULL");
   else
     {
+#if defined(__aarch64__)
+      arm64_startup_trace ("handle_to_fn: after name buffer check");
+#endif
       WCHAR *w32 = ntfn->Name.Buffer;
       size_t w32len = ntfn->Name.Length / sizeof (WCHAR);
       w32[w32len] = L'\0';

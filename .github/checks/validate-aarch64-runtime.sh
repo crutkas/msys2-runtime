@@ -76,7 +76,7 @@ for file in \
 done
 
 "$cc" -D__MSYS__ -dM -E - </dev/null > "$report/compiler-macros.txt"
-for macro in __aarch64__ __CYGWIN__ __MSYS__ _WIN64; do
+for macro in __aarch64__ __CYGWIN__ __MSYS__ _WIN64 __LP64__; do
   grep -Eq "^#define $macro([[:space:]]|$)" "$report/compiler-macros.txt"
 done
 if grep -Eq '^#define __x86_64__([[:space:]]|$)' \
@@ -100,6 +100,17 @@ if grep -Eiq 'pei-x86-64|i386:x86-64|file format pe-i386' \
   echo "A foreign object was found in the target build" >&2
   exit 1
 fi
+
+audit_runtime_executable()
+{
+  exe="$1"
+  name="$(basename "$exe")"
+  test -f "$exe"
+  "$objdump" -f -h -p "$exe" > "$report/$name.txt"
+  grep -Fq 'file format pei-aarch64-little' "$report/$name.txt"
+  grep -Fq 'DLL Name: msys-2.0.dll' "$report/$name.txt"
+  sha256sum "$exe" >> "$report/SHA256SUMS"
+}
 
 audit_archive()
 {
@@ -238,14 +249,13 @@ selected_arm64="$(grep -Fc 'file format pe-aarch64-little' \
 test "$selected" -eq "$selected_arm64"
 rm -f "$report"/selected-*.o
 
-smoke="$cygwin/aarch64-runtime-smoke.exe"
-if test -f "$smoke"; then
-  "$objdump" -f -h -p "$smoke" > "$report/aarch64-runtime-smoke.txt"
-  grep -Fq 'file format pei-aarch64-little' \
-    "$report/aarch64-runtime-smoke.txt"
-  grep -Fq 'DLL Name: msys-2.0.dll' "$report/aarch64-runtime-smoke.txt"
-  sha256sum "$smoke" >> "$report/SHA256SUMS"
-fi
+for probe in \
+    "$cygwin/aarch64-runtime-minimal.exe" \
+    "$cygwin/aarch64-runtime-tls.exe" \
+    "$cygwin/aarch64-runtime-smoke.exe" \
+    "$cygwin/aarch64-runtime-abi.exe"; do
+  audit_runtime_executable "$probe"
+done
 
 {
   printf 'objects\t%s\n' "$object_count"
@@ -254,4 +264,5 @@ fi
   printf 'entry_symbol\t0x%s\n' "$entry_symbol"
   printf 'image_base\t0x%s\n' "$image_base"
   printf 'pe_tls_directory\tcustom-cygtls-no-pe-directory\n'
+  printf 'runtime_probes\t4\n'
 } > "$report/summary.txt"

@@ -1052,12 +1052,13 @@ _dll_crt0 ()
 		       subq  $32,%%rsp     \n"
 		       : : [ADDR] "r" (stackaddr));
 #elif defined(__aarch64__)
-	      /* Set stack and frame pointers to new address. */
-	      __asm__ ("\n\
-		       mov fp, %[ADDR] \n\
-		       mov sp, fp      \n"
+	      /* Set the stack pointer to the new address and clear the
+	         frame pointer so unwinding doesn't follow the old stack. */
+	      __asm__ __volatile__ ("\n\
+		       mov sp, %[ADDR] \n\
+		       mov fp, xzr     \n"
 		       : : [ADDR] "r" (stackaddr)
-		       : "memory");
+		       : "x29", "memory");
 #else
 #error unimplemented for this target
 #endif
@@ -1074,12 +1075,6 @@ _dll_crt0 ()
   fesetenv (FE_DFL_ENV);
   _main_tls = &_my_tls;
   _main_tls->call ((DWORD (*) (void *, void *)) dll_crt0_1, NULL);
-#if defined(__aarch64__)
-  /* Add a compiler barrier to prevent the epilogue from appearing before
-     _main_tls->call. The epilogue optimization should not be applied after
-     the stack replacement.  */
-  __asm__ ("");
-#endif
 }
 
 void

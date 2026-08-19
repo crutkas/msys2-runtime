@@ -522,7 +522,9 @@ wsock_init (struct func_info *func)
       if (wsastartup)
 	{
 	  int res = wsastartup (MAKEWORD (2, 2), &wsadata);
-
+#if defined(__aarch64__)
+	  (void) res;
+#else
 	  debug_printf ("res %d", res);
 	  debug_printf ("wVersion %d", wsadata.wVersion);
 	  debug_printf ("wHighVersion %d", wsadata.wHighVersion);
@@ -530,6 +532,7 @@ wsock_init (struct func_info *func)
 	  debug_printf ("szSystemStatus %s", wsadata.szSystemStatus);
 	  debug_printf ("iMaxSockets %d", wsadata.iMaxSockets);
 	  debug_printf ("iMaxUdpDg %d", wsadata.iMaxUdpDg);
+#endif
 
 	  wsock_started = 1;
 	}

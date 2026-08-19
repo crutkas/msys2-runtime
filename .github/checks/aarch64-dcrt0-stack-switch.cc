@@ -11,8 +11,8 @@ extern "C" __attribute__ ((noinline)) void
 check_dcrt0_stack_switch (void *stackaddr)
 {
   __asm__ ("\n\
-	   mov fp, %[ADDR] \n\
-	   mov sp, fp      \n"
+	   mov sp, %[ADDR] \n\
+	   mov fp, xzr     \n"
 	   : : [ADDR] "r" (stackaddr)
 	   : "memory");
 }
