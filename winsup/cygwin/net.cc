@@ -2315,23 +2315,49 @@ socketpair (int af, int type, int protocol, int sv[2])
       fh_out = reinterpret_cast<fhandler_socket *> (build_fh_dev (*dev));
       if (fh_in && fh_out)
 	{
-	  if (fh_in->socketpair (af, type, protocol, flags, fh_out) == 0)
+#if defined (__aarch64__)
+	  if (af == AF_UNIX)
 	    {
-	      fd_in = fh_in;
-	      fd_out = fh_out;
-	      if (fd_in <= 2)
-		set_std_handle (fd_in);
-	      if (fd_out <= 2)
-		set_std_handle (fd_out);
-	      __try
+	      if (static_cast<fhandler_socket_unix *> (fh_in)
+		  ->fhandler_socket_unix::socketpair (
+		       af, type, protocol, flags,
+		       static_cast<fhandler_socket_unix *> (fh_out)) == 0)
 		{
-		  sv[0] = fd_in;
-		  sv[1] = fd_out;
-		  res = 0;
+		  fd_in = fh_in;
+		  fd_out = fh_out;
+		  if (fd_in <= 2)
+		    set_std_handle (fd_in);
+		  if (fd_out <= 2)
+		    set_std_handle (fd_out);
+		  __try
+		    {
+		      sv[0] = fd_in;
+		      sv[1] = fd_out;
+		      res = 0;
+		    }
+		  __except (EFAULT) {}
+		  __endtry
 		}
-	      __except (EFAULT) {}
-	      __endtry
 	    }
+	  else
+#endif
+	    if (fh_in->socketpair (af, type, protocol, flags, fh_out) == 0)
+	      {
+		fd_in = fh_in;
+		fd_out = fh_out;
+		if (fd_in <= 2)
+		  set_std_handle (fd_in);
+		if (fd_out <= 2)
+		  set_std_handle (fd_out);
+		__try
+		  {
+		    sv[0] = fd_in;
+		    sv[1] = fd_out;
+		    res = 0;
+		  }
+		__except (EFAULT) {}
+		__endtry
+	      }
 	}
       else
 	{
