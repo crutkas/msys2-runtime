@@ -118,7 +118,7 @@ main (void)
     return 11;
 
   bindaddr.sin_family = AF_INET;
-  bindaddr.sin_addr.s_addr = 0x0100007fU;
+  bindaddr.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
   if (bind (server, (struct sockaddr *) &bindaddr, sizeof (bindaddr)) != 0)
     return fail_socket (13, "bind");
   if (listen (server, 1) != 0)
@@ -129,7 +129,7 @@ main (void)
 	   | (((unsigned int) bound.sin_port & 0xff) << 8);
   snprintf (port, sizeof (port), "%u", port_num);
   connectaddr.sin_family = AF_INET;
-  connectaddr.sin_addr.s_addr = 0x0100007fU;
+  connectaddr.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
   connectaddr.sin_port = bound.sin_port;
   if (connect (client, (struct sockaddr *) &connectaddr, sizeof (connectaddr)) != 0)
     return fail_socket (16, "connect");
