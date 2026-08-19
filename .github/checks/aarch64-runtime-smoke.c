@@ -1,5 +1,6 @@
 #include <pthread.h>
 #include <signal.h>
+#include <stdio.h>
 #include <sys/socket.h>
 #include <sys/select.h>
 #include <sys/stat.h>
@@ -49,6 +50,13 @@ wait_readable (int sock)
   FD_ZERO (&rfds);
   FD_SET (sock, &rfds);
   return select (sock + 1, &rfds, NULL, NULL, &tv);
+}
+
+static int
+fail_socket (int code, const char *stage)
+{
+  fprintf (stderr, "%s failed: WSA error %d\n", stage, WSAGetLastError ());
+  return code;
 }
 
 int
@@ -112,39 +120,39 @@ main (void)
   addr.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
   addr.sin_port = 0;
   if (bind (server, (struct sockaddr *) &addr, sizeof (addr)) != 0)
-    return 13;
+    return fail_socket (13, "bind");
   if (listen (server, 1) != 0)
-    return 14;
+    return fail_socket (14, "listen");
   if (getsockname (server, (struct sockaddr *) &addr, &addrlen) != 0)
     return 15;
   if (connect (client, (struct sockaddr *) &addr, sizeof (addr)) != 0)
-    return 16;
+    return fail_socket (16, "connect");
   addrlen = sizeof (peer);
   accepted = accept (server, (struct sockaddr *) &peer, &addrlen);
   if (accepted < 0)
-    return 17;
+    return fail_socket (17, "accept");
   if (!socket_ino (accepted, &accepted_ino)
       || accepted_ino == server_ino
       || accepted_ino == client_ino)
     return 18;
 
   if (send (client, ping, sizeof (ping), 0) != (int) sizeof (ping))
-    return 19;
+    return fail_socket (19, "send ping");
   rc = wait_readable (accepted);
   if (rc != 1)
-    return 20;
+    return fail_socket (20, "select accepted");
   if (recv (accepted, buf, sizeof (ping), 0) != (int) sizeof (ping))
-    return 21;
+    return fail_socket (21, "recv ping");
   if (memcmp (buf, ping, sizeof (ping)) != 0)
     return 22;
 
   if (send (accepted, pong, sizeof (pong), 0) != (int) sizeof (pong))
-    return 23;
+    return fail_socket (23, "send pong");
   rc = wait_readable (client);
   if (rc != 1)
-    return 24;
+    return fail_socket (24, "select client");
   if (recv (client, buf, sizeof (pong), 0) != (int) sizeof (pong))
-    return 25;
+    return fail_socket (25, "recv pong");
   if (memcmp (buf, pong, sizeof (pong)) != 0)
     return 26;
 
