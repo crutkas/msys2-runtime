@@ -1,9 +1,13 @@
 #include <pthread.h>
 #include <signal.h>
 #include <sys/socket.h>
+#include <sys/select.h>
+#include <sys/stat.h>
 #include <sys/utsname.h>
+#include <netinet/in.h>
 #include <time.h>
 #include <ucontext.h>
+#include <string.h>
 #include <unistd.h>
 
 static __thread int tls_value = 17;
@@ -25,6 +29,28 @@ thread_main (void *arg)
   return NULL;
 }
 
+static int
+socket_ino (int sock, ino_t *ino)
+{
+  struct stat st;
+
+  if (fstat (sock, &st) != 0)
+    return 0;
+  *ino = st.st_ino;
+  return st.st_ino != 0;
+}
+
+static int
+wait_readable (int sock)
+{
+  fd_set rfds;
+  struct timeval tv = { 5, 0 };
+
+  FD_ZERO (&rfds);
+  FD_SET (sock, &rfds);
+  return select (sock + 1, &rfds, NULL, NULL, &tv);
+}
+
 int
 main (void)
 {
@@ -34,7 +60,19 @@ main (void)
   ucontext_t context;
   pthread_t thread;
   int thread_value = 0;
-  int sock;
+  int server;
+  int client;
+  int accepted;
+  int rc;
+  ino_t server_ino;
+  ino_t client_ino;
+  ino_t accepted_ino;
+  struct sockaddr_in addr = {};
+  struct sockaddr_in peer = {};
+  socklen_t addrlen = sizeof (addr);
+  char buf[8] = {};
+  const char ping[] = "ping";
+  const char pong[] = "pong";
 
   if (getpid () <= 0)
     return 1;
@@ -61,11 +99,61 @@ main (void)
   if (raise (SIGUSR1) != 0 || signal_seen != SIGUSR1)
     return 10;
 
-  sock = socket (AF_INET, SOCK_STREAM, 0);
-  if (sock < 0)
+  server = socket (AF_INET, SOCK_STREAM, 0);
+  client = socket (AF_INET, SOCK_STREAM, 0);
+  if (server < 0 || client < 0)
     return 11;
-  if (close (sock) != 0)
+  if (!socket_ino (server, &server_ino)
+      || !socket_ino (client, &client_ino)
+      || server_ino == client_ino)
     return 12;
+
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
+  addr.sin_port = 0;
+  if (bind (server, (struct sockaddr *) &addr, sizeof (addr)) != 0)
+    return 13;
+  if (listen (server, 1) != 0)
+    return 14;
+  if (getsockname (server, (struct sockaddr *) &addr, &addrlen) != 0)
+    return 15;
+  if (connect (client, (struct sockaddr *) &addr, sizeof (addr)) != 0)
+    return 16;
+  addrlen = sizeof (peer);
+  accepted = accept (server, (struct sockaddr *) &peer, &addrlen);
+  if (accepted < 0)
+    return 17;
+  if (!socket_ino (accepted, &accepted_ino)
+      || accepted_ino == server_ino
+      || accepted_ino == client_ino)
+    return 18;
+
+  if (send (client, ping, sizeof (ping), 0) != (int) sizeof (ping))
+    return 19;
+  rc = wait_readable (accepted);
+  if (rc != 1)
+    return 20;
+  if (recv (accepted, buf, sizeof (ping), 0) != (int) sizeof (ping))
+    return 21;
+  if (memcmp (buf, ping, sizeof (ping)) != 0)
+    return 22;
+
+  if (send (accepted, pong, sizeof (pong), 0) != (int) sizeof (pong))
+    return 23;
+  rc = wait_readable (client);
+  if (rc != 1)
+    return 24;
+  if (recv (client, buf, sizeof (pong), 0) != (int) sizeof (pong))
+    return 25;
+  if (memcmp (buf, pong, sizeof (pong)) != 0)
+    return 26;
+
+  if (close (accepted) != 0)
+    return 27;
+  if (close (client) != 0)
+    return 28;
+  if (close (server) != 0)
+    return 29;
 
   return 0;
 }
