@@ -46,6 +46,51 @@ extern "C" {
   int sscanf (const char *, const char *, ...);
 } /* End of "C" section */
 
+#if defined(__aarch64__)
+static int
+arm64_wsa_event_select (SOCKET sock, WSAEVENT evt, long mask)
+{
+  using wsaeventselect_t = int (WINAPI *) (SOCKET, WSAEVENT, long);
+  HMODULE ws2_32 = GetModuleHandleA ("ws2_32.dll");
+  if (!ws2_32)
+    ws2_32 = LoadLibraryA ("ws2_32.dll");
+  wsaeventselect_t wsaeventselect =
+    ws2_32 ? (wsaeventselect_t) GetProcAddress (ws2_32, "WSAEventSelect")
+	   : NULL;
+  return wsaeventselect ? wsaeventselect (sock, evt, mask) : SOCKET_ERROR;
+}
+
+static int
+arm64_wsa_async_select (SOCKET sock, HWND wnd, unsigned int msg, long mask)
+{
+  using wsaasyncselect_t = int (WINAPI *) (SOCKET, HWND, unsigned int, long);
+  HMODULE ws2_32 = GetModuleHandleA ("ws2_32.dll");
+  if (!ws2_32)
+    ws2_32 = LoadLibraryA ("ws2_32.dll");
+  wsaasyncselect_t wsaasyncselect =
+    ws2_32 ? (wsaasyncselect_t) GetProcAddress (ws2_32, "WSAAsyncSelect")
+	   : NULL;
+  return wsaasyncselect ? wsaasyncselect (sock, wnd, msg, mask) : SOCKET_ERROR;
+}
+
+static int
+arm64_closesocket (SOCKET sock)
+{
+  using closesocket_t = int (WINAPI *) (SOCKET);
+  HMODULE ws2_32 = GetModuleHandleA ("ws2_32.dll");
+  if (!ws2_32)
+    ws2_32 = LoadLibraryA ("ws2_32.dll");
+  closesocket_t closesocket =
+    ws2_32 ? (closesocket_t) GetProcAddress (ws2_32, "closesocket")
+	   : NULL;
+  return closesocket ? closesocket (sock) : SOCKET_ERROR;
+}
+#else
+#define arm64_wsa_event_select WSAEventSelect
+#define arm64_wsa_async_select WSAAsyncSelect
+#define arm64_closesocket closesocket
+#endif
+
 #define ASYNC_MASK (FD_READ|FD_WRITE|FD_OOB|FD_ACCEPT|FD_CONNECT)
 #define EVENT_MASK (FD_READ|FD_WRITE|FD_OOB|FD_ACCEPT|FD_CONNECT|FD_CLOSE)
 
@@ -256,7 +301,7 @@ fhandler_socket_local::socket (int af, int type, int protocol, int flags)
     }
   ret = set_socket_handle (sock, af, type, flags);
   if (ret < 0)
-    ::closesocket (sock);
+    arm64_closesocket (sock);
   return ret;
 }
 
@@ -357,7 +402,7 @@ fhandler_socket_local::socketpair (int af, int type, int protocol, int flags,
 	  set_winsock_errno ();
 	  goto err;
 	}
-      ::closesocket (sock);
+      arm64_closesocket (sock);
     }
   else
     {
@@ -388,11 +433,11 @@ fhandler_socket_local::socketpair (int af, int type, int protocol, int flags,
 
 err:
   if (sock != INVALID_SOCKET)
-    ::closesocket (sock);
+    arm64_closesocket (sock);
   if (insock != INVALID_SOCKET)
-    ::closesocket (insock);
+    arm64_closesocket (insock);
   if (outsock != INVALID_SOCKET)
-    ::closesocket (outsock);
+    arm64_closesocket (outsock);
   return -1;
 }
 
@@ -411,8 +456,8 @@ fhandler_socket_local::af_local_setblocking (bool &async, bool &nonblocking)
   nonblocking = is_nonblocking ();
   if (async)
     {
-      WSAAsyncSelect (get_socket (), winmsg, 0, 0);
-      WSAEventSelect (get_socket (), wsock_evt, EVENT_MASK);
+      arm64_wsa_async_select (get_socket (), winmsg, 0, 0);
+      arm64_wsa_event_select (get_socket (), wsock_evt, EVENT_MASK);
     }
   set_nonblocking (false);
   async_io (false);
@@ -425,7 +470,7 @@ fhandler_socket_local::af_local_unsetblocking (bool async, bool nonblocking)
     set_nonblocking (true);
   if (async)
     {
-      WSAAsyncSelect (get_socket (), winmsg, WM_ASYNCIO, ASYNC_MASK);
+      arm64_wsa_async_select (get_socket (), winmsg, WM_ASYNCIO, ASYNC_MASK);
       async_io (true);
     }
 }
@@ -566,7 +611,7 @@ fhandler_socket_local::af_local_accept ()
     {
       debug_printf ("connect from unauthorized client");
       ::shutdown (get_socket (), SD_BOTH);
-      ::closesocket (get_socket ());
+      arm64_closesocket (get_socket ());
       WSASetLastError (WSAECONNABORTED);
       return -1;
     }
@@ -1107,7 +1152,7 @@ fhandler_socket_local::accept4 (struct sockaddr *peer, int *len, int flags)
 	    delete sock;
 	}
       if (ret == -1)
-	::closesocket (res);
+	arm64_closesocket (res);
     }
   return ret;
 }

@@ -34,6 +34,7 @@
 #include <sys/socket.h>
 #include <sys/param.h>
 #include <sys/statvfs.h>
+#include <string.h>
 #include <cygwin/acl.h>
 #include "cygerrno.h"
 #include "path.h"
@@ -46,6 +47,69 @@
 
 #define ASYNC_MASK (FD_READ|FD_WRITE|FD_OOB|FD_ACCEPT|FD_CONNECT)
 #define EVENT_MASK (FD_READ|FD_WRITE|FD_OOB|FD_ACCEPT|FD_CONNECT|FD_CLOSE)
+
+#if defined(__aarch64__)
+static int
+arm64_wsa_event_select (SOCKET sock, WSAEVENT evt, long mask)
+{
+  using wsaeventselect_t = int (WINAPI *) (SOCKET, WSAEVENT, long);
+  HMODULE ws2_32 = GetModuleHandleA ("ws2_32.dll");
+  if (!ws2_32)
+    ws2_32 = LoadLibraryA ("ws2_32.dll");
+  wsaeventselect_t wsaeventselect =
+    ws2_32 ? (wsaeventselect_t) GetProcAddress (ws2_32, "WSAEventSelect")
+	   : NULL;
+  return wsaeventselect ? wsaeventselect (sock, evt, mask) : SOCKET_ERROR;
+}
+
+static int
+arm64_wsa_async_select (SOCKET sock, HWND wnd, unsigned int msg, long mask)
+{
+  using wsaasyncselect_t = int (WINAPI *) (SOCKET, HWND, unsigned int, long);
+  HMODULE ws2_32 = GetModuleHandleA ("ws2_32.dll");
+  if (!ws2_32)
+    ws2_32 = LoadLibraryA ("ws2_32.dll");
+  wsaasyncselect_t wsaasyncselect =
+    ws2_32 ? (wsaasyncselect_t) GetProcAddress (ws2_32, "WSAAsyncSelect")
+	   : NULL;
+  return wsaasyncselect ? wsaasyncselect (sock, wnd, msg, mask) : SOCKET_ERROR;
+}
+
+static int
+arm64_wsa_enum_network_events (SOCKET sock, WSAEVENT evt,
+			       LPWSANETWORKEVENTS events)
+{
+  using wsaenumnetworkevents_t =
+    int (WINAPI *) (SOCKET, WSAEVENT, LPWSANETWORKEVENTS);
+  HMODULE ws2_32 = GetModuleHandleA ("ws2_32.dll");
+  if (!ws2_32)
+    ws2_32 = LoadLibraryA ("ws2_32.dll");
+  wsaenumnetworkevents_t wsaenumnetworkevents =
+    ws2_32 ? (wsaenumnetworkevents_t) GetProcAddress (ws2_32,
+						      "WSAEnumNetworkEvents")
+	   : NULL;
+  return wsaenumnetworkevents ? wsaenumnetworkevents (sock, evt, events)
+			      : SOCKET_ERROR;
+}
+
+static int
+arm64_closesocket (SOCKET sock)
+{
+  using closesocket_t = int (WINAPI *) (SOCKET);
+  HMODULE ws2_32 = GetModuleHandleA ("ws2_32.dll");
+  if (!ws2_32)
+    ws2_32 = LoadLibraryA ("ws2_32.dll");
+  closesocket_t closesocket =
+    ws2_32 ? (closesocket_t) GetProcAddress (ws2_32, "closesocket")
+	   : NULL;
+  return closesocket ? closesocket (sock) : SOCKET_ERROR;
+}
+#else
+#define arm64_wsa_event_select WSAEventSelect
+#define arm64_wsa_async_select WSAAsyncSelect
+#define arm64_wsa_enum_network_events WSAEnumNetworkEvents
+#define arm64_closesocket closesocket
+#endif
 
 #define LOCK_EVENTS	\
   if (wsock_mtx && \
@@ -207,7 +271,6 @@ fhandler_socket_wsock::init_events ()
   UNICODE_STRING uname;
   OBJECT_ATTRIBUTES attr;
   NTSTATUS status;
-
   do
     {
       new_serial_number =
@@ -238,7 +301,8 @@ fhandler_socket_wsock::init_events ()
       NtClose (wsock_mtx);
       return false;
     }
-  if (WSAEventSelect (get_socket (), wsock_evt, EVENT_MASK) == SOCKET_ERROR)
+  if (arm64_wsa_event_select (get_socket (), wsock_evt, EVENT_MASK)
+      == SOCKET_ERROR)
     {
       debug_printf ("WSAEventSelect, %E");
       set_winsock_errno ();
@@ -266,7 +330,7 @@ fhandler_socket_wsock::evaluate_events (const long event_mask, long &events,
   long events_now = 0;
 
   WSANETWORKEVENTS evts = { 0 };
-  if (!(WSAEnumNetworkEvents (get_socket (), wsock_evt, &evts)))
+  if (!(arm64_wsa_enum_network_events (get_socket (), wsock_evt, &evts)))
     {
       if (evts.lNetworkEvents)
 	{
@@ -622,11 +686,17 @@ fhandler_socket_wsock::set_socket_handle (SOCKET sock, int af, int type,
       DWORD bret;
 
       lsp_fixup = true;
+#if !defined(__aarch64__)
       debug_printf ("LSP handle: %p", sock);
+#endif
       ret = WSAIoctl (sock, SIO_BASE_HANDLE, NULL, 0, (void *) &base_sock,
                       sizeof (base_sock), &bret, NULL, NULL);
       if (ret)
+#if defined(__aarch64__)
+        ;
+#else
         debug_printf ("WSAIoctl: %u", WSAGetLastError ());
+#endif
       else if (base_sock != sock)
         {
           if (GetHandleInformation ((HANDLE) base_sock, &hdl_flags)
@@ -635,10 +705,12 @@ fhandler_socket_wsock::set_socket_handle (SOCKET sock, int af, int type,
               if (!DuplicateHandle (GetCurrentProcess (), (HANDLE) base_sock,
                                     GetCurrentProcess (), (PHANDLE) &base_sock,
                                     0, TRUE, DUPLICATE_SAME_ACCESS))
-                debug_printf ("DuplicateHandle failed, %E");
+                {
+                  debug_printf ("DuplicateHandle failed, %E");
+                }
               else
                 {
-                  ::closesocket (sock);
+                  arm64_closesocket (sock);
                   sock = base_sock;
                   lsp_fixup = false;
                 }
@@ -659,8 +731,16 @@ fhandler_socket_wsock::set_socket_handle (SOCKET sock, int af, int type,
     }
   set_flags (file_flags);
   if (lsp_fixup)
-    init_fixup_before ();
+    {
+      init_fixup_before ();
+    }
+#if defined(__aarch64__)
+  /* Reuse the socket's session-unique inode here to avoid the extra LUID
+     allocation path that is tripping native ARM64 startup. */
+  set_unique_id (get_ino ());
+#else
   set_unique_id ();
+#endif
   if (get_socket_type () == SOCK_DGRAM)
     {
       /* Workaround the problem that a missing listener on a UDP socket
@@ -707,11 +787,51 @@ fhandler_socket_inet::socket (int af, int type, int protocol, int flags)
   /* This test should be covered by ::socket, but make sure we don't
      accidentally try anything else. */
   if (type != SOCK_STREAM && type != SOCK_DGRAM && type != SOCK_RAW)
-        {
-          set_errno (EINVAL);
-          return -1;
-        }
+    {
+      set_errno (EINVAL);
+      return -1;
+    }
+#if defined(__aarch64__)
+  {
+    static bool wsock_ready;
+
+    if (!wsock_ready)
+      {
+        using wsastartup_t = int (WINAPI *) (WORD, WSADATA *);
+        HMODULE ws2_32 = GetModuleHandleA ("ws2_32.dll");
+        if (!ws2_32)
+          ws2_32 = LoadLibraryA ("ws2_32.dll");
+
+        WSADATA wsadata;
+        wsastartup_t wsastartup =
+	  ws2_32 ? (wsastartup_t) GetProcAddress (ws2_32, "WSAStartup")
+		 : NULL;
+
+        if (!wsastartup
+            || wsastartup (MAKEWORD (2, 2), &wsadata) != 0)
+          {
+            set_winsock_errno ();
+            return -1;
+          }
+        wsock_ready = true;
+      }
+  }
+#endif
+#if defined(__aarch64__)
+  {
+    typedef SOCKET (WINAPI *wsasocketw_t) (int, int, int, void *, unsigned int,
+					   unsigned int);
+    HMODULE ws2_32 = GetModuleHandleA ("ws2_32.dll");
+    if (!ws2_32)
+      ws2_32 = LoadLibraryA ("ws2_32.dll");
+    wsasocketw_t wsasocketw =
+      ws2_32 ? (wsasocketw_t) GetProcAddress (ws2_32, "WSASocketW") : NULL;
+    sock = wsasocketw ? wsasocketw (af, type, protocol, NULL, 0, 0)
+		      : INVALID_SOCKET;
+  }
+#else
   sock = ::socket (af, type, protocol);
+#endif
   if (sock == INVALID_SOCKET)
     {
       set_winsock_errno ();
@@ -719,7 +839,7 @@ fhandler_socket_inet::socket (int af, int type, int protocol, int flags)
     }
   ret = set_socket_handle (sock, af, type, flags);
   if (ret < 0)
-    ::closesocket (sock);
+    arm64_closesocket (sock);
   return ret;
 }
 
@@ -925,7 +1045,7 @@ fhandler_socket_inet::accept4 (struct sockaddr *peer, int *len, int flags)
 	    delete sock;
 	}
       if (ret == -1)
-	::closesocket (res);
+	arm64_closesocket (res);
     }
   return ret;
 }
@@ -1060,7 +1180,7 @@ fhandler_socket_wsock::close (int flag)
       break;
     }
   release_events ();
-  while ((res = ::closesocket (get_socket ())) != 0)
+  while ((res = arm64_closesocket (get_socket ())) != 0)
     {
       if (WSAGetLastError () != WSAEWOULDBLOCK)
 	{
@@ -1074,7 +1194,7 @@ fhandler_socket_wsock::close (int flag)
 	  res = -1;
 	  break;
 	}
-      WSASetLastError (0);
+	WSASetLastError (0);
     }
   return res;
 }
@@ -2350,14 +2470,14 @@ fhandler_socket_wsock::ioctl (unsigned int cmd, void *p)
        use a type of the expected size.  Hopefully. */
     case FIOASYNC:
     case _IOW('f', 125, u_long):
-      res = WSAAsyncSelect (get_socket (), winmsg, WM_ASYNCIO,
-	      *(int *) p ? ASYNC_MASK : 0);
+      res = arm64_wsa_async_select (get_socket (), winmsg, WM_ASYNCIO,
+				    *(int *) p ? ASYNC_MASK : 0);
       syscall_printf ("Async I/O on socket %s",
 	      *(int *) p ? "started" : "cancelled");
       async_io (*(int *) p != 0);
       /* If async_io is switched off, revert the event handling. */
       if (*(int *) p == 0)
-	WSAEventSelect (get_socket (), wsock_evt, EVENT_MASK);
+	arm64_wsa_event_select (get_socket (), wsock_evt, EVENT_MASK);
       break;
     case FIONREAD:
     case _IOR('f', 127, u_long):
