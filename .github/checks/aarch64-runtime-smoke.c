@@ -61,6 +61,13 @@ fail_socket (int code, const char *stage)
   return code;
 }
 
+static int
+fail_gai (int code, const char *host, int rc)
+{
+  fprintf (stderr, "getaddrinfo %s failed: %s\n", host, gai_strerror (rc));
+  return code;
+}
+
 int
 main (void)
 {
@@ -87,6 +94,9 @@ main (void)
   char buf[8] = {};
   const char ping[] = "ping";
   const char pong[] = "pong";
+  const char *loopback_hosts[] = { "::1", "127.0.0.1" };
+  const int loopback_families[] = { AF_INET6, AF_INET };
+  const size_t loopback_count = sizeof (loopback_hosts) / sizeof (loopback_hosts[0]);
 
   if (getpid () <= 0)
     return 1;
@@ -113,24 +123,37 @@ main (void)
   if (raise (SIGUSR1) != 0 || signal_seen != SIGUSR1)
     return 10;
 
-  hints.ai_family = AF_INET6;
   hints.ai_socktype = SOCK_STREAM;
-  hints.ai_flags = AI_NUMERICHOST | AI_NUMERICSERV;
-  if (getaddrinfo ("::1", "0", &hints, &resolved) != 0)
-    return 11;
-  for (ai = resolved; ai; ai = ai->ai_next)
-    if (ai->ai_family == AF_INET6
-        && ai->ai_socktype == SOCK_STREAM
-        && ai->ai_addrlen <= sizeof (server_storage))
-      break;
-  if (!ai)
+  hints.ai_flags = AI_NUMERICHOST;
+  for (size_t i = 0; i < loopback_count; ++i)
     {
-      freeaddrinfo (resolved);
-      return 12;
-    }
+      int gai_rc;
 
-  server = socket (AF_INET6, SOCK_STREAM, 0);
-  client = socket (AF_INET6, SOCK_STREAM, 0);
+      hints.ai_family = loopback_families[i];
+      gai_rc = getaddrinfo (loopback_hosts[i], "0", &hints, &resolved);
+      if (gai_rc != 0)
+        {
+          if (i + 1 == loopback_count)
+            return fail_gai (11, loopback_hosts[i], gai_rc);
+          continue;
+        }
+      for (ai = resolved; ai; ai = ai->ai_next)
+        if (ai->ai_family == loopback_families[i]
+            && ai->ai_socktype == SOCK_STREAM
+            && ai->ai_addrlen <= sizeof (server_storage))
+          break;
+      if (ai)
+        break;
+      if (i + 1 == loopback_count)
+        return 11;
+      freeaddrinfo (resolved);
+      resolved = NULL;
+    }
+  if (!ai)
+    return 11;
+
+  server = socket (ai->ai_family, ai->ai_socktype, ai->ai_protocol);
+  client = socket (ai->ai_family, ai->ai_socktype, ai->ai_protocol);
   if (server < 0 || client < 0)
     {
       freeaddrinfo (resolved);
