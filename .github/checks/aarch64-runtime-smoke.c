@@ -47,6 +47,13 @@ fail_socket (int code, const char *stage)
   return code;
 }
 
+static void
+mark (const char *label)
+{
+  fprintf (stderr, "%s\n", label);
+  fflush (stderr);
+}
+
 int
 main (void)
 {
@@ -90,34 +97,74 @@ main (void)
   if (raise (SIGUSR1) != 0 || signal_seen != SIGUSR1)
     return 10;
 
+  mark ("diag: inode probe start");
+  mark ("diag: inode server socket before");
+  server = socket (AF_INET, SOCK_STREAM, 0);
+  mark ("diag: inode server socket after");
+  if (server < 0)
+    return fail_socket (11, "inode server socket");
+  mark ("diag: inode server fstat before");
+  if (!socket_ino (server, &server_ino))
+    return fail_socket (12, "inode server fstat");
+  mark ("diag: inode server fstat after");
+  mark ("diag: inode client socket before");
+  client = socket (AF_INET, SOCK_STREAM, 0);
+  mark ("diag: inode client socket after");
+  if (client < 0)
+    return fail_socket (13, "inode client socket");
+  mark ("diag: inode client fstat before");
+  if (!socket_ino (client, &client_ino))
+    return fail_socket (14, "inode client fstat");
+  mark ("diag: inode client fstat after");
+  if (server_ino == client_ino)
+    return 15;
+  mark ("diag: inode client close before");
+  if (close (client) != 0)
+    return fail_socket (16, "inode client close");
+  mark ("diag: inode client close after");
+  mark ("diag: inode server close before");
+  if (close (server) != 0)
+    return fail_socket (17, "inode server close");
+  mark ("diag: inode server close after");
+
+  mark ("diag: socketpair probe start");
+  mark ("diag: socketpair before");
   if (socketpair (AF_UNIX, SOCK_STREAM, 0, fds) != 0)
-    return fail_socket (11, "socketpair");
+    return fail_socket (18, "socketpair");
+  mark ("diag: socketpair after");
   server = fds[0];
   client = fds[1];
 
-  if (!socket_ino (server, &server_ino)
-      || !socket_ino (client, &client_ino)
-      || server_ino == client_ino)
-    return 12;
-
+  mark ("diag: socketpair send ping before");
   if (send (client, ping, sizeof (ping), 0) != (int) sizeof (ping))
-    return fail_socket (13, "send ping");
+    return fail_socket (19, "send ping");
+  mark ("diag: socketpair send ping after");
+  mark ("diag: socketpair recv ping before");
   if (recv (server, buf, sizeof (ping), 0) != (int) sizeof (ping))
-    return fail_socket (14, "recv ping");
+    return fail_socket (20, "recv ping");
+  mark ("diag: socketpair recv ping after");
   if (memcmp (buf, ping, sizeof (ping)) != 0)
-    return 15;
+    return 21;
 
+  mark ("diag: socketpair send pong before");
   if (send (server, pong, sizeof (pong), 0) != (int) sizeof (pong))
-    return fail_socket (16, "send pong");
+    return fail_socket (22, "send pong");
+  mark ("diag: socketpair send pong after");
+  mark ("diag: socketpair recv pong before");
   if (recv (client, buf, sizeof (pong), 0) != (int) sizeof (pong))
-    return fail_socket (17, "recv pong");
+    return fail_socket (23, "recv pong");
+  mark ("diag: socketpair recv pong after");
   if (memcmp (buf, pong, sizeof (pong)) != 0)
-    return 18;
+    return 24;
 
+  mark ("diag: socketpair client close before");
   if (close (client) != 0)
-    return 19;
+    return fail_socket (25, "socketpair client close");
+  mark ("diag: socketpair client close after");
+  mark ("diag: socketpair server close before");
   if (close (server) != 0)
-    return 20;
+    return fail_socket (26, "socketpair server close");
+  mark ("diag: socketpair server close after");
 
   return 0;
 }
