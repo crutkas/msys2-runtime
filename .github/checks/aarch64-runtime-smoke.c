@@ -6,7 +6,6 @@
 #include <sys/select.h>
 #include <sys/stat.h>
 #include <sys/utsname.h>
-#include <sys/un.h>
 #include <netinet/in.h>
 #include <time.h>
 #include <ucontext.h>
@@ -61,13 +60,6 @@ fail_socket (int code, const char *stage)
   return code;
 }
 
-static void
-stage (const char *name)
-{
-  fprintf (stderr, "stage: %s\n", name);
-  fflush (stderr);
-}
-
 int
 main (void)
 {
@@ -84,10 +76,10 @@ main (void)
   ino_t server_ino;
   ino_t client_ino;
   ino_t accepted_ino;
-  struct sockaddr_un server_addr = {};
-  struct sockaddr_un peer = {};
+  struct sockaddr_in server_addr = {};
+  struct sockaddr_in peer = {};
+  socklen_t server_addrlen = sizeof (server_addr);
   socklen_t addrlen = sizeof (peer);
-  char socket_path[64];
   char buf[8] = {};
   const char ping[] = "ping";
   const char pong[] = "pong";
@@ -117,81 +109,68 @@ main (void)
   if (raise (SIGUSR1) != 0 || signal_seen != SIGUSR1)
     return 10;
 
-  stage ("socket-create");
-  server = socket (AF_LOCAL, SOCK_STREAM, 0);
-  client = socket (AF_LOCAL, SOCK_STREAM, 0);
+  server = socket (AF_INET, SOCK_STREAM, 0);
+  client = socket (AF_INET, SOCK_STREAM, 0);
   if (server < 0 || client < 0)
     return 11;
 
-  stage ("socket-ino");
   if (!socket_ino (server, &server_ino)
       || !socket_ino (client, &client_ino)
       || server_ino == client_ino)
     return 12;
 
-  snprintf (socket_path, sizeof (socket_path), "aarch64-runtime-smoke-%ld.sock",
-	    (long) getpid ());
-  unlink (socket_path);
-
-  server_addr.sun_family = AF_LOCAL;
-  strncpy (server_addr.sun_path, socket_path, sizeof (server_addr.sun_path) - 1);
-  stage ("bind");
+  server_addr.sin_family = AF_INET;
+  server_addr.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
+  server_addr.sin_port = 0;
   if (bind (server, (struct sockaddr *) &server_addr,
-	    (socklen_t) (SUN_LEN (&server_addr) + 1)) != 0)
+	    (socklen_t) sizeof (server_addr)) != 0)
     return fail_socket (13, "bind");
-  stage ("listen");
+  if (getsockname (server, (struct sockaddr *) &server_addr, &server_addrlen) != 0)
+    return fail_socket (14, "getsockname");
+  if (server_addrlen != sizeof (server_addr))
+    return 15;
   if (listen (server, 1) != 0)
-    return fail_socket (14, "listen");
-  stage ("connect");
+    return fail_socket (16, "listen");
   if (connect (client, (struct sockaddr *) &server_addr,
-	       (socklen_t) (SUN_LEN (&server_addr) + 1)) != 0)
-    return fail_socket (15, "connect");
-  stage ("accept");
+	       (socklen_t) sizeof (server_addr)) != 0)
+    return fail_socket (17, "connect");
   accepted = accept (server, (struct sockaddr *) &peer, &addrlen);
   if (accepted < 0)
-    return fail_socket (16, "accept");
-  stage ("accept-ino");
+    return fail_socket (18, "accept");
   if (!socket_ino (accepted, &accepted_ino)
       || !socket_ino (server, &server_ino)
       || !socket_ino (client, &client_ino)
       || server_ino == client_ino
       || server_ino == accepted_ino
       || client_ino == accepted_ino)
-    return 17;
+    return 19;
 
-  stage ("send-ping");
   if (send (client, ping, sizeof (ping), 0) != (int) sizeof (ping))
-    return fail_socket (18, "send ping");
-  stage ("recv-ping-select");
+    return fail_socket (20, "send ping");
   rc = wait_readable (accepted);
   if (rc != 1)
-    return fail_socket (19, "select accepted");
-  stage ("recv-ping");
+    return fail_socket (21, "select accepted");
   if (recv (accepted, buf, sizeof (ping), 0) != (int) sizeof (ping))
-    return fail_socket (20, "recv ping");
+    return fail_socket (22, "recv ping");
   if (memcmp (buf, ping, sizeof (ping)) != 0)
-    return 21;
+    return 23;
 
-  stage ("send-pong");
   if (send (accepted, pong, sizeof (pong), 0) != (int) sizeof (pong))
-    return fail_socket (22, "send pong");
-  stage ("recv-pong-select");
+    return fail_socket (24, "send pong");
   rc = wait_readable (client);
   if (rc != 1)
-    return fail_socket (23, "select client");
-  stage ("recv-pong");
+    return fail_socket (25, "select client");
   if (recv (client, buf, sizeof (pong), 0) != (int) sizeof (pong))
-    return fail_socket (24, "recv pong");
+    return fail_socket (26, "recv pong");
   if (memcmp (buf, pong, sizeof (pong)) != 0)
-    return 25;
-
-  unlink (socket_path);
-  if (close (accepted) != 0)
-    return 26;
-  if (close (client) != 0)
     return 27;
-  if (close (server) != 0)
+
+  if (close (accepted) != 0)
     return 28;
+  if (close (client) != 0)
+    return 29;
+  if (close (server) != 0)
+    return 30;
 
   return 0;
 }
