@@ -2277,9 +2277,9 @@ arm64_socketpair_net_diag (const char *label)
   fprintf (stderr, "%s\n", label);
   fflush (stderr);
 }
-#define ARM64_SOCKETPAIR_NET_DIAG(label) (arm64_socketpair_net_diag (label), 0)
+#define ARM64_SOCKETPAIR_NET_DIAG(label) arm64_socketpair_net_diag (label)
 #else
-#define ARM64_SOCKETPAIR_NET_DIAG(label) (0)
+#define ARM64_SOCKETPAIR_NET_DIAG(label) do { } while (0)
 #endif
 
 extern "C" int
@@ -2331,25 +2331,27 @@ socketpair (int af, int type, int protocol, int sv[2])
       ARM64_SOCKETPAIR_NET_DIAG ("diag: net build_fh_dev out before");
       fh_out = reinterpret_cast<fhandler_socket *> (build_fh_dev (*dev));
       ARM64_SOCKETPAIR_NET_DIAG ("diag: net build_fh_dev out after");
-      if (fh_in && fh_out
-	  && (ARM64_SOCKETPAIR_NET_DIAG ("diag: net virtual socketpair before"),
-	      fh_in->socketpair (af, type, protocol, flags, fh_out) == 0))
+      if (fh_in && fh_out)
 	{
-	  ARM64_SOCKETPAIR_NET_DIAG ("diag: net virtual socketpair after");
-	  fd_in = fh_in;
-	  fd_out = fh_out;
-	  if (fd_in <= 2)
-	    set_std_handle (fd_in);
-	  if (fd_out <= 2)
-	    set_std_handle (fd_out);
-	  __try
+	  ARM64_SOCKETPAIR_NET_DIAG ("diag: net virtual socketpair before");
+	  if (fh_in->socketpair (af, type, protocol, flags, fh_out) == 0)
 	    {
-	      sv[0] = fd_in;
-	      sv[1] = fd_out;
-	      res = 0;
+	      ARM64_SOCKETPAIR_NET_DIAG ("diag: net virtual socketpair after");
+	      fd_in = fh_in;
+	      fd_out = fh_out;
+	      if (fd_in <= 2)
+		set_std_handle (fd_in);
+	      if (fd_out <= 2)
+		set_std_handle (fd_out);
+	      __try
+	        {
+	          sv[0] = fd_in;
+	          sv[1] = fd_out;
+	          res = 0;
+	        }
+	      __except (EFAULT) {}
+	      __endtry
 	    }
-	  __except (EFAULT) {}
-	  __endtry
 	}
       else
 	{
