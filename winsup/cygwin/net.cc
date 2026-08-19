@@ -2382,6 +2382,7 @@ socketpair (int af, int type, int protocol, int sv[2])
 		  __endtry
 		}
 	    }
+	}
       else
 	{
 	  delete fh_in;
