@@ -3,7 +3,6 @@
 #include <errno.h>
 #include <stdio.h>
 #include <sys/socket.h>
-#include <sys/select.h>
 #include <sys/stat.h>
 #include <sys/utsname.h>
 #include <netdb.h>
@@ -44,17 +43,6 @@ socket_ino (int sock, ino_t *ino)
 }
 
 static int
-wait_readable (int sock)
-{
-  fd_set rfds;
-  struct timeval tv = { 5, 0 };
-
-  FD_ZERO (&rfds);
-  FD_SET (sock, &rfds);
-  return select (sock + 1, &rfds, NULL, NULL, &tv);
-}
-
-static int
 fail_socket (int code, const char *stage)
 {
   fprintf (stderr, "%s failed: errno %d\n", stage, errno);
@@ -79,7 +67,6 @@ main (void)
   int thread_value = 0;
   int server;
   int client;
-  int rc;
   ino_t server_ino;
   ino_t client_ino;
   struct sockaddr_storage server_storage = {};
@@ -89,6 +76,7 @@ main (void)
   struct addrinfo *ai = NULL;
   socklen_t server_addrlen;
   socklen_t addrlen = sizeof (peer);
+  struct timeval timeout = { 5, 0 };
   char buf[8] = {};
   const char ping[] = "ping";
   const char pong[] = "pong";
@@ -166,36 +154,45 @@ main (void)
       return 14;
     }
 
+  if (setsockopt (server, SOL_SOCKET, SO_RCVTIMEO,
+                  &timeout, sizeof (timeout)) != 0
+      || setsockopt (client, SOL_SOCKET, SO_RCVTIMEO,
+                     &timeout, sizeof (timeout)) != 0)
+    {
+      freeaddrinfo (resolved);
+      return fail_socket (15, "setsockopt SO_RCVTIMEO");
+    }
+
   {
     int on = 1;
     if (setsockopt (server, SOL_SOCKET, SO_REUSEADDR,
                     &on, sizeof (on)) != 0)
       {
         freeaddrinfo (resolved);
-        return fail_socket (15, "setsockopt SO_REUSEADDR");
+        return fail_socket (16, "setsockopt SO_REUSEADDR");
       }
   }
   if (bind (server, ai->ai_addr, (socklen_t) ai->ai_addrlen) != 0)
     {
       freeaddrinfo (resolved);
-      return fail_socket (16, "bind");
+      return fail_socket (17, "bind");
     }
   server_addrlen = sizeof (server_storage);
   if (getsockname (server, (struct sockaddr *) &server_storage, &server_addrlen) != 0)
     {
       freeaddrinfo (resolved);
-      return fail_socket (17, "getsockname");
+      return fail_socket (18, "getsockname");
     }
   if (server_addrlen != ai->ai_addrlen)
     {
       freeaddrinfo (resolved);
-      return 18;
+      return 19;
     }
   if (!socket_ino (client, &client_ino)
       || server_ino == client_ino)
     {
       freeaddrinfo (resolved);
-      return 19;
+      return 20;
     }
 
   if (sendto (client, ping, sizeof (ping), 0,
@@ -203,13 +200,7 @@ main (void)
               (socklen_t) server_addrlen) != (int) sizeof (ping))
     {
       freeaddrinfo (resolved);
-      return fail_socket (20, "sendto ping");
-    }
-  rc = wait_readable (server);
-  if (rc != 1)
-    {
-      freeaddrinfo (resolved);
-      return fail_socket (21, "select server");
+      return fail_socket (21, "sendto ping");
     }
   addrlen = sizeof (peer);
   if (recvfrom (server, buf, sizeof (ping), 0,
@@ -230,34 +221,28 @@ main (void)
       freeaddrinfo (resolved);
       return fail_socket (24, "sendto pong");
     }
-  rc = wait_readable (client);
-  if (rc != 1)
-    {
-      freeaddrinfo (resolved);
-      return fail_socket (25, "select client");
-    }
   addrlen = sizeof (server_storage);
   if (recvfrom (client, buf, sizeof (pong), 0,
                 (struct sockaddr *) &server_storage, &addrlen) != (int) sizeof (pong))
     {
       freeaddrinfo (resolved);
-      return fail_socket (26, "recvfrom pong");
+      return fail_socket (25, "recvfrom pong");
     }
   if (memcmp (buf, pong, sizeof (pong)) != 0)
     {
       freeaddrinfo (resolved);
-      return 27;
+      return 26;
     }
 
   if (close (client) != 0)
     {
       freeaddrinfo (resolved);
-      return 28;
+      return 27;
     }
   if (close (server) != 0)
     {
       freeaddrinfo (resolved);
-      return 29;
+      return 28;
     }
   freeaddrinfo (resolved);
 
