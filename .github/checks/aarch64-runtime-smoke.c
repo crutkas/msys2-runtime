@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <sys/utsname.h>
 #include <netinet/in.h>
+#include <netdb.h>
 #include <time.h>
 #include <ucontext.h>
 #include <string.h>
@@ -76,9 +77,13 @@ main (void)
   ino_t server_ino;
   ino_t client_ino;
   ino_t accepted_ino;
-  struct sockaddr_in addr = {};
   struct sockaddr_in peer = {};
-  socklen_t addrlen = sizeof (addr);
+  struct sockaddr_in bound = {};
+  struct addrinfo hints = {};
+  struct addrinfo *bindinfo = NULL;
+  struct addrinfo *connectinfo = NULL;
+  socklen_t addrlen = sizeof (peer);
+  char port[16];
   char buf[8] = {};
   const char ping[] = "ping";
   const char pong[] = "pong";
@@ -113,17 +118,32 @@ main (void)
   if (server < 0 || client < 0)
     return 11;
 
-  addr.sin_family = AF_INET;
-  addr.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
-  addr.sin_port = 0;
-  if (bind (server, (struct sockaddr *) &addr, sizeof (addr)) != 0)
-    return fail_socket (13, "bind");
+  hints.ai_family = AF_INET;
+  hints.ai_socktype = SOCK_STREAM;
+  hints.ai_protocol = IPPROTO_TCP;
+  hints.ai_flags = AI_PASSIVE;
+  if (getaddrinfo (NULL, "0", &hints, &bindinfo) != 0 || !bindinfo)
+    return 13;
+  if (bind (server, bindinfo->ai_addr, (int) bindinfo->ai_addrlen) != 0)
+    {
+      freeaddrinfo (bindinfo);
+      return fail_socket (13, "bind");
+    }
+  freeaddrinfo (bindinfo);
   if (listen (server, 1) != 0)
     return fail_socket (14, "listen");
-  if (getsockname (server, (struct sockaddr *) &addr, &addrlen) != 0)
+  if (getsockname (server, (struct sockaddr *) &bound, &addrlen) != 0)
     return 15;
-  if (connect (client, (struct sockaddr *) &addr, sizeof (addr)) != 0)
-    return fail_socket (16, "connect");
+  snprintf (port, sizeof (port), "%u", ntohs (bound.sin_port));
+  if (getaddrinfo ("127.0.0.1", port, &hints, &connectinfo) != 0
+      || !connectinfo)
+    return fail_socket (16, "connect addrinfo");
+  if (connect (client, connectinfo->ai_addr, (int) connectinfo->ai_addrlen) != 0)
+    {
+      freeaddrinfo (connectinfo);
+      return fail_socket (16, "connect");
+    }
+  freeaddrinfo (connectinfo);
   addrlen = sizeof (peer);
   accepted = accept (server, (struct sockaddr *) &peer, &addrlen);
   if (accepted < 0)
