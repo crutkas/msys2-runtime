@@ -2334,13 +2334,16 @@ socketpair (int af, int type, int protocol, int sv[2])
       if (fh_in && fh_out)
 	{
 #if defined (__aarch64__)
+extern "C" int arm64_socketpair_unix (fhandler_socket *, int, int, int, int,
+				      fhandler_socket *);
+#endif
+
+#if defined (__aarch64__)
 	  if (af == AF_UNIX)
 	    {
 	      ARM64_SOCKETPAIR_NET_DIAG ("diag: net direct socketpair before");
-	      if (static_cast<fhandler_socket_unix *> (fh_in)
-		  ->fhandler_socket_unix::socketpair (af, type, protocol, flags,
-						      static_cast<fhandler_socket_unix *> (fh_out))
-		  == 0)
+	      if (arm64_socketpair_unix (fh_in, af, type, protocol, flags,
+					  fh_out) == 0)
 		{
 		  ARM64_SOCKETPAIR_NET_DIAG ("diag: net direct socketpair after");
 		  fd_in = fh_in;
