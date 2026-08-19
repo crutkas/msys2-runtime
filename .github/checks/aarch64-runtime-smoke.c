@@ -1,5 +1,6 @@
 #include <pthread.h>
 #include <signal.h>
+#include <errno.h>
 #include <stdio.h>
 #include <sys/socket.h>
 #include <sys/select.h>
@@ -55,7 +56,7 @@ wait_readable (int sock)
 static int
 fail_socket (int code, const char *stage)
 {
-  fprintf (stderr, "%s failed: WSA error %d\n", stage, WSAGetLastError ());
+  fprintf (stderr, "%s failed: errno %d\n", stage, errno);
   return code;
 }
 
