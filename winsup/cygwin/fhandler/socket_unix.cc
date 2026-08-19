@@ -37,6 +37,18 @@ GUID __cygwin_socket_guid = {
 #include "miscfuncs.h"
 #include "tls_pbuf.h"
 
+#if defined (__aarch64__)
+static void
+arm64_socketpair_diag (const char *label)
+{
+  fprintf (stderr, "%s\n", label);
+  fflush (stderr);
+}
+#define ARM64_SOCKETPAIR_DIAG(label) arm64_socketpair_diag (label)
+#else
+#define ARM64_SOCKETPAIR_DIAG(label) do { } while (0)
+#endif
+
 /*
    Abstract socket:
 
@@ -1368,6 +1380,7 @@ fhandler_socket_unix::socketpair (int af, int type, int protocol, int flags,
   sun_name_t sun;
   fhandler_socket_unix *fh = (fhandler_socket_unix *) fh_out;
 
+  ARM64_SOCKETPAIR_DIAG ("diag: socketpair enter");
   if (type != SOCK_STREAM && type != SOCK_DGRAM)
     {
       set_errno (EINVAL);
@@ -1379,11 +1392,16 @@ fhandler_socket_unix::socketpair (int af, int type, int protocol, int flags,
       return -1;
     }
 
+  ARM64_SOCKETPAIR_DIAG ("diag: socketpair create_shmem self before");
   if (create_shmem () < 0)
     return -1;
+  ARM64_SOCKETPAIR_DIAG ("diag: socketpair create_shmem self after");
+  ARM64_SOCKETPAIR_DIAG ("diag: socketpair create_shmem peer before");
   if (fh->create_shmem () < 0)
     goto fh_shmem_failed;
+  ARM64_SOCKETPAIR_DIAG ("diag: socketpair create_shmem peer after");
   /* socket() on both sockets */
+  ARM64_SOCKETPAIR_DIAG ("diag: socketpair init attrs before");
   rmem (262144);
   fh->rmem (262144);
   wmem (262144);
@@ -1396,20 +1414,30 @@ fhandler_socket_unix::socketpair (int af, int type, int protocol, int flags,
   fh->set_cred ();
   set_unique_id ();
   set_ino (get_unique_id ());
+  ARM64_SOCKETPAIR_DIAG ("diag: socketpair init attrs after");
   /* bind/listen 1st socket */
+  ARM64_SOCKETPAIR_DIAG ("diag: socketpair gen_pipe_name before");
   gen_pipe_name ();
+  ARM64_SOCKETPAIR_DIAG ("diag: socketpair gen_pipe_name after");
+  ARM64_SOCKETPAIR_DIAG ("diag: socketpair create_pipe before");
   pipe = create_pipe (true);
   if (!pipe)
     goto create_pipe_failed;
+  ARM64_SOCKETPAIR_DIAG ("diag: socketpair create_pipe after");
+  ARM64_SOCKETPAIR_DIAG ("diag: socketpair set_handle before");
   set_handle (pipe);
+  ARM64_SOCKETPAIR_DIAG ("diag: socketpair set_handle after");
   sun_path (&sun);
   fh->peer_sun_path (&sun);
   connect_state (listener);
   /* connect 2nd socket, even for DGRAM.  There's no difference as far
      as socketpairs are concerned. */
+  ARM64_SOCKETPAIR_DIAG ("diag: socketpair open_pipe before");
   if (fh->open_pipe (pc.get_nt_native_path (), false) < 0)
     goto fh_open_pipe_failed;
+  ARM64_SOCKETPAIR_DIAG ("diag: socketpair open_pipe after");
   fh->connect_state (connected);
+  ARM64_SOCKETPAIR_DIAG ("diag: socketpair connected after");
   if (flags & SOCK_NONBLOCK)
     {
       set_nonblocking (true);
@@ -1420,6 +1448,7 @@ fhandler_socket_unix::socketpair (int af, int type, int protocol, int flags,
       set_close_on_exec (true);
       fh->set_close_on_exec (true);
     }
+  ARM64_SOCKETPAIR_DIAG ("diag: socketpair return");
   return 0;
 
 fh_open_pipe_failed:
