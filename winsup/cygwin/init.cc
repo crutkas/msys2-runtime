@@ -11,10 +11,6 @@ details. */
 #include "ntdll.h"
 #include "shared_info.h"
 
-#if defined(__aarch64__)
-extern "C" void arm64_startup_trace (const char *stage);
-#endif
-
 static DWORD _my_oldfunc;
 
 static char *search_for  = (char *) cygthread::stub;
@@ -87,10 +83,6 @@ dll_entry (HANDLE h, DWORD reason, void *static_load)
       cygwin_hmodule = (HMODULE) h;
       dynamically_loaded = (static_load == NULL);
 
-#if defined(__aarch64__)
-      arm64_startup_trace ("dll_entry: before dll_crt0_0");
-#endif
-
       /* Starting with adding the POSIX-1.2008 per-thread locale functionality,
 	 we need an initalized _REENT area even for the functions called from
 	 dll_crt0_0.  Most importantly, we need the _REENT->_locale pointer
@@ -102,9 +94,6 @@ dll_entry (HANDLE h, DWORD reason, void *static_load)
       memcpy (_REENT, _GLOBAL_REENT, sizeof (struct _reent));
 
       dll_crt0_0 ();
-#if defined(__aarch64__)
-      arm64_startup_trace ("dll_entry: after dll_crt0_0");
-#endif
       _my_oldfunc = TlsAlloc ();
       dll_finished_loading = true;
       break;

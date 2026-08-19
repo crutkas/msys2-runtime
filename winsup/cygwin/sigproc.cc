@@ -507,10 +507,6 @@ sigpending (sigset_t *mask)
   return 0;
 }
 
-#if defined(__aarch64__)
-extern "C" void arm64_startup_trace (const char *stage);
-#endif
-
 /* Force the wait_sig thread to wake up and scan for pending signals */
 void
 sig_dispatch_pending (bool fast)
@@ -548,13 +544,7 @@ sigproc_init ()
   /* sync_proc_subproc is used by proc_subproc.  It serializes
      access to the children and proc arrays.  */
   sync_proc_subproc.init ("sync_proc_subproc");
-#if defined(__aarch64__)
-  arm64_startup_trace ("sigproc_init: before wait_sig thread");
-#endif
   new cygthread (wait_sig, cygself, "sig");
-#if defined(__aarch64__)
-  arm64_startup_trace ("sigproc_init: after wait_sig thread");
-#endif
 }
 
 /* Exit the current thread very carefully.

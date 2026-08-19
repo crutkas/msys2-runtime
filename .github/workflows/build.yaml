@@ -913,8 +913,6 @@ jobs:
 
       - name: Run AArch64 runtime startup probes
         shell: pwsh
-        env:
-          CYGWIN_ARM64_STARTUP_TRACE: 1
         run: |
           if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture -ne
               [System.Runtime.InteropServices.Architecture]::Arm64) {

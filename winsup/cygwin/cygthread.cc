@@ -93,10 +93,6 @@ details. */
 #include "cygtls.h"
 #include "ntdll.h"
 
-#if defined(__aarch64__)
-extern "C" void arm64_startup_trace (const char *stage);
-#endif
-
 #undef CloseHandle
 
 static cygthread NO_COPY threads[64];
@@ -143,9 +139,6 @@ cygthread::stub (VOID *arg)
 {
   cygthread *info = (cygthread *) arg;
   _my_tls._ctinfo = info;
-#if defined(__aarch64__)
-  arm64_startup_trace ("cygthread::stub: entered");
-#endif
   if (info->arg == cygself)
     {
       if (info->ev)
