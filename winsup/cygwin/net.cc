@@ -2270,11 +2270,6 @@ cygwin_bindresvport (int fd, struct sockaddr_in *sin)
 }
 
 /* socketpair: POSIX.1-2001, POSIX.1-2008, 4.4BSD. */
-#if defined (__aarch64__)
-extern "C" int arm64_socketpair_unix (fhandler_socket *, int, int, int, int,
-				      fhandler_socket *);
-#endif
-
 extern "C" int
 socketpair (int af, int type, int protocol, int sv[2])
 {
@@ -2320,48 +2315,22 @@ socketpair (int af, int type, int protocol, int sv[2])
       fh_out = reinterpret_cast<fhandler_socket *> (build_fh_dev (*dev));
       if (fh_in && fh_out)
 	{
-#if defined (__aarch64__)
-	  if (af == AF_UNIX)
+	  if (fh_in->socketpair (af, type, protocol, flags, fh_out) == 0)
 	    {
-	      if (arm64_socketpair_unix (fh_in, af, type, protocol, flags,
-					  fh_out) == 0)
+	      fd_in = fh_in;
+	      fd_out = fh_out;
+	      if (fd_in <= 2)
+		set_std_handle (fd_in);
+	      if (fd_out <= 2)
+		set_std_handle (fd_out);
+	      __try
 		{
-		  fd_in = fh_in;
-		  fd_out = fh_out;
-		  if (fd_in <= 2)
-		    set_std_handle (fd_in);
-		  if (fd_out <= 2)
-		    set_std_handle (fd_out);
-		  __try
-		    {
-		      sv[0] = fd_in;
-		      sv[1] = fd_out;
-		      res = 0;
-		    }
-		  __except (EFAULT) {}
-		  __endtry
+		  sv[0] = fd_in;
+		  sv[1] = fd_out;
+		  res = 0;
 		}
-	    }
-	  else
-#endif
-	    {
-	      if (fh_in->socketpair (af, type, protocol, flags, fh_out) == 0)
-		{
-		  fd_in = fh_in;
-		  fd_out = fh_out;
-		  if (fd_in <= 2)
-		    set_std_handle (fd_in);
-		  if (fd_out <= 2)
-		    set_std_handle (fd_out);
-		  __try
-		    {
-		      sv[0] = fd_in;
-		      sv[1] = fd_out;
-		      res = 0;
-		    }
-		  __except (EFAULT) {}
-		  __endtry
-		}
+	      __except (EFAULT) {}
+	      __endtry
 	    }
 	}
       else

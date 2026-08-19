@@ -1433,17 +1433,6 @@ fh_shmem_failed:
   return -1;
 }
 
-#if defined (__aarch64__)
-extern "C" int
-arm64_socketpair_unix (fhandler_socket *fh_in, int af, int type, int protocol,
-		       int flags, fhandler_socket *fh_out)
-{
-  return static_cast<fhandler_socket_unix *> (fh_in)
-    ->fhandler_socket_unix::socketpair (af, type, protocol, flags,
-					static_cast<fhandler_socket_unix *> (fh_out));
-}
-#endif
-
 /* Bind creates the backing file, generates the pipe name and sets
    bind_state.  On DGRAM sockets it also creates the pipe.  On STREAM
    sockets either listen or connect will do that. */
