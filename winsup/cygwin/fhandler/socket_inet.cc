@@ -734,13 +734,7 @@ fhandler_socket_wsock::set_socket_handle (SOCKET sock, int af, int type,
     {
       init_fixup_before ();
     }
-#if defined(__aarch64__)
-  /* Reuse the socket's session-unique inode here to avoid the extra LUID
-     allocation path that is tripping native ARM64 startup. */
-  set_unique_id (get_ino ());
-#else
   set_unique_id ();
-#endif
   if (get_socket_type () == SOCK_DGRAM)
     {
       /* Workaround the problem that a missing listener on a UDP socket
@@ -826,7 +820,8 @@ fhandler_socket_inet::socket (int af, int type, int protocol, int flags)
       ws2_32 = LoadLibraryA ("ws2_32.dll");
     wsasocketw_t wsasocketw =
       ws2_32 ? (wsasocketw_t) GetProcAddress (ws2_32, "WSASocketW") : NULL;
-    sock = wsasocketw ? wsasocketw (af, type, protocol, NULL, 0, 0)
+    sock = wsasocketw ? wsasocketw (af, type, protocol, NULL, 0,
+				     WSA_FLAG_OVERLAPPED)
 		      : INVALID_SOCKET;
   }
 #else
