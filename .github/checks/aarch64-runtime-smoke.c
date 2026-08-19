@@ -112,10 +112,6 @@ main (void)
   client = socket (AF_INET, SOCK_STREAM, 0);
   if (server < 0 || client < 0)
     return 11;
-  if (!socket_ino (server, &server_ino)
-      || !socket_ino (client, &client_ino)
-      || server_ino == client_ino)
-    return 12;
 
   addr.sin_family = AF_INET;
   addr.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
@@ -132,9 +128,12 @@ main (void)
   accepted = accept (server, (struct sockaddr *) &peer, &addrlen);
   if (accepted < 0)
     return fail_socket (17, "accept");
-  if (!socket_ino (accepted, &accepted_ino)
-      || accepted_ino == server_ino
-      || accepted_ino == client_ino)
+  if (!socket_ino (server, &server_ino)
+      || !socket_ino (client, &client_ino)
+      || !socket_ino (accepted, &accepted_ino)
+      || server_ino == client_ino
+      || server_ino == accepted_ino
+      || client_ino == accepted_ino)
     return 18;
 
   if (send (client, ping, sizeof (ping), 0) != (int) sizeof (ping))
