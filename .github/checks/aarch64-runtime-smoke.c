@@ -119,58 +119,64 @@ main (void)
       || server_ino == client_ino)
     return 12;
 
+  {
+    int on = 1;
+    if (setsockopt (server, SOL_SOCKET, SO_REUSEADDR,
+                    &on, sizeof (on)) != 0)
+      return fail_socket (13, "setsockopt SO_REUSEADDR");
+  }
   server_addr.sin6_family = AF_INET6;
   server_addr.sin6_addr = in6addr_loopback;
   server_addr.sin6_port = 0;
   if (bind (server, (struct sockaddr *) &server_addr,
 	    (socklen_t) sizeof (server_addr)) != 0)
-    return fail_socket (13, "bind");
+    return fail_socket (14, "bind");
   if (getsockname (server, (struct sockaddr *) &server_addr, &server_addrlen) != 0)
-    return fail_socket (14, "getsockname");
+    return fail_socket (15, "getsockname");
   if (server_addrlen != sizeof (server_addr))
-    return 15;
+    return 16;
   if (listen (server, 1) != 0)
-    return fail_socket (16, "listen");
+    return fail_socket (17, "listen");
   if (connect (client, (struct sockaddr *) &server_addr,
 	       (socklen_t) sizeof (server_addr)) != 0)
-    return fail_socket (17, "connect");
+    return fail_socket (18, "connect");
   accepted = accept (server, (struct sockaddr *) &peer, &addrlen);
   if (accepted < 0)
-    return fail_socket (18, "accept");
+    return fail_socket (19, "accept");
   if (!socket_ino (accepted, &accepted_ino)
       || !socket_ino (server, &server_ino)
       || !socket_ino (client, &client_ino)
       || server_ino == client_ino
       || server_ino == accepted_ino
       || client_ino == accepted_ino)
-    return 19;
+    return 20;
 
   if (send (client, ping, sizeof (ping), 0) != (int) sizeof (ping))
-    return fail_socket (20, "send ping");
+    return fail_socket (21, "send ping");
   rc = wait_readable (accepted);
   if (rc != 1)
-    return fail_socket (21, "select accepted");
+    return fail_socket (22, "select accepted");
   if (recv (accepted, buf, sizeof (ping), 0) != (int) sizeof (ping))
-    return fail_socket (22, "recv ping");
+    return fail_socket (23, "recv ping");
   if (memcmp (buf, ping, sizeof (ping)) != 0)
-    return 23;
+    return 24;
 
   if (send (accepted, pong, sizeof (pong), 0) != (int) sizeof (pong))
-    return fail_socket (24, "send pong");
+    return fail_socket (25, "send pong");
   rc = wait_readable (client);
   if (rc != 1)
-    return fail_socket (25, "select client");
+    return fail_socket (26, "select client");
   if (recv (client, buf, sizeof (pong), 0) != (int) sizeof (pong))
-    return fail_socket (26, "recv pong");
+    return fail_socket (27, "recv pong");
   if (memcmp (buf, pong, sizeof (pong)) != 0)
-    return 27;
+    return 28;
 
   if (close (accepted) != 0)
-    return 28;
-  if (close (client) != 0)
     return 29;
-  if (close (server) != 0)
+  if (close (client) != 0)
     return 30;
+  if (close (server) != 0)
+    return 31;
 
   return 0;
 }
