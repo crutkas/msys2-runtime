@@ -83,6 +83,7 @@ main (void)
   struct addrinfo *bindinfo = NULL;
   struct addrinfo *connectinfo = NULL;
   socklen_t addrlen = sizeof (peer);
+  unsigned int port_num;
   char port[16];
   char buf[8] = {};
   const char ping[] = "ping";
@@ -134,7 +135,9 @@ main (void)
     return fail_socket (14, "listen");
   if (getsockname (server, (struct sockaddr *) &bound, &addrlen) != 0)
     return 15;
-  snprintf (port, sizeof (port), "%u", ntohs (bound.sin_port));
+  port_num = ((unsigned int) bound.sin_port >> 8)
+	   | (((unsigned int) bound.sin_port & 0xff) << 8);
+  snprintf (port, sizeof (port), "%u", port_num);
   if (getaddrinfo ("127.0.0.1", port, &hints, &connectinfo) != 0
       || !connectinfo)
     return fail_socket (16, "connect addrinfo");
