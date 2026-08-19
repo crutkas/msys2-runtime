@@ -6,6 +6,7 @@
 #include <sys/select.h>
 #include <sys/stat.h>
 #include <sys/utsname.h>
+#include <sys/un.h>
 #include <netinet/in.h>
 #include <time.h>
 #include <ucontext.h>
@@ -71,12 +72,15 @@ main (void)
   int thread_value = 0;
   int server;
   int client;
-  int pair[2];
+  int accepted;
   int rc;
   ino_t server_ino;
   ino_t client_ino;
-  ino_t pair0_ino;
-  ino_t pair1_ino;
+  ino_t accepted_ino;
+  struct sockaddr_un server_addr = {};
+  struct sockaddr_un peer = {};
+  socklen_t addrlen = sizeof (peer);
+  char socket_path[64];
   char buf[8] = {};
   const char ping[] = "ping";
   const char pong[] = "pong";
@@ -106,8 +110,8 @@ main (void)
   if (raise (SIGUSR1) != 0 || signal_seen != SIGUSR1)
     return 10;
 
-  server = socket (AF_INET, SOCK_STREAM, 0);
-  client = socket (AF_INET, SOCK_STREAM, 0);
+  server = socket (AF_LOCAL, SOCK_STREAM, 0);
+  client = socket (AF_LOCAL, SOCK_STREAM, 0);
   if (server < 0 || client < 0)
     return 11;
 
@@ -116,48 +120,58 @@ main (void)
       || server_ino == client_ino)
     return 12;
 
-  if (socketpair (AF_UNIX, SOCK_STREAM, 0, pair) != 0)
-    return fail_socket (13, "socketpair");
-  if (!socket_ino (pair[0], &pair0_ino)
-      || !socket_ino (pair[1], &pair1_ino)
-      || pair0_ino == pair1_ino)
-    return 14;
-  if (!socket_ino (server, &server_ino)
+  snprintf (socket_path, sizeof (socket_path), "aarch64-runtime-smoke-%ld.sock",
+	    (long) getpid ());
+  unlink (socket_path);
+
+  server_addr.sun_family = AF_LOCAL;
+  strncpy (server_addr.sun_path, socket_path, sizeof (server_addr.sun_path) - 1);
+  if (bind (server, (struct sockaddr *) &server_addr,
+	    (socklen_t) (SUN_LEN (&server_addr) + 1)) != 0)
+    return fail_socket (13, "bind");
+  if (listen (server, 1) != 0)
+    return fail_socket (14, "listen");
+  if (connect (client, (struct sockaddr *) &server_addr,
+	       (socklen_t) (SUN_LEN (&server_addr) + 1)) != 0)
+    return fail_socket (15, "connect");
+  accepted = accept (server, (struct sockaddr *) &peer, &addrlen);
+  if (accepted < 0)
+    return fail_socket (16, "accept");
+  if (!socket_ino (accepted, &accepted_ino)
+      || !socket_ino (server, &server_ino)
       || !socket_ino (client, &client_ino)
-      || server_ino == pair0_ino
-      || server_ino == pair1_ino
-      || client_ino == pair0_ino
-      || client_ino == pair1_ino)
-    return 15;
+      || server_ino == client_ino
+      || server_ino == accepted_ino
+      || client_ino == accepted_ino)
+    return 17;
 
-  if (send (pair[0], ping, sizeof (ping), 0) != (int) sizeof (ping))
-    return fail_socket (16, "send ping");
-  rc = wait_readable (pair[1]);
+  if (send (client, ping, sizeof (ping), 0) != (int) sizeof (ping))
+    return fail_socket (18, "send ping");
+  rc = wait_readable (accepted);
   if (rc != 1)
-    return fail_socket (17, "select pair1");
-  if (recv (pair[1], buf, sizeof (ping), 0) != (int) sizeof (ping))
-    return fail_socket (18, "recv ping");
+    return fail_socket (19, "select accepted");
+  if (recv (accepted, buf, sizeof (ping), 0) != (int) sizeof (ping))
+    return fail_socket (20, "recv ping");
   if (memcmp (buf, ping, sizeof (ping)) != 0)
-    return 19;
+    return 21;
 
-  if (send (pair[1], pong, sizeof (pong), 0) != (int) sizeof (pong))
-    return fail_socket (20, "send pong");
-  rc = wait_readable (pair[0]);
+  if (send (accepted, pong, sizeof (pong), 0) != (int) sizeof (pong))
+    return fail_socket (22, "send pong");
+  rc = wait_readable (client);
   if (rc != 1)
-    return fail_socket (21, "select pair0");
-  if (recv (pair[0], buf, sizeof (pong), 0) != (int) sizeof (pong))
-    return fail_socket (22, "recv pong");
+    return fail_socket (23, "select client");
+  if (recv (client, buf, sizeof (pong), 0) != (int) sizeof (pong))
+    return fail_socket (24, "recv pong");
   if (memcmp (buf, pong, sizeof (pong)) != 0)
-    return 23;
-
-  if (close (pair[1]) != 0)
-    return 24;
-  if (close (pair[0]) != 0)
     return 25;
-  if (close (client) != 0)
+
+  unlink (socket_path);
+  if (close (accepted) != 0)
     return 26;
-  if (close (server) != 0)
+  if (close (client) != 0)
     return 27;
+  if (close (server) != 0)
+    return 28;
 
   return 0;
 }
