@@ -61,6 +61,13 @@ fail_socket (int code, const char *stage)
   return code;
 }
 
+static void
+stage (const char *name)
+{
+  fprintf (stderr, "stage: %s\n", name);
+  fflush (stderr);
+}
+
 int
 main (void)
 {
@@ -110,11 +117,13 @@ main (void)
   if (raise (SIGUSR1) != 0 || signal_seen != SIGUSR1)
     return 10;
 
+  stage ("socket-create");
   server = socket (AF_LOCAL, SOCK_STREAM, 0);
   client = socket (AF_LOCAL, SOCK_STREAM, 0);
   if (server < 0 || client < 0)
     return 11;
 
+  stage ("socket-ino");
   if (!socket_ino (server, &server_ino)
       || !socket_ino (client, &client_ino)
       || server_ino == client_ino)
@@ -126,17 +135,22 @@ main (void)
 
   server_addr.sun_family = AF_LOCAL;
   strncpy (server_addr.sun_path, socket_path, sizeof (server_addr.sun_path) - 1);
+  stage ("bind");
   if (bind (server, (struct sockaddr *) &server_addr,
 	    (socklen_t) (SUN_LEN (&server_addr) + 1)) != 0)
     return fail_socket (13, "bind");
+  stage ("listen");
   if (listen (server, 1) != 0)
     return fail_socket (14, "listen");
+  stage ("connect");
   if (connect (client, (struct sockaddr *) &server_addr,
 	       (socklen_t) (SUN_LEN (&server_addr) + 1)) != 0)
     return fail_socket (15, "connect");
+  stage ("accept");
   accepted = accept (server, (struct sockaddr *) &peer, &addrlen);
   if (accepted < 0)
     return fail_socket (16, "accept");
+  stage ("accept-ino");
   if (!socket_ino (accepted, &accepted_ino)
       || !socket_ino (server, &server_ino)
       || !socket_ino (client, &client_ino)
@@ -145,21 +159,27 @@ main (void)
       || client_ino == accepted_ino)
     return 17;
 
+  stage ("send-ping");
   if (send (client, ping, sizeof (ping), 0) != (int) sizeof (ping))
     return fail_socket (18, "send ping");
+  stage ("recv-ping-select");
   rc = wait_readable (accepted);
   if (rc != 1)
     return fail_socket (19, "select accepted");
+  stage ("recv-ping");
   if (recv (accepted, buf, sizeof (ping), 0) != (int) sizeof (ping))
     return fail_socket (20, "recv ping");
   if (memcmp (buf, ping, sizeof (ping)) != 0)
     return 21;
 
+  stage ("send-pong");
   if (send (accepted, pong, sizeof (pong), 0) != (int) sizeof (pong))
     return fail_socket (22, "send pong");
+  stage ("recv-pong-select");
   rc = wait_readable (client);
   if (rc != 1)
     return fail_socket (23, "select client");
+  stage ("recv-pong");
   if (recv (client, buf, sizeof (pong), 0) != (int) sizeof (pong))
     return fail_socket (24, "recv pong");
   if (memcmp (buf, pong, sizeof (pong)) != 0)
