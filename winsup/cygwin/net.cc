@@ -2270,18 +2270,6 @@ cygwin_bindresvport (int fd, struct sockaddr_in *sin)
 }
 
 /* socketpair: POSIX.1-2001, POSIX.1-2008, 4.4BSD. */
-#if defined (__aarch64__)
-static void
-arm64_socketpair_net_diag (const char *label)
-{
-  fprintf (stderr, "%s\n", label);
-  fflush (stderr);
-}
-#define ARM64_SOCKETPAIR_NET_DIAG(label) arm64_socketpair_net_diag (label)
-#else
-#define ARM64_SOCKETPAIR_NET_DIAG(label) do { } while (0)
-#endif
-
 extern "C" int
 socketpair (int af, int type, int protocol, int sv[2])
 {
@@ -2293,8 +2281,6 @@ socketpair (int af, int type, int protocol, int sv[2])
   type &= ~_SOCK_FLAG_MASK;
 
   debug_printf ("socket (%d, %d (flags %y), %d)", af, type, flags, protocol);
-  ARM64_SOCKETPAIR_NET_DIAG ("diag: net socketpair enter");
-
   switch (af)
     {
     case AF_LOCAL:
@@ -2325,12 +2311,8 @@ socketpair (int af, int type, int protocol, int sv[2])
       if (fd_out < 0)
 	goto done;
 
-      ARM64_SOCKETPAIR_NET_DIAG ("diag: net build_fh_dev in before");
       fh_in = reinterpret_cast<fhandler_socket *> (build_fh_dev (*dev));
-      ARM64_SOCKETPAIR_NET_DIAG ("diag: net build_fh_dev in after");
-      ARM64_SOCKETPAIR_NET_DIAG ("diag: net build_fh_dev out before");
       fh_out = reinterpret_cast<fhandler_socket *> (build_fh_dev (*dev));
-      ARM64_SOCKETPAIR_NET_DIAG ("diag: net build_fh_dev out after");
       if (fh_in && fh_out)
 	{
 #if defined (__aarch64__)
@@ -2341,11 +2323,9 @@ extern "C" int arm64_socketpair_unix (fhandler_socket *, int, int, int, int,
 #if defined (__aarch64__)
 	  if (af == AF_UNIX)
 	    {
-	      ARM64_SOCKETPAIR_NET_DIAG ("diag: net direct socketpair before");
 	      if (arm64_socketpair_unix (fh_in, af, type, protocol, flags,
 					  fh_out) == 0)
 		{
-		  ARM64_SOCKETPAIR_NET_DIAG ("diag: net direct socketpair after");
 		  fd_in = fh_in;
 		  fd_out = fh_out;
 		  if (fd_in <= 2)
@@ -2365,10 +2345,8 @@ extern "C" int arm64_socketpair_unix (fhandler_socket *, int, int, int, int,
 	  else
 #endif
 	    {
-	      ARM64_SOCKETPAIR_NET_DIAG ("diag: net virtual socketpair before");
 	      if (fh_in->socketpair (af, type, protocol, flags, fh_out) == 0)
 		{
-		  ARM64_SOCKETPAIR_NET_DIAG ("diag: net virtual socketpair after");
 		  fd_in = fh_in;
 		  fd_out = fh_out;
 		  if (fd_in <= 2)
