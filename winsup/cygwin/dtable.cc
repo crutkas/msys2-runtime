@@ -985,6 +985,9 @@ handle_to_fn (HANDLE h, char *posix_fn)
   if (!NT_SUCCESS (status))
     {
       debug_printf ("NtQueryObject failed, %y", status);
+#if defined(__aarch64__)
+      return false;
+#endif
     }
   // NT seems to do this on an unopened file
   else if (!ntfn->Name.Buffer)
