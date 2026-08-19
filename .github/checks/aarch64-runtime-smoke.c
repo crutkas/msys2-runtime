@@ -6,6 +6,7 @@
 #include <sys/select.h>
 #include <sys/stat.h>
 #include <sys/utsname.h>
+#include <netdb.h>
 #include <netinet/in.h>
 #include <time.h>
 #include <ucontext.h>
@@ -76,9 +77,12 @@ main (void)
   ino_t server_ino;
   ino_t client_ino;
   ino_t accepted_ino;
-  struct sockaddr_in6 server_addr = {};
-  struct sockaddr_in6 peer = {};
-  socklen_t server_addrlen = sizeof (server_addr);
+  struct sockaddr_storage server_storage = {};
+  struct sockaddr_storage peer = {};
+  struct addrinfo hints = {};
+  struct addrinfo *resolved = NULL;
+  struct addrinfo *ai = NULL;
+  socklen_t server_addrlen;
   socklen_t addrlen = sizeof (peer);
   char buf[8] = {};
   const char ping[] = "ping";
@@ -109,74 +113,150 @@ main (void)
   if (raise (SIGUSR1) != 0 || signal_seen != SIGUSR1)
     return 10;
 
+  hints.ai_family = AF_INET6;
+  hints.ai_socktype = SOCK_STREAM;
+  hints.ai_flags = AI_NUMERICHOST | AI_NUMERICSERV;
+  if (getaddrinfo ("::1", "0", &hints, &resolved) != 0)
+    return 11;
+  for (ai = resolved; ai; ai = ai->ai_next)
+    if (ai->ai_family == AF_INET6
+        && ai->ai_socktype == SOCK_STREAM
+        && ai->ai_addrlen <= sizeof (server_storage))
+      break;
+  if (!ai)
+    {
+      freeaddrinfo (resolved);
+      return 12;
+    }
+
   server = socket (AF_INET6, SOCK_STREAM, 0);
   client = socket (AF_INET6, SOCK_STREAM, 0);
   if (server < 0 || client < 0)
-    return 11;
+    {
+      freeaddrinfo (resolved);
+      return 13;
+    }
 
   if (!socket_ino (server, &server_ino)
       || !socket_ino (client, &client_ino)
       || server_ino == client_ino)
-    return 12;
+    {
+      freeaddrinfo (resolved);
+      return 14;
+    }
 
   {
     int on = 1;
     if (setsockopt (server, SOL_SOCKET, SO_REUSEADDR,
                     &on, sizeof (on)) != 0)
-      return fail_socket (13, "setsockopt SO_REUSEADDR");
+      {
+        freeaddrinfo (resolved);
+        return fail_socket (15, "setsockopt SO_REUSEADDR");
+      }
   }
-  server_addr.sin6_family = AF_INET6;
-  server_addr.sin6_addr = in6addr_loopback;
-  server_addr.sin6_port = 0;
-  if (bind (server, (struct sockaddr *) &server_addr,
-	    (socklen_t) sizeof (server_addr)) != 0)
-    return fail_socket (14, "bind");
-  if (getsockname (server, (struct sockaddr *) &server_addr, &server_addrlen) != 0)
-    return fail_socket (15, "getsockname");
-  if (server_addrlen != sizeof (server_addr))
-    return 16;
+  if (bind (server, ai->ai_addr, (socklen_t) ai->ai_addrlen) != 0)
+    {
+      freeaddrinfo (resolved);
+      return fail_socket (16, "bind");
+    }
+  server_addrlen = sizeof (server_storage);
+  if (getsockname (server, (struct sockaddr *) &server_storage, &server_addrlen) != 0)
+    {
+      freeaddrinfo (resolved);
+      return fail_socket (17, "getsockname");
+    }
+  if (server_addrlen != ai->ai_addrlen)
+    {
+      freeaddrinfo (resolved);
+      return 18;
+    }
   if (listen (server, 1) != 0)
-    return fail_socket (17, "listen");
-  if (connect (client, (struct sockaddr *) &server_addr,
-	       (socklen_t) sizeof (server_addr)) != 0)
-    return fail_socket (18, "connect");
+    {
+      freeaddrinfo (resolved);
+      return fail_socket (19, "listen");
+    }
+  if (connect (client, ai->ai_addr, (socklen_t) ai->ai_addrlen) != 0)
+    {
+      freeaddrinfo (resolved);
+      return fail_socket (20, "connect");
+    }
   accepted = accept (server, (struct sockaddr *) &peer, &addrlen);
   if (accepted < 0)
-    return fail_socket (19, "accept");
+    {
+      freeaddrinfo (resolved);
+      return fail_socket (21, "accept");
+    }
   if (!socket_ino (accepted, &accepted_ino)
       || !socket_ino (server, &server_ino)
       || !socket_ino (client, &client_ino)
       || server_ino == client_ino
       || server_ino == accepted_ino
       || client_ino == accepted_ino)
-    return 20;
+    {
+      freeaddrinfo (resolved);
+      return 22;
+    }
 
   if (send (client, ping, sizeof (ping), 0) != (int) sizeof (ping))
-    return fail_socket (21, "send ping");
+    {
+      freeaddrinfo (resolved);
+      return fail_socket (23, "send ping");
+    }
   rc = wait_readable (accepted);
   if (rc != 1)
-    return fail_socket (22, "select accepted");
+    {
+      freeaddrinfo (resolved);
+      return fail_socket (24, "select accepted");
+    }
   if (recv (accepted, buf, sizeof (ping), 0) != (int) sizeof (ping))
-    return fail_socket (23, "recv ping");
+    {
+      freeaddrinfo (resolved);
+      return fail_socket (25, "recv ping");
+    }
   if (memcmp (buf, ping, sizeof (ping)) != 0)
-    return 24;
+    {
+      freeaddrinfo (resolved);
+      return 26;
+    }
 
   if (send (accepted, pong, sizeof (pong), 0) != (int) sizeof (pong))
-    return fail_socket (25, "send pong");
+    {
+      freeaddrinfo (resolved);
+      return fail_socket (27, "send pong");
+    }
   rc = wait_readable (client);
   if (rc != 1)
-    return fail_socket (26, "select client");
+    {
+      freeaddrinfo (resolved);
+      return fail_socket (28, "select client");
+    }
   if (recv (client, buf, sizeof (pong), 0) != (int) sizeof (pong))
-    return fail_socket (27, "recv pong");
+    {
+      freeaddrinfo (resolved);
+      return fail_socket (29, "recv pong");
+    }
   if (memcmp (buf, pong, sizeof (pong)) != 0)
-    return 28;
+    {
+      freeaddrinfo (resolved);
+      return 30;
+    }
 
   if (close (accepted) != 0)
-    return 29;
+    {
+      freeaddrinfo (resolved);
+      return 31;
+    }
   if (close (client) != 0)
-    return 30;
+    {
+      freeaddrinfo (resolved);
+      return 32;
+    }
   if (close (server) != 0)
-    return 31;
+    {
+      freeaddrinfo (resolved);
+      return 33;
+    }
+  freeaddrinfo (resolved);
 
   return 0;
 }
