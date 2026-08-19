@@ -2270,6 +2270,11 @@ cygwin_bindresvport (int fd, struct sockaddr_in *sin)
 }
 
 /* socketpair: POSIX.1-2001, POSIX.1-2008, 4.4BSD. */
+#if defined (__aarch64__)
+extern "C" int arm64_socketpair_unix (fhandler_socket *, int, int, int, int,
+				      fhandler_socket *);
+#endif
+
 extern "C" int
 socketpair (int af, int type, int protocol, int sv[2])
 {
@@ -2315,11 +2320,6 @@ socketpair (int af, int type, int protocol, int sv[2])
       fh_out = reinterpret_cast<fhandler_socket *> (build_fh_dev (*dev));
       if (fh_in && fh_out)
 	{
-#if defined (__aarch64__)
-extern "C" int arm64_socketpair_unix (fhandler_socket *, int, int, int, int,
-				      fhandler_socket *);
-#endif
-
 #if defined (__aarch64__)
 	  if (af == AF_UNIX)
 	    {
