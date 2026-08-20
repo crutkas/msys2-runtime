@@ -85,6 +85,20 @@ arm64_bind (SOCKET sock, const struct sockaddr *name, int namelen)
 }
 
 static int
+arm64_setsockopt (SOCKET sock, int level, int optname, const char *optval,
+		  int optlen)
+{
+  using setsockopt_t = int (WINAPI *) (SOCKET, int, int, const char *, int);
+  HMODULE ws2_32 = GetModuleHandleA ("ws2_32.dll");
+  if (!ws2_32)
+    ws2_32 = LoadLibraryA ("ws2_32.dll");
+  setsockopt_t setsockopt =
+    ws2_32 ? (setsockopt_t) GetProcAddress (ws2_32, "setsockopt") : NULL;
+  return setsockopt ? setsockopt (sock, level, optname, optval, optlen)
+		    : SOCKET_ERROR;
+}
+
+static int
 arm64_wsa_async_select (SOCKET sock, HWND wnd, unsigned int msg, long mask)
 {
   using wsaasyncselect_t = int (WINAPI *) (SOCKET, HWND, unsigned int, long);
@@ -981,9 +995,9 @@ fhandler_socket_inet::bind (const struct sockaddr *name, int namelen)
 	 SO_EXCLUSIVEADDRUSE socket option.  See cygwin_setsockopt()
 	 for a more detailed description. */
       int on = 1;
-      int ret = ::setsockopt (get_socket (), SOL_SOCKET,
-			      SO_EXCLUSIVEADDRUSE,
-			      (const char *) &on, sizeof on);
+      int ret = arm64_setsockopt (get_socket (), SOL_SOCKET,
+				  SO_EXCLUSIVEADDRUSE,
+				  (const char *) &on, sizeof on);
       debug_printf ("%d = setsockopt(SO_EXCLUSIVEADDRUSE), %E", ret);
       ARM64_SOCKET_DIAG ("diag: inet bind exclusive after");
     }
