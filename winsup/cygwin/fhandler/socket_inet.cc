@@ -49,6 +49,7 @@
 #define ASYNC_MASK (FD_READ|FD_WRITE|FD_OOB|FD_ACCEPT|FD_CONNECT)
 #define EVENT_MASK (FD_READ|FD_WRITE|FD_OOB|FD_ACCEPT|FD_CONNECT|FD_CLOSE)
 
+#if defined(__aarch64__)
 static int
 arm64_closesocket (SOCKET sock)
 {
