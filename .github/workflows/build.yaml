@@ -23,7 +23,17 @@ jobs:
         with:
           msystem: MSYS
           update: true
-          install: base-devel cocom gcc git gmp isl libiconv libintl libzstd mpc mpfr zlib
+          # autotools provides /usr/bin/aclocal, /usr/bin/autoconf, and
+          # /usr/bin/automake, which winsup/autogen.sh (invoked below by
+          # the cygtls-lock, autoload, and POSIX-thread-startup checks)
+          # calls directly. It is already part of the (passing) x86_64
+          # build job's package list; this job was simply missing it,
+          # causing a pre-existing, deterministic "aclocal: No such file
+          # or directory" failure here (reproduced on the unmodified base
+          # branch as well, unrelated to the AArch64 wsock autoload fix)
+          # that aborted the job before the _wsock_init disassembly
+          # assertions below could ever run.
+          install: autotools base-devel cocom gcc git gmp isl libiconv libintl libzstd mpc mpfr zlib
 
       - name: Install fork-local AArch64 runtime toolchain
         run: ./.github/checks/install-aarch64-runtime-toolchain.sh
@@ -227,9 +237,25 @@ jobs:
           # tail-branch straight into dll_func_load afterwards, reusing
           # that one func_info frame rather than leaking a second one
           # through another dll_chain round trip.
-          sed -n '/<_wsock_init>:/,$p' aarch64-autoload.dis \
-            > aarch64-wsock-init.dis
+          #
+          # Bound the extracted disassembly strictly to _wsock_init's own
+          # body: start at its "<_wsock_init>:" label and stop at the next
+          # "<symbol>:" label, whatever it happens to be, rather than
+          # hardcoding the following function's name (which is fragile if
+          # symbol order ever changes) or reading to end-of-file (which
+          # would let assertions like "br x16" or "no mov x0, x30" match
+          # unrelated code in later functions, e.g. dll_func_load itself).
+          awk '
+            /^[0-9a-f]+ <_wsock_init>:$/ { found = 1; print; next }
+            found && /^[0-9a-f]+ <[^>]+>:$/ { exit }
+            found { print }
+          ' aarch64-autoload.dis | tee aarch64-wsock-init.dis
           test -s aarch64-wsock-init.dis
+          if tail -n +2 aarch64-wsock-init.dis \
+              | grep -Eq '^[0-9a-f]+ <[^>]+>:$'; then
+            echo "_wsock_init disassembly slice leaked into another symbol" >&2
+            exit 1
+          fi
           grep -Eq '[[:space:]]ldr[[:space:]]+x0, \[sp, #16\]' \
             aarch64-wsock-init.dis
           grep -Eq '[[:space:]]br[[:space:]]+x16' aarch64-wsock-init.dis
