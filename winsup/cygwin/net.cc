@@ -38,6 +38,18 @@ details. */
 #include "cygheap.h"
 #include "tls_pbuf.h"
 
+#if defined (__aarch64__)
+static void
+arm64_socketpair_net_diag (const char *label)
+{
+  fprintf (stderr, "%s\n", label);
+  fflush (stderr);
+}
+#define ARM64_SOCKETPAIR_NET_DIAG(label) arm64_socketpair_net_diag (label)
+#else
+#define ARM64_SOCKETPAIR_NET_DIAG(label) do { } while (0)
+#endif
+
 /* Unfortunately defined in Windows header files and arpa/nameser_compat.h. */
 #undef NOERROR
 #undef DELETE
@@ -2311,18 +2323,24 @@ socketpair (int af, int type, int protocol, int sv[2])
       if (fd_out < 0)
 	goto done;
 
+      ARM64_SOCKETPAIR_NET_DIAG ("diag: net build_fh_dev in before");
       fh_in = reinterpret_cast<fhandler_socket *> (build_fh_dev (*dev));
+      ARM64_SOCKETPAIR_NET_DIAG ("diag: net build_fh_dev in after");
+      ARM64_SOCKETPAIR_NET_DIAG ("diag: net build_fh_dev out before");
       fh_out = reinterpret_cast<fhandler_socket *> (build_fh_dev (*dev));
+      ARM64_SOCKETPAIR_NET_DIAG ("diag: net build_fh_dev out after");
       if (fh_in && fh_out)
 	{
 #if defined (__aarch64__)
 	  if (af == AF_UNIX)
 	    {
+	      ARM64_SOCKETPAIR_NET_DIAG ("diag: net local socketpair before");
 	      if (static_cast<fhandler_socket_local *> (fh_in)
 		  ->fhandler_socket_local::socketpair (
 		       af, type, protocol, flags,
 		       static_cast<fhandler_socket_local *> (fh_out)) == 0)
 		{
+		  ARM64_SOCKETPAIR_NET_DIAG ("diag: net local socketpair after");
 		  fd_in = fh_in;
 		  fd_out = fh_out;
 		  if (fd_in <= 2)
