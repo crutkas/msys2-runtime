@@ -135,25 +135,25 @@ main (void)
   server = fds[0];
   client = fds[1];
 
-  mark ("diag: socketpair send ping before");
-  if (send (client, ping, sizeof (ping), 0) != (int) sizeof (ping))
-    return fail_socket (19, "send ping");
-  mark ("diag: socketpair send ping after");
-  mark ("diag: socketpair recv ping before");
-  if (recv (server, buf, sizeof (ping), 0) != (int) sizeof (ping))
-    return fail_socket (20, "recv ping");
-  mark ("diag: socketpair recv ping after");
+  mark ("diag: socketpair write ping before");
+  if (write (client, ping, sizeof (ping)) != (int) sizeof (ping))
+    return fail_socket (19, "write ping");
+  mark ("diag: socketpair write ping after");
+  mark ("diag: socketpair read ping before");
+  if (read (server, buf, sizeof (ping)) != (int) sizeof (ping))
+    return fail_socket (20, "read ping");
+  mark ("diag: socketpair read ping after");
   if (memcmp (buf, ping, sizeof (ping)) != 0)
     return 21;
 
-  mark ("diag: socketpair send pong before");
-  if (send (server, pong, sizeof (pong), 0) != (int) sizeof (pong))
-    return fail_socket (22, "send pong");
-  mark ("diag: socketpair send pong after");
-  mark ("diag: socketpair recv pong before");
-  if (recv (client, buf, sizeof (pong), 0) != (int) sizeof (pong))
-    return fail_socket (23, "recv pong");
-  mark ("diag: socketpair recv pong after");
+  mark ("diag: socketpair write pong before");
+  if (write (server, pong, sizeof (pong)) != (int) sizeof (pong))
+    return fail_socket (22, "write pong");
+  mark ("diag: socketpair write pong after");
+  mark ("diag: socketpair read pong before");
+  if (read (client, buf, sizeof (pong)) != (int) sizeof (pong))
+    return fail_socket (23, "read pong");
+  mark ("diag: socketpair read pong after");
   if (memcmp (buf, pong, sizeof (pong)) != 0)
     return 24;
 
