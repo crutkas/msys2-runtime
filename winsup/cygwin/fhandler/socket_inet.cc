@@ -972,8 +972,10 @@ fhandler_socket_inet::bind (const struct sockaddr *name, int namelen)
 {
   int res = -1;
 
+  ARM64_SOCKET_DIAG ("diag: inet bind enter");
   if (!saw_reuseaddr ())
     {
+      ARM64_SOCKET_DIAG ("diag: inet bind exclusive before");
       /* If the application didn't explicitely request SO_REUSEADDR,
 	 enforce POSIX standard socket binding behaviour by setting the
 	 SO_EXCLUSIVEADDRUSE socket option.  See cygwin_setsockopt()
@@ -983,16 +985,18 @@ fhandler_socket_inet::bind (const struct sockaddr *name, int namelen)
 			      SO_EXCLUSIVEADDRUSE,
 			      (const char *) &on, sizeof on);
       debug_printf ("%d = setsockopt(SO_EXCLUSIVEADDRUSE), %E", ret);
+      ARM64_SOCKET_DIAG ("diag: inet bind exclusive after");
     }
-  if (
+  ARM64_SOCKET_DIAG ("diag: inet bind syscall before");
 #if defined(__aarch64__)
-      arm64_bind (get_socket (), name, namelen))
+  if (arm64_bind (get_socket (), name, namelen))
 #else
-      ::bind (get_socket (), name, namelen))
+  if (::bind (get_socket (), name, namelen))
 #endif
     set_winsock_errno ();
   else
     res = 0;
+  ARM64_SOCKET_DIAG ("diag: inet bind syscall after");
 
   return res;
 }
