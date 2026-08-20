@@ -99,6 +99,18 @@ arm64_closesocket (SOCKET sock)
   return closesocket ? closesocket (sock) : SOCKET_ERROR;
 }
 
+static int
+arm64_bind (SOCKET sock, const struct sockaddr *name, int namelen)
+{
+  using bind_t = int (WINAPI *) (SOCKET, const struct sockaddr *, int);
+  HMODULE ws2_32 = GetModuleHandleA ("ws2_32.dll");
+  if (!ws2_32)
+    ws2_32 = LoadLibraryA ("ws2_32.dll");
+  bind_t bind =
+    ws2_32 ? (bind_t) GetProcAddress (ws2_32, "bind") : NULL;
+  return bind ? bind (sock, name, namelen) : SOCKET_ERROR;
+}
+
 static SOCKET
 arm64_socket (int af, int type, int protocol)
 {
@@ -397,7 +409,12 @@ fhandler_socket_local::socketpair (int af, int type, int protocol, int flags,
   sock_in.sin_family = AF_INET;
   sock_in.sin_port = 0;
   sock_in.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
-  if (::bind (sock, (struct sockaddr *) &sock_in, sizeof (sock_in)) < 0)
+  if (
+#if defined(__aarch64__)
+      arm64_bind (sock, (struct sockaddr *) &sock_in, sizeof (sock_in)) < 0)
+#else
+      ::bind (sock, (struct sockaddr *) &sock_in, sizeof (sock_in)) < 0)
+#endif
     {
       set_winsock_errno ();
       goto err;
@@ -441,8 +458,14 @@ fhandler_socket_local::socketpair (int af, int type, int protocol, int flags,
       sock_out.sin_family = AF_INET;
       sock_out.sin_port = 0;
       sock_out.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
-      if (::bind (outsock, (struct sockaddr *) &sock_out,
+      if (
+#if defined(__aarch64__)
+	  arm64_bind (outsock, (struct sockaddr *) &sock_out,
+		      sizeof (sock_out)) < 0)
+#else
+	  ::bind (outsock, (struct sockaddr *) &sock_out,
 		  sizeof (sock_out)) < 0)
+#endif
 	{
 	  set_winsock_errno ();
 	  goto err;
