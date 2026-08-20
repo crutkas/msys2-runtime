@@ -85,6 +85,18 @@ arm64_bind (SOCKET sock, const struct sockaddr *name, int namelen)
 }
 
 static int
+arm64_getsockname (SOCKET sock, struct sockaddr *name, int *namelen)
+{
+  using getsockname_t = int (WINAPI *) (SOCKET, struct sockaddr *, int *);
+  HMODULE ws2_32 = GetModuleHandleA ("ws2_32.dll");
+  if (!ws2_32)
+    ws2_32 = LoadLibraryA ("ws2_32.dll");
+  getsockname_t getsockname =
+    ws2_32 ? (getsockname_t) GetProcAddress (ws2_32, "getsockname") : NULL;
+  return getsockname ? getsockname (sock, name, namelen) : SOCKET_ERROR;
+}
+
+static int
 arm64_setsockopt (SOCKET sock, int level, int optname, const char *optval,
 		  int optlen)
 {
@@ -1204,7 +1216,12 @@ fhandler_socket_inet::getsockname (struct sockaddr *name, int *namelen)
      big enough local buffer and truncate later as necessary, per POSIX. */
   struct sockaddr_storage sock;
   int len = sizeof sock;
-  res = ::getsockname (get_socket (), (struct sockaddr *) &sock, &len);
+  res =
+#if defined(__aarch64__)
+    arm64_getsockname (get_socket (), (struct sockaddr *) &sock, &len);
+#else
+    ::getsockname (get_socket (), (struct sockaddr *) &sock, &len);
+#endif
   if (!res)
     {
       memcpy (name, &sock, MIN (*namelen, len));
