@@ -69,8 +69,8 @@ main (void)
   ino_t server_ino;
   ino_t client_ino;
   char buf[8] = {};
-  const char ping[] = "ping";
-  const char pong[] = "pong";
+  char ping[] = "ping";
+  char pong[] = "pong";
 
   if (getpid () <= 0)
     return 1;
