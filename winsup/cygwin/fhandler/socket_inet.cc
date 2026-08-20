@@ -103,6 +103,63 @@ arm64_wsa_enum_network_events (SOCKET sock, WSAEVENT evt,
 }
 
 static int
+arm64_wsa_recv (SOCKET sock, LPWSABUF buffers, DWORD bufcnt, LPDWORD ret,
+		LPDWORD flags, LPWSAOVERLAPPED ovl,
+		LPWSAOVERLAPPED_COMPLETION_ROUTINE cr)
+{
+  using wsarecv_t = int (WINAPI *) (SOCKET, LPWSABUF, DWORD, LPDWORD, LPDWORD,
+				    LPWSAOVERLAPPED,
+				    LPWSAOVERLAPPED_COMPLETION_ROUTINE);
+  HMODULE ws2_32 = GetModuleHandleA ("ws2_32.dll");
+  if (!ws2_32)
+    ws2_32 = LoadLibraryA ("ws2_32.dll");
+  wsarecv_t wsarecv =
+    ws2_32 ? (wsarecv_t) GetProcAddress (ws2_32, "WSARecv") : NULL;
+  return wsarecv ? wsarecv (sock, buffers, bufcnt, ret, flags, ovl, cr)
+		 : SOCKET_ERROR;
+}
+
+static int
+arm64_wsa_recvfrom (SOCKET sock, LPWSABUF buffers, DWORD bufcnt, LPDWORD ret,
+		    LPDWORD flags, struct sockaddr *from, int *fromlen,
+		    LPWSAOVERLAPPED ovl,
+		    LPWSAOVERLAPPED_COMPLETION_ROUTINE cr)
+{
+  using wsarecvfrom_t = int (WINAPI *) (SOCKET, LPWSABUF, DWORD, LPDWORD,
+					LPDWORD, struct sockaddr *, int *,
+					LPWSAOVERLAPPED,
+					LPWSAOVERLAPPED_COMPLETION_ROUTINE);
+  HMODULE ws2_32 = GetModuleHandleA ("ws2_32.dll");
+  if (!ws2_32)
+    ws2_32 = LoadLibraryA ("ws2_32.dll");
+  wsarecvfrom_t wsarecvfrom =
+    ws2_32 ? (wsarecvfrom_t) GetProcAddress (ws2_32, "WSARecvFrom") : NULL;
+  return wsarecvfrom ? wsarecvfrom (sock, buffers, bufcnt, ret, flags, from,
+				    fromlen, ovl, cr)
+		     : SOCKET_ERROR;
+}
+
+static int
+arm64_wsa_sendto (SOCKET sock, LPWSABUF buffers, DWORD bufcnt, LPDWORD ret,
+		  DWORD flags, const struct sockaddr *to, int tolen,
+		  LPWSAOVERLAPPED ovl,
+		  LPWSAOVERLAPPED_COMPLETION_ROUTINE cr)
+{
+  using wsasendto_t = int (WINAPI *) (SOCKET, LPWSABUF, DWORD, LPDWORD, DWORD,
+				      const struct sockaddr *, int,
+				      LPWSAOVERLAPPED,
+				      LPWSAOVERLAPPED_COMPLETION_ROUTINE);
+  HMODULE ws2_32 = GetModuleHandleA ("ws2_32.dll");
+  if (!ws2_32)
+    ws2_32 = LoadLibraryA ("ws2_32.dll");
+  wsasendto_t wsasendto =
+    ws2_32 ? (wsasendto_t) GetProcAddress (ws2_32, "WSASendTo") : NULL;
+  return wsasendto ? wsasendto (sock, buffers, bufcnt, ret, flags, to, tolen,
+				ovl, cr)
+		   : SOCKET_ERROR;
+}
+
+static int
 arm64_closesocket (SOCKET sock)
 {
   using closesocket_t = int (WINAPI *) (SOCKET);
@@ -118,6 +175,9 @@ arm64_closesocket (SOCKET sock)
 #define arm64_wsa_event_select WSAEventSelect
 #define arm64_wsa_async_select WSAAsyncSelect
 #define arm64_wsa_enum_network_events WSAEnumNetworkEvents
+#define arm64_wsa_recv WSARecv
+#define arm64_wsa_recvfrom WSARecvFrom
+#define arm64_wsa_sendto WSASendTo
 #define arm64_closesocket closesocket
 #define ARM64_SOCKET_DIAG(label) do { } while (0)
 #endif
@@ -1337,12 +1397,12 @@ fhandler_socket_inet::recv_internal (LPWSAMSG wsamsg, bool use_recvmsg)
 	 namelen is a valid pointer while name is NULL.  Both parameters are
 	 ignored for TCP sockets, so this only occurs when using UDP socket. */
       else if (!wsamsg->name || get_socket_type () == SOCK_STREAM)
-	res = WSARecv (get_socket (), wsabuf, wsacnt, &wret, &dwFlags,
-		       NULL, NULL);
+	res = arm64_wsa_recv (get_socket (), wsabuf, wsacnt, &wret, &dwFlags,
+			      NULL, NULL);
       else
-	res = WSARecvFrom (get_socket (), wsabuf, wsacnt, &wret,
-			   &dwFlags, wsamsg->name, &wsamsg->namelen,
-			   NULL, NULL);
+	res = arm64_wsa_recvfrom (get_socket (), wsabuf, wsacnt, &wret,
+				  &dwFlags, wsamsg->name, &wsamsg->namelen,
+				  NULL, NULL);
       if (!res)
 	{
 	  ret += wret;
@@ -1583,12 +1643,12 @@ fhandler_socket_wsock::send_internal (struct _WSAMSG *wsamsg, int flags)
 	  if (use_sendmsg)
 	    res = WSASendMsg (get_socket (), wsamsg, flags, &ret, NULL, NULL);
 	  else if (get_socket_type () == SOCK_STREAM)
-	    res = WSASendTo (get_socket (), out_buf, out_idx, &ret, flags,
-			     wsamsg->name, wsamsg->namelen, NULL, NULL);
+	    res = arm64_wsa_sendto (get_socket (), out_buf, out_idx, &ret, flags,
+				    wsamsg->name, wsamsg->namelen, NULL, NULL);
 	  else
-	    res = WSASendTo (get_socket (), wsamsg->lpBuffers,
-			     wsamsg->dwBufferCount, &ret, flags,
-			     wsamsg->name, wsamsg->namelen, NULL, NULL);
+	    res = arm64_wsa_sendto (get_socket (), wsamsg->lpBuffers,
+				    wsamsg->dwBufferCount, &ret, flags,
+				    wsamsg->name, wsamsg->namelen, NULL, NULL);
 	  if (res && (WSAGetLastError () == WSAEWOULDBLOCK))
 	    {
 	      LOCK_EVENTS;
