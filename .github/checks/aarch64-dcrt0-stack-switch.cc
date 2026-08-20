@@ -10,9 +10,9 @@ static_assert (((0x10000U + 0x10000U - 16U) & 15U) == 0);
 extern "C" __attribute__ ((noinline)) void
 check_dcrt0_stack_switch (void *stackaddr)
 {
-  __asm__ ("\n\
-	   mov fp, %[ADDR] \n\
-	   mov sp, fp      \n"
+  __asm__ __volatile__ ("\n\
+	   mov sp, %[ADDR] \n\
+	   mov fp, xzr     \n"
 	   : : [ADDR] "r" (stackaddr)
-	   : "memory");
+	   : "x29", "memory");
 }
