@@ -49,193 +49,6 @@
 #define ASYNC_MASK (FD_READ|FD_WRITE|FD_OOB|FD_ACCEPT|FD_CONNECT)
 #define EVENT_MASK (FD_READ|FD_WRITE|FD_OOB|FD_ACCEPT|FD_CONNECT|FD_CLOSE)
 
-#if defined(__aarch64__)
-static void
-arm64_socket_diag (const char *label)
-{
-  fprintf (stderr, "%s\n", label);
-  fflush (stderr);
-}
-
-#define ARM64_SOCKET_DIAG(label) arm64_socket_diag (label)
-
-static int
-arm64_wsa_event_select (SOCKET sock, WSAEVENT evt, long mask)
-{
-  using wsaeventselect_t = int (WINAPI *) (SOCKET, WSAEVENT, long);
-  HMODULE ws2_32 = GetModuleHandleA ("ws2_32.dll");
-  if (!ws2_32)
-    ws2_32 = LoadLibraryA ("ws2_32.dll");
-  wsaeventselect_t wsaeventselect =
-    ws2_32 ? (wsaeventselect_t) GetProcAddress (ws2_32, "WSAEventSelect")
-	   : NULL;
-  return wsaeventselect ? wsaeventselect (sock, evt, mask) : SOCKET_ERROR;
-}
-
-static int
-arm64_bind (SOCKET sock, const struct sockaddr *name, int namelen)
-{
-  using bind_t = int (WINAPI *) (SOCKET, const struct sockaddr *, int);
-  HMODULE ws2_32 = GetModuleHandleA ("ws2_32.dll");
-  if (!ws2_32)
-    ws2_32 = LoadLibraryA ("ws2_32.dll");
-  bind_t bind =
-    ws2_32 ? (bind_t) GetProcAddress (ws2_32, "bind") : NULL;
-  return bind ? bind (sock, name, namelen) : SOCKET_ERROR;
-}
-
-static int
-arm64_getsockname (SOCKET sock, struct sockaddr *name, int *namelen)
-{
-  using getsockname_t = int (WINAPI *) (SOCKET, struct sockaddr *, int *);
-  HMODULE ws2_32 = GetModuleHandleA ("ws2_32.dll");
-  if (!ws2_32)
-    ws2_32 = LoadLibraryA ("ws2_32.dll");
-  getsockname_t getsockname =
-    ws2_32 ? (getsockname_t) GetProcAddress (ws2_32, "getsockname") : NULL;
-  return getsockname ? getsockname (sock, name, namelen) : SOCKET_ERROR;
-}
-
-static int
-arm64_listen (SOCKET sock, int backlog)
-{
-  using listen_t = int (WINAPI *) (SOCKET, int);
-  HMODULE ws2_32 = GetModuleHandleA ("ws2_32.dll");
-  if (!ws2_32)
-    ws2_32 = LoadLibraryA ("ws2_32.dll");
-  listen_t listen =
-    ws2_32 ? (listen_t) GetProcAddress (ws2_32, "listen") : NULL;
-  return listen ? listen (sock, backlog) : SOCKET_ERROR;
-}
-
-static int
-arm64_wsa_connect (SOCKET sock, const struct sockaddr *name, int namelen)
-{
-  using wsaconnect_t =
-    int (WINAPI *) (SOCKET, const struct sockaddr *, int, LPWSABUF, LPWSABUF,
-		    LPQOS, LPQOS);
-  HMODULE ws2_32 = GetModuleHandleA ("ws2_32.dll");
-  if (!ws2_32)
-    ws2_32 = LoadLibraryA ("ws2_32.dll");
-  wsaconnect_t wsaconnect =
-    ws2_32 ? (wsaconnect_t) GetProcAddress (ws2_32, "WSAConnect") : NULL;
-  return wsaconnect ? wsaconnect (sock, name, namelen, NULL, NULL, NULL, NULL)
-		    : SOCKET_ERROR;
-}
-
-static SOCKET
-arm64_accept (SOCKET sock, struct sockaddr *name, int *namelen)
-{
-  using accept_t = SOCKET (WINAPI *) (SOCKET, struct sockaddr *, int *);
-  HMODULE ws2_32 = GetModuleHandleA ("ws2_32.dll");
-  if (!ws2_32)
-    ws2_32 = LoadLibraryA ("ws2_32.dll");
-  accept_t accept =
-    ws2_32 ? (accept_t) GetProcAddress (ws2_32, "accept") : NULL;
-  return accept ? accept (sock, name, namelen) : INVALID_SOCKET;
-}
-
-static int
-arm64_setsockopt (SOCKET sock, int level, int optname, const char *optval,
-		  int optlen)
-{
-  using setsockopt_t = int (WINAPI *) (SOCKET, int, int, const char *, int);
-  HMODULE ws2_32 = GetModuleHandleA ("ws2_32.dll");
-  if (!ws2_32)
-    ws2_32 = LoadLibraryA ("ws2_32.dll");
-  setsockopt_t setsockopt =
-    ws2_32 ? (setsockopt_t) GetProcAddress (ws2_32, "setsockopt") : NULL;
-  return setsockopt ? setsockopt (sock, level, optname, optval, optlen)
-		    : SOCKET_ERROR;
-}
-
-static int
-arm64_wsa_async_select (SOCKET sock, HWND wnd, unsigned int msg, long mask)
-{
-  using wsaasyncselect_t = int (WINAPI *) (SOCKET, HWND, unsigned int, long);
-  HMODULE ws2_32 = GetModuleHandleA ("ws2_32.dll");
-  if (!ws2_32)
-    ws2_32 = LoadLibraryA ("ws2_32.dll");
-  wsaasyncselect_t wsaasyncselect =
-    ws2_32 ? (wsaasyncselect_t) GetProcAddress (ws2_32, "WSAAsyncSelect")
-	   : NULL;
-  return wsaasyncselect ? wsaasyncselect (sock, wnd, msg, mask) : SOCKET_ERROR;
-}
-
-static int
-arm64_wsa_enum_network_events (SOCKET sock, WSAEVENT evt,
-			       LPWSANETWORKEVENTS events)
-{
-  using wsaenumnetworkevents_t =
-    int (WINAPI *) (SOCKET, WSAEVENT, LPWSANETWORKEVENTS);
-  HMODULE ws2_32 = GetModuleHandleA ("ws2_32.dll");
-  if (!ws2_32)
-    ws2_32 = LoadLibraryA ("ws2_32.dll");
-  wsaenumnetworkevents_t wsaenumnetworkevents =
-    ws2_32 ? (wsaenumnetworkevents_t) GetProcAddress (ws2_32,
-						      "WSAEnumNetworkEvents")
-	   : NULL;
-  return wsaenumnetworkevents ? wsaenumnetworkevents (sock, evt, events)
-			      : SOCKET_ERROR;
-}
-
-static int
-arm64_wsa_recv (SOCKET sock, LPWSABUF buffers, DWORD bufcnt, LPDWORD ret,
-		LPDWORD flags, LPWSAOVERLAPPED ovl,
-		LPWSAOVERLAPPED_COMPLETION_ROUTINE cr)
-{
-  using wsarecv_t = int (WINAPI *) (SOCKET, LPWSABUF, DWORD, LPDWORD, LPDWORD,
-				    LPWSAOVERLAPPED,
-				    LPWSAOVERLAPPED_COMPLETION_ROUTINE);
-  HMODULE ws2_32 = GetModuleHandleA ("ws2_32.dll");
-  if (!ws2_32)
-    ws2_32 = LoadLibraryA ("ws2_32.dll");
-  wsarecv_t wsarecv =
-    ws2_32 ? (wsarecv_t) GetProcAddress (ws2_32, "WSARecv") : NULL;
-  return wsarecv ? wsarecv (sock, buffers, bufcnt, ret, flags, ovl, cr)
-		 : SOCKET_ERROR;
-}
-
-static int
-arm64_wsa_recvfrom (SOCKET sock, LPWSABUF buffers, DWORD bufcnt, LPDWORD ret,
-		    LPDWORD flags, struct sockaddr *from, int *fromlen,
-		    LPWSAOVERLAPPED ovl,
-		    LPWSAOVERLAPPED_COMPLETION_ROUTINE cr)
-{
-  using wsarecvfrom_t = int (WINAPI *) (SOCKET, LPWSABUF, DWORD, LPDWORD,
-					LPDWORD, struct sockaddr *, int *,
-					LPWSAOVERLAPPED,
-					LPWSAOVERLAPPED_COMPLETION_ROUTINE);
-  HMODULE ws2_32 = GetModuleHandleA ("ws2_32.dll");
-  if (!ws2_32)
-    ws2_32 = LoadLibraryA ("ws2_32.dll");
-  wsarecvfrom_t wsarecvfrom =
-    ws2_32 ? (wsarecvfrom_t) GetProcAddress (ws2_32, "WSARecvFrom") : NULL;
-  return wsarecvfrom ? wsarecvfrom (sock, buffers, bufcnt, ret, flags, from,
-				    fromlen, ovl, cr)
-		     : SOCKET_ERROR;
-}
-
-static int
-arm64_wsa_sendto (SOCKET sock, LPWSABUF buffers, DWORD bufcnt, LPDWORD ret,
-		  DWORD flags, const struct sockaddr *to, int tolen,
-		  LPWSAOVERLAPPED ovl,
-		  LPWSAOVERLAPPED_COMPLETION_ROUTINE cr)
-{
-  using wsasendto_t = int (WINAPI *) (SOCKET, LPWSABUF, DWORD, LPDWORD, DWORD,
-				      const struct sockaddr *, int,
-				      LPWSAOVERLAPPED,
-				      LPWSAOVERLAPPED_COMPLETION_ROUTINE);
-  HMODULE ws2_32 = GetModuleHandleA ("ws2_32.dll");
-  if (!ws2_32)
-    ws2_32 = LoadLibraryA ("ws2_32.dll");
-  wsasendto_t wsasendto =
-    ws2_32 ? (wsasendto_t) GetProcAddress (ws2_32, "WSASendTo") : NULL;
-  return wsasendto ? wsasendto (sock, buffers, bufcnt, ret, flags, to, tolen,
-				ovl, cr)
-		   : SOCKET_ERROR;
-}
-
 static int
 arm64_closesocket (SOCKET sock)
 {
@@ -248,6 +61,19 @@ arm64_closesocket (SOCKET sock)
 	   : NULL;
   return closesocket ? closesocket (sock) : SOCKET_ERROR;
 }
+#define arm64_wsa_event_select WSAEventSelect
+#define arm64_wsa_async_select WSAAsyncSelect
+#define arm64_wsa_enum_network_events WSAEnumNetworkEvents
+#define arm64_wsa_recv WSARecv
+#define arm64_wsa_recvfrom WSARecvFrom
+#define arm64_wsa_sendto WSASendTo
+#define arm64_bind ::bind
+#define arm64_getsockname ::getsockname
+#define arm64_listen ::listen
+#define arm64_wsa_connect ::connect
+#define arm64_accept ::accept
+#define arm64_setsockopt ::setsockopt
+#define ARM64_SOCKET_DIAG(label) do { } while (0)
 #else
 #define arm64_wsa_event_select WSAEventSelect
 #define arm64_wsa_async_select WSAAsyncSelect
@@ -914,35 +740,7 @@ fhandler_socket_wsock::set_socket_handle (SOCKET sock, int af, int type,
     {
       init_fixup_before ();
     }
-  ARM64_SOCKET_DIAG ("diag: inet set_unique_id before");
-#if defined(__aarch64__)
-  if (get_socket_type () == SOCK_DGRAM)
-    set_unique_id (get_ino ());
-  else
-    set_unique_id ();
-#else
   set_unique_id ();
-#endif
-  ARM64_SOCKET_DIAG ("diag: inet set_unique_id after");
-#if !defined(__aarch64__)
-  if (get_socket_type () == SOCK_DGRAM)
-    {
-      /* Workaround the problem that a missing listener on a UDP socket
-	 in a call to sendto will result in select/WSAEnumNetworkEvents
-	 reporting that the socket has pending data and a subsequent call
-	 to recvfrom will return -1 with error set to WSAECONNRESET.
-
-	 This problem is a regression introduced in Windows 2000.
-	 Instead of fixing the problem, a new socket IOCTL code has
-	 been added, see http://support.microsoft.com/kb/263823 */
-      BOOL cr = FALSE;
-      DWORD blen;
-      if (WSAIoctl (sock, SIO_UDP_CONNRESET, &cr, sizeof cr, NULL, 0,
-		    &blen, NULL, NULL) == SOCKET_ERROR)
-	debug_printf ("Reset SIO_UDP_CONNRESET: WinSock error %u",
-		      WSAGetLastError ());
-    }
-#endif
   rmem () = 212992;
   wmem () = 212992;
   return 0;
