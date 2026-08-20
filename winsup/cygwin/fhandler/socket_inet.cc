@@ -541,9 +541,11 @@ fhandler_socket_wsock::wait_for_events (const long event_mask,
   else
     timeout = INFINITE;
 
+  ARM64_SOCKET_DIAG ("diag: inet wait_for_events evaluate before");
   while (!(ret = evaluate_events (event_mask, events, !(flags & MSG_PEEK)))
 	 && !events)
     {
+      ARM64_SOCKET_DIAG ("diag: inet wait_for_events evaluate after");
       if (timeout == 0)
 	{
 	  WSASetLastError (WSAEWOULDBLOCK);
@@ -552,6 +554,7 @@ fhandler_socket_wsock::wait_for_events (const long event_mask,
 
       if (timeout < wfmo_timeout)
 	wfmo_timeout = timeout;
+      ARM64_SOCKET_DIAG ("diag: inet wait_for_events wsfmo before");
       switch (WSAWaitForMultipleEvents (ev_cnt, ev, FALSE, wfmo_timeout, FALSE))
 	{
 	  case WSA_WAIT_TIMEOUT:
@@ -581,6 +584,7 @@ fhandler_socket_wsock::wait_for_events (const long event_mask,
 	    return SOCKET_ERROR;
 	}
     }
+  ARM64_SOCKET_DIAG ("diag: inet wait_for_events done");
   return ret;
 }
 
