@@ -98,10 +98,44 @@ arm64_closesocket (SOCKET sock)
 	   : NULL;
   return closesocket ? closesocket (sock) : SOCKET_ERROR;
 }
+
+static SOCKET
+arm64_socket (int af, int type, int protocol)
+{
+  using wsastartup_t = int (WINAPI *) (WORD, WSADATA *);
+  using wsasocketw_t = SOCKET (WINAPI *) (int, int, int, void *, unsigned int,
+					  unsigned int);
+  static bool wsock_ready;
+
+  if (!wsock_ready)
+    {
+      HMODULE ws2_32 = GetModuleHandleA ("ws2_32.dll");
+      if (!ws2_32)
+	ws2_32 = LoadLibraryA ("ws2_32.dll");
+
+      WSADATA wsadata;
+      wsastartup_t wsastartup =
+	ws2_32 ? (wsastartup_t) GetProcAddress (ws2_32, "WSAStartup") : NULL;
+
+      if (!wsastartup
+	  || wsastartup (MAKEWORD (2, 2), &wsadata) != 0)
+	return INVALID_SOCKET;
+      wsock_ready = true;
+    }
+
+  HMODULE ws2_32 = GetModuleHandleA ("ws2_32.dll");
+  if (!ws2_32)
+    ws2_32 = LoadLibraryA ("ws2_32.dll");
+  wsasocketw_t wsasocketw =
+    ws2_32 ? (wsasocketw_t) GetProcAddress (ws2_32, "WSASocketW") : NULL;
+  return wsasocketw ? wsasocketw (af, type, protocol, NULL, 0,
+				  WSA_FLAG_OVERLAPPED) : INVALID_SOCKET;
+}
 #else
 #define arm64_wsa_event_select WSAEventSelect
 #define arm64_wsa_async_select WSAAsyncSelect
 #define arm64_closesocket closesocket
+#define arm64_socket socket
 #endif
 
 #define ASYNC_MASK (FD_READ|FD_WRITE|FD_OOB|FD_ACCEPT|FD_CONNECT)
@@ -306,7 +340,7 @@ fhandler_socket_local::socket (int af, int type, int protocol, int flags)
       set_errno (EPROTONOSUPPORT);
       return -1;
     }
-  sock = ::socket (AF_INET, type, protocol);
+  sock = arm64_socket (AF_INET, type, protocol);
   if (sock == INVALID_SOCKET)
     {
       set_winsock_errno ();
@@ -342,7 +376,7 @@ fhandler_socket_local::socketpair (int af, int type, int protocol, int flags,
       return -1;
     }
   ARM64_SOCKETPAIR_DIAG ("diag: local socketpair create listener before");
-  sock = ::socket (AF_INET, type, 0);
+  sock = arm64_socket (AF_INET, type, 0);
   if (sock == INVALID_SOCKET)
     {
       set_winsock_errno ();
@@ -379,7 +413,7 @@ fhandler_socket_local::socketpair (int af, int type, int protocol, int flags,
   ARM64_SOCKETPAIR_DIAG ("diag: local socketpair listen after");
   /* create connecting socket */
   ARM64_SOCKETPAIR_DIAG ("diag: local socketpair create peer before");
-  outsock = ::socket (AF_INET, type, 0);
+  outsock = arm64_socket (AF_INET, type, 0);
   if (outsock == INVALID_SOCKET)
     {
       set_winsock_errno ();
