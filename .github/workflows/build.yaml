@@ -268,7 +268,15 @@ jobs:
             echo "_wsock_init must not route back through dll_chain" >&2
             exit 1
           fi
-          grep -Fq 'wsock_init' aarch64-autoload.relocs
+          # wsock_init() (the C worker _wsock_init's "bl wsock_init" calls)
+          # is a local, same-section branch that the assembler/linker
+          # resolves directly -- objdump shows e.g. "bl 288 <wsock_init>"
+          # with no relocation entry, so it can never appear in the
+          # relocs list.  Only dll_func_load is reached via an adrp/add
+          # pair that does require one.  Assert the call target from the
+          # bounded _wsock_init disassembly instead of the relocs list.
+          grep -Eq '[[:space:]]bl[[:space:]]+[0-9a-f]+ <wsock_init>$' \
+            aarch64-wsock-init.dis
           grep -Fq 'dll_func_load' aarch64-autoload.relocs
 
           mkdir aarch64-autoload-sections
