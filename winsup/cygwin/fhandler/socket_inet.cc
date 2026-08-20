@@ -120,6 +120,18 @@ arm64_connect (SOCKET sock, const struct sockaddr *name, int namelen)
   return connect ? connect (sock, name, namelen) : SOCKET_ERROR;
 }
 
+static SOCKET
+arm64_accept (SOCKET sock, struct sockaddr *name, int *namelen)
+{
+  using accept_t = SOCKET (WINAPI *) (SOCKET, struct sockaddr *, int *);
+  HMODULE ws2_32 = GetModuleHandleA ("ws2_32.dll");
+  if (!ws2_32)
+    ws2_32 = LoadLibraryA ("ws2_32.dll");
+  accept_t accept =
+    ws2_32 ? (accept_t) GetProcAddress (ws2_32, "accept") : NULL;
+  return accept ? accept (sock, name, namelen) : INVALID_SOCKET;
+}
+
 static int
 arm64_setsockopt (SOCKET sock, int level, int optname, const char *optval,
 		  int optlen)
@@ -1217,7 +1229,13 @@ fhandler_socket_inet::accept4 (struct sockaddr *peer, int *len, int flags)
 
   SOCKET res = INVALID_SOCKET;
   while (!(res = wait_for_events (FD_ACCEPT | FD_CLOSE, 0))
-	 && (res = ::accept (get_socket (), (struct sockaddr *) &lpeer, &llen))
+	 && (res =
+#if defined(__aarch64__)
+	     arm64_accept (get_socket (), (struct sockaddr *) &lpeer, &llen)
+#else
+	     ::accept (get_socket (), (struct sockaddr *) &lpeer, &llen)
+#endif
+	     )
 	    == INVALID_SOCKET
 	 && WSAGetLastError () == WSAEWOULDBLOCK)
     ;
