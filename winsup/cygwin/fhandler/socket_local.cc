@@ -111,6 +111,54 @@ arm64_bind (SOCKET sock, const struct sockaddr *name, int namelen)
   return bind ? bind (sock, name, namelen) : SOCKET_ERROR;
 }
 
+static int
+arm64_getsockname (SOCKET sock, struct sockaddr *name, int *namelen)
+{
+  using getsockname_t = int (WINAPI *) (SOCKET, struct sockaddr *, int *);
+  HMODULE ws2_32 = GetModuleHandleA ("ws2_32.dll");
+  if (!ws2_32)
+    ws2_32 = LoadLibraryA ("ws2_32.dll");
+  getsockname_t getsockname =
+    ws2_32 ? (getsockname_t) GetProcAddress (ws2_32, "getsockname") : NULL;
+  return getsockname ? getsockname (sock, name, namelen) : SOCKET_ERROR;
+}
+
+static int
+arm64_listen (SOCKET sock, int backlog)
+{
+  using listen_t = int (WINAPI *) (SOCKET, int);
+  HMODULE ws2_32 = GetModuleHandleA ("ws2_32.dll");
+  if (!ws2_32)
+    ws2_32 = LoadLibraryA ("ws2_32.dll");
+  listen_t listen =
+    ws2_32 ? (listen_t) GetProcAddress (ws2_32, "listen") : NULL;
+  return listen ? listen (sock, backlog) : SOCKET_ERROR;
+}
+
+static int
+arm64_connect (SOCKET sock, const struct sockaddr *name, int namelen)
+{
+  using connect_t = int (WINAPI *) (SOCKET, const struct sockaddr *, int);
+  HMODULE ws2_32 = GetModuleHandleA ("ws2_32.dll");
+  if (!ws2_32)
+    ws2_32 = LoadLibraryA ("ws2_32.dll");
+  connect_t connect =
+    ws2_32 ? (connect_t) GetProcAddress (ws2_32, "connect") : NULL;
+  return connect ? connect (sock, name, namelen) : SOCKET_ERROR;
+}
+
+static SOCKET
+arm64_accept (SOCKET sock, struct sockaddr *name, int *namelen)
+{
+  using accept_t = SOCKET (WINAPI *) (SOCKET, struct sockaddr *, int *);
+  HMODULE ws2_32 = GetModuleHandleA ("ws2_32.dll");
+  if (!ws2_32)
+    ws2_32 = LoadLibraryA ("ws2_32.dll");
+  accept_t accept =
+    ws2_32 ? (accept_t) GetProcAddress (ws2_32, "accept") : NULL;
+  return accept ? accept (sock, name, namelen) : INVALID_SOCKET;
+}
+
 static SOCKET
 arm64_socket (int af, int type, int protocol)
 {
@@ -423,7 +471,13 @@ fhandler_socket_local::socketpair (int af, int type, int protocol, int flags,
   /* fetch socket name */
   ARM64_SOCKETPAIR_DIAG ("diag: local socketpair getsockname listener before");
   len = sizeof (sock_in);
-  if (::getsockname (sock, (struct sockaddr *) &sock_in, &len) < 0)
+  if (
+#if defined(__aarch64__)
+      arm64_getsockname (sock, (struct sockaddr *) &sock_in, &len) < 0
+#else
+      ::getsockname (sock, (struct sockaddr *) &sock_in, &len) < 0
+#endif
+     )
     {
       set_winsock_errno ();
       goto err;
@@ -431,7 +485,13 @@ fhandler_socket_local::socketpair (int af, int type, int protocol, int flags,
   ARM64_SOCKETPAIR_DIAG ("diag: local socketpair getsockname listener after");
   /* on stream sockets, create listener */
   ARM64_SOCKETPAIR_DIAG ("diag: local socketpair listen before");
-  if (type == SOCK_STREAM && ::listen (sock, 2) < 0)
+  if (type == SOCK_STREAM &&
+#if defined(__aarch64__)
+      arm64_listen (sock, 2) < 0
+#else
+      ::listen (sock, 2) < 0
+#endif
+     )
     {
       set_winsock_errno ();
       goto err;
@@ -474,7 +534,13 @@ fhandler_socket_local::socketpair (int af, int type, int protocol, int flags,
       /* ...and fetch name */
       ARM64_SOCKETPAIR_DIAG ("diag: local socketpair getsockname peer before");
       len = sizeof (sock_out);
-      if (::getsockname (outsock, (struct sockaddr *) &sock_out, &len) < 0)
+      if (
+#if defined(__aarch64__)
+	   arm64_getsockname (outsock, (struct sockaddr *) &sock_out, &len) < 0
+#else
+	   ::getsockname (outsock, (struct sockaddr *) &sock_out, &len) < 0
+#endif
+	  )
 	{
 	  set_winsock_errno ();
 	  goto err;
@@ -486,7 +552,13 @@ fhandler_socket_local::socketpair (int af, int type, int protocol, int flags,
     sock_out.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
   /* connect */
   ARM64_SOCKETPAIR_DIAG ("diag: local socketpair connect peer before");
-  if (::connect (outsock, (struct sockaddr *) &sock_in, sizeof (sock_in)) < 0)
+  if (
+#if defined(__aarch64__)
+      arm64_connect (outsock, (struct sockaddr *) &sock_in, sizeof (sock_in)) < 0
+#else
+      ::connect (outsock, (struct sockaddr *) &sock_in, sizeof (sock_in)) < 0
+#endif
+     )
     {
       set_winsock_errno ();
       goto err;
@@ -497,7 +569,12 @@ fhandler_socket_local::socketpair (int af, int type, int protocol, int flags,
       /* on stream sockets, accept connection and close listener */
       ARM64_SOCKETPAIR_DIAG ("diag: local socketpair accept before");
       len = sizeof (sock_in);
-      insock = ::accept (sock, (struct sockaddr *) &sock_in, &len);
+      insock =
+#if defined(__aarch64__)
+	arm64_accept (sock, (struct sockaddr *) &sock_in, &len);
+#else
+	::accept (sock, (struct sockaddr *) &sock_in, &len);
+#endif
       if (insock == INVALID_SOCKET)
 	{
 	  set_winsock_errno ();
@@ -510,8 +587,15 @@ fhandler_socket_local::socketpair (int af, int type, int protocol, int flags,
     {
       /* on datagram sockets, connect vice versa */
       ARM64_SOCKETPAIR_DIAG ("diag: local socketpair connect listener before");
-      if (::connect (sock, (struct sockaddr *) &sock_out,
-		   sizeof (sock_out)) < 0)
+      if (
+#if defined(__aarch64__)
+	  arm64_connect (sock, (struct sockaddr *) &sock_out,
+			 sizeof (sock_out)) < 0
+#else
+	  ::connect (sock, (struct sockaddr *) &sock_out,
+		     sizeof (sock_out)) < 0
+#endif
+	 )
 	{
 	  set_winsock_errno ();
 	  goto err;
