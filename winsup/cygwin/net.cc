@@ -2315,7 +2315,7 @@ socketpair (int af, int type, int protocol, int sv[2])
       fh_out = reinterpret_cast<fhandler_socket *> (build_fh_dev (*dev));
       if (fh_in && fh_out)
 	{
-#if defined (__aarch64__)
+#if defined (__aarch64__) && defined (__WITH_AF_UNIX)
 	  if (af == AF_UNIX)
 	    {
 	      if (static_cast<fhandler_socket_unix *> (fh_in)
