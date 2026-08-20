@@ -90,17 +90,13 @@ jobs:
             exit 1
           fi
 
-          gcc \
-            -std=gnu11 \
-            -O2 \
-            -Wall \
-            -Wextra \
-            -Werror \
-            -I"$GITHUB_WORKSPACE/winsup/cygwin/include" \
-            -I"$GITHUB_WORKSPACE/newlib/libc/include" \
-            "$GITHUB_WORKSPACE/.github/checks/aarch64-endian-runtime.c" \
-            -o aarch64-endian-runtime
-          ./aarch64-endian-runtime
+          # The behavioral runtime check (aarch64-endian-runtime.c) is
+          # cross-compiled and linked against the real AArch64 Cygwin
+          # runtime in the aarch64-linker-script job below, then executed
+          # natively on windows-11-arm in aarch64-runtime-smoke. It must
+          # not be compiled/run with the host's own (x86_64) gcc here,
+          # since that both defeats the purpose of the check (the file
+          # gates on __aarch64__) and cannot execute an ARM64 binary.
 
       - name: Compile and disassemble AArch64 cygtls lock
         run: |
@@ -882,6 +878,38 @@ jobs:
             -lkernel32 \
             -lntdll
 
+          # Cross-compile and link the AArch64 endian-primitives runtime
+          # check against the real Cygwin runtime, so it can be executed
+          # natively on windows-11-arm in aarch64-runtime-smoke below,
+          # instead of with the host's own (x86_64) gcc, which can never
+          # define __aarch64__ or run the resulting binary.
+          aarch64-pc-cygwin-gcc \
+            -std=gnu11 \
+            -O2 \
+            -Wall \
+            -Wextra \
+            -Werror \
+            -c .github/checks/aarch64-endian-runtime.c \
+            -o "$cygwin_build/aarch64-endian-runtime.o"
+          aarch64-pc-cygwin-gcc \
+            -nostdlib \
+            -Wl,--no-insert-timestamp \
+            -Wl,--subsystem,console \
+            -Wl,-e,mainCRTStartup \
+            -o "$cygwin_build/aarch64-endian-runtime.exe" \
+            "$cygwin_build/crt0.o" \
+            "$gccdir/crtbegin.o" \
+            "$cygwin_build/aarch64-endian-runtime.o" \
+            -L"$cygwin_build" \
+            -Wl,--start-group \
+            -lmsys-2.0 \
+            -lgcc \
+            -Wl,--end-group \
+            "$gccdir/crtend.o" \
+            /opt/aarch64-pc-cygwin/lib/default-manifest.o \
+            -lkernel32 \
+            -lntdll
+
           cp "$cygwin_build/new-msys-2.0.dll" \
             "$cygwin_build/new-msys-2.0.first.dll"
           cp "$cygwin_build/libmsys-2.0.a" \
@@ -905,6 +933,8 @@ jobs:
           cp "$cygwin_build/aarch64-runtime-smoke.exe" \
             aarch64-runtime-validation/
           cp "$cygwin_build/aarch64-wsock-autoload-smoke.exe" \
+            aarch64-runtime-validation/
+          cp "$cygwin_build/aarch64-endian-runtime.exe" \
             aarch64-runtime-validation/
 
       - name: Upload AArch64 runtime validation
@@ -960,6 +990,20 @@ jobs:
           & (Join-Path $runtime "aarch64-wsock-autoload-smoke.exe")
           if ($LASTEXITCODE -ne 0) {
             throw "AArch64 wsock autoload regression probe failed with exit code $LASTEXITCODE"
+          }
+
+      - name: Run AArch64 endian primitives runtime check
+        shell: pwsh
+        run: |
+          if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture -ne
+              [System.Runtime.InteropServices.Architecture]::Arm64) {
+            throw "A native Windows ARM64 runner is required"
+          }
+          $runtime = (Resolve-Path `
+            aarch64-runtime-validation/aarch64-runtime-validation).Path
+          & (Join-Path $runtime "aarch64-endian-runtime.exe")
+          if ($LASTEXITCODE -ne 0) {
+            throw "AArch64 endian primitives runtime check failed with exit code $LASTEXITCODE"
           }
 
   configure-winsup:
