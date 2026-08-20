@@ -2,6 +2,7 @@
 #include <signal.h>
 #include <errno.h>
 #include <stdio.h>
+#include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/utsname.h>
