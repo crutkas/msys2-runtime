@@ -265,6 +265,15 @@ if test -f "$endian_runtime"; then
   sha256sum "$endian_runtime" >> "$report/SHA256SUMS"
 fi
 
+ucontext_model="$cygwin/aarch64-ucontext-model.exe"
+if test -f "$ucontext_model"; then
+  "$objdump" -f -h -p "$ucontext_model" > "$report/aarch64-ucontext-model.txt"
+  grep -Fq 'file format pei-aarch64-little' \
+    "$report/aarch64-ucontext-model.txt"
+  grep -Fq 'DLL Name: msys-2.0.dll' "$report/aarch64-ucontext-model.txt"
+  sha256sum "$ucontext_model" >> "$report/SHA256SUMS"
+fi
+
 {
   printf 'objects\t%s\n' "$object_count"
   printf 'selected_archive_members\t%s\n' "$selected"

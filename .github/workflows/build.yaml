@@ -440,18 +440,21 @@ jobs:
             'return ((PBYTE) allocationbase + stacksize - 16);' \
             "$GITHUB_WORKSPACE/winsup/cygwin/create_posix_thread.cc"
 
-      - name: Run AArch64 ucontext ABI model
+      - name: Verify AArch64 ucontext ABI model is native-only
         run: |
-          g++ \
-            -std=gnu++17 \
-            -O2 \
-            -Wall \
-            -Wextra \
-            -Werror \
-            -ffixed-x18 \
-            "$GITHUB_WORKSPACE/.github/checks/aarch64-ucontext-model.cc" \
-            -o aarch64-ucontext-model
-          ./aarch64-ucontext-model
+          # aarch64-ucontext-model.cc exercises real AArch64 signal
+          # alternate-stack switching and ucontext-style makecontext
+          # register/stack layout using inline asm against x18/x19/x30
+          # and -ffixed-x18. It must not be compiled or executed with
+          # the host's own (x86_64) g++ here: -ffixed-x18 names an
+          # AArch64-only register (host g++ fails with "unknown
+          # register name"), and the file itself gates on __aarch64__.
+          # It is cross-compiled and linked against the real AArch64
+          # Cygwin runtime in the aarch64-linker-script job below, then
+          # executed natively on windows-11-arm in aarch64-runtime-smoke.
+          test -f "$GITHUB_WORKSPACE/.github/checks/aarch64-ucontext-model.cc"
+          grep -Fq '#if !defined(__aarch64__)' \
+            "$GITHUB_WORKSPACE/.github/checks/aarch64-ucontext-model.cc"
 
       - name: Compile and inspect AArch64 signal and SEH paths
         run: |
@@ -944,6 +947,40 @@ jobs:
             -lkernel32 \
             -lntdll
 
+          # Cross-compile and link the AArch64 ucontext ABI model check
+          # against the real Cygwin runtime, so it can be executed
+          # natively on windows-11-arm in aarch64-runtime-smoke below,
+          # instead of with the host's own (x86_64) g++, which can
+          # never accept -ffixed-x18 (an AArch64-only register name)
+          # or define __aarch64__.
+          "$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-g++" \
+            -std=gnu++17 \
+            -O2 \
+            -Wall \
+            -Wextra \
+            -Werror \
+            -ffixed-x18 \
+            -c .github/checks/aarch64-ucontext-model.cc \
+            -o "$cygwin_build/aarch64-ucontext-model.o"
+          "$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-g++" \
+            -nostdlib \
+            -Wl,--no-insert-timestamp \
+            -Wl,--subsystem,console \
+            -Wl,-e,mainCRTStartup \
+            -o "$cygwin_build/aarch64-ucontext-model.exe" \
+            "$cygwin_build/crt0.o" \
+            "$gccdir/crtbegin.o" \
+            "$cygwin_build/aarch64-ucontext-model.o" \
+            -L"$cygwin_build" \
+            -Wl,--start-group \
+            -lmsys-2.0 \
+            -lgcc \
+            -Wl,--end-group \
+            "$gccdir/crtend.o" \
+            /opt/aarch64-pc-cygwin/lib/default-manifest.o \
+            -lkernel32 \
+            -lntdll
+
           cp "$cygwin_build/new-msys-2.0.dll" \
             "$cygwin_build/new-msys-2.0.first.dll"
           cp "$cygwin_build/libmsys-2.0.a" \
@@ -969,6 +1006,8 @@ jobs:
           cp "$cygwin_build/aarch64-wsock-autoload-smoke.exe" \
             aarch64-runtime-validation/
           cp "$cygwin_build/aarch64-endian-runtime.exe" \
+            aarch64-runtime-validation/
+          cp "$cygwin_build/aarch64-ucontext-model.exe" \
             aarch64-runtime-validation/
 
       - name: Upload AArch64 runtime validation
@@ -1038,6 +1077,20 @@ jobs:
           & (Join-Path $runtime "aarch64-endian-runtime.exe")
           if ($LASTEXITCODE -ne 0) {
             throw "AArch64 endian primitives runtime check failed with exit code $LASTEXITCODE"
+          }
+
+      - name: Run AArch64 ucontext ABI model
+        shell: pwsh
+        run: |
+          if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture -ne
+              [System.Runtime.InteropServices.Architecture]::Arm64) {
+            throw "A native Windows ARM64 runner is required"
+          }
+          $runtime = (Resolve-Path `
+            aarch64-runtime-validation/aarch64-runtime-validation).Path
+          & (Join-Path $runtime "aarch64-ucontext-model.exe")
+          if ($LASTEXITCODE -ne 0) {
+            throw "AArch64 ucontext ABI model check failed with exit code $LASTEXITCODE"
           }
 
   configure-winsup:
