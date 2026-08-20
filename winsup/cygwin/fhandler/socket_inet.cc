@@ -1372,9 +1372,11 @@ fhandler_socket_inet::recv_internal (LPWSAMSG wsamsg, bool use_recvmsg)
   /* Note: Don't call WSARecvFrom(MSG_PEEK) without actually having data
      waiting in the buffers, otherwise the event handling gets messed up
      for some reason. */
+  ARM64_SOCKET_DIAG ("diag: inet recv wait before");
   while (!(res = wait_for_events (evt_mask | FD_CLOSE, wait_flags))
 	 || saw_shutdown_read ())
     {
+      ARM64_SOCKET_DIAG ("diag: inet recv wait after");
       DWORD dwFlags = wsamsg->dwFlags | (read_oob ? MSG_OOB : 0);
       if (use_recvmsg)
 	res = WSARecvMsg (get_socket (), wsamsg, &wret, NULL, NULL);
@@ -1397,12 +1399,20 @@ fhandler_socket_inet::recv_internal (LPWSAMSG wsamsg, bool use_recvmsg)
 	 namelen is a valid pointer while name is NULL.  Both parameters are
 	 ignored for TCP sockets, so this only occurs when using UDP socket. */
       else if (!wsamsg->name || get_socket_type () == SOCK_STREAM)
-	res = arm64_wsa_recv (get_socket (), wsabuf, wsacnt, &wret, &dwFlags,
-			      NULL, NULL);
+	{
+	  ARM64_SOCKET_DIAG ("diag: inet recv wsarecv before");
+	  res = arm64_wsa_recv (get_socket (), wsabuf, wsacnt, &wret, &dwFlags,
+				NULL, NULL);
+	  ARM64_SOCKET_DIAG ("diag: inet recv wsarecv after");
+	}
       else
-	res = arm64_wsa_recvfrom (get_socket (), wsabuf, wsacnt, &wret,
-				  &dwFlags, wsamsg->name, &wsamsg->namelen,
-				  NULL, NULL);
+	{
+	  ARM64_SOCKET_DIAG ("diag: inet recv wsarecvfrom before");
+	  res = arm64_wsa_recvfrom (get_socket (), wsabuf, wsacnt, &wret,
+				    &dwFlags, wsamsg->name, &wsamsg->namelen,
+				    NULL, NULL);
+	  ARM64_SOCKET_DIAG ("diag: inet recv wsarecvfrom after");
+	}
       if (!res)
 	{
 	  ret += wret;
