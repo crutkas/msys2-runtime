@@ -46,6 +46,18 @@ extern "C" {
   int sscanf (const char *, const char *, ...);
 } /* End of "C" section */
 
+#if defined (__aarch64__)
+static void
+arm64_socketpair_diag (const char *label)
+{
+  fprintf (stderr, "%s\n", label);
+  fflush (stderr);
+}
+#define ARM64_SOCKETPAIR_DIAG(label) arm64_socketpair_diag (label)
+#else
+#define ARM64_SOCKETPAIR_DIAG(label) do { } while (0)
+#endif
+
 #if defined(__aarch64__)
 static int
 arm64_wsa_event_select (SOCKET sock, WSAEVENT evt, long mask)
@@ -317,6 +329,7 @@ fhandler_socket_local::socketpair (int af, int type, int protocol, int flags,
   fhandler_socket_local *fh_out = reinterpret_cast<fhandler_socket_local *>
 				  (_fh_out);
 
+  ARM64_SOCKETPAIR_DIAG ("diag: local socketpair enter");
   if (type != SOCK_STREAM && type != SOCK_DGRAM)
         {
           set_errno (EINVAL);
@@ -327,14 +340,16 @@ fhandler_socket_local::socketpair (int af, int type, int protocol, int flags,
       set_errno (EPROTONOSUPPORT);
       return -1;
     }
-  /* create listening socket */
+  ARM64_SOCKETPAIR_DIAG ("diag: local socketpair create listener before");
   sock = ::socket (AF_INET, type, 0);
   if (sock == INVALID_SOCKET)
     {
       set_winsock_errno ();
       goto err;
     }
+  ARM64_SOCKETPAIR_DIAG ("diag: local socketpair create listener after");
   /* bind to unused port */
+  ARM64_SOCKETPAIR_DIAG ("diag: local socketpair bind listener before");
   sock_in.sin_family = AF_INET;
   sock_in.sin_port = 0;
   sock_in.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
@@ -343,29 +358,37 @@ fhandler_socket_local::socketpair (int af, int type, int protocol, int flags,
       set_winsock_errno ();
       goto err;
     }
+  ARM64_SOCKETPAIR_DIAG ("diag: local socketpair bind listener after");
   /* fetch socket name */
+  ARM64_SOCKETPAIR_DIAG ("diag: local socketpair getsockname listener before");
   len = sizeof (sock_in);
   if (::getsockname (sock, (struct sockaddr *) &sock_in, &len) < 0)
     {
       set_winsock_errno ();
       goto err;
     }
+  ARM64_SOCKETPAIR_DIAG ("diag: local socketpair getsockname listener after");
   /* on stream sockets, create listener */
+  ARM64_SOCKETPAIR_DIAG ("diag: local socketpair listen before");
   if (type == SOCK_STREAM && ::listen (sock, 2) < 0)
     {
       set_winsock_errno ();
       goto err;
     }
+  ARM64_SOCKETPAIR_DIAG ("diag: local socketpair listen after");
   /* create connecting socket */
+  ARM64_SOCKETPAIR_DIAG ("diag: local socketpair create peer before");
   outsock = ::socket (AF_INET, type, 0);
   if (outsock == INVALID_SOCKET)
     {
       set_winsock_errno ();
       goto err;
     }
+  ARM64_SOCKETPAIR_DIAG ("diag: local socketpair create peer after");
   /* on datagram sockets, bind connecting socket */
   if (type == SOCK_DGRAM)
     {
+      ARM64_SOCKETPAIR_DIAG ("diag: local socketpair bind peer before");
       sock_out.sin_family = AF_INET;
       sock_out.sin_port = 0;
       sock_out.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
@@ -375,26 +398,32 @@ fhandler_socket_local::socketpair (int af, int type, int protocol, int flags,
 	  set_winsock_errno ();
 	  goto err;
 	}
+      ARM64_SOCKETPAIR_DIAG ("diag: local socketpair bind peer after");
       /* ...and fetch name */
+      ARM64_SOCKETPAIR_DIAG ("diag: local socketpair getsockname peer before");
       len = sizeof (sock_out);
       if (::getsockname (outsock, (struct sockaddr *) &sock_out, &len) < 0)
 	{
 	  set_winsock_errno ();
 	  goto err;
 	}
+      ARM64_SOCKETPAIR_DIAG ("diag: local socketpair getsockname peer after");
     }
   sock_in.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
   if (type == SOCK_DGRAM)
     sock_out.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
   /* connect */
+  ARM64_SOCKETPAIR_DIAG ("diag: local socketpair connect peer before");
   if (::connect (outsock, (struct sockaddr *) &sock_in, sizeof (sock_in)) < 0)
     {
       set_winsock_errno ();
       goto err;
     }
+  ARM64_SOCKETPAIR_DIAG ("diag: local socketpair connect peer after");
   if (type == SOCK_STREAM)
     {
       /* on stream sockets, accept connection and close listener */
+      ARM64_SOCKETPAIR_DIAG ("diag: local socketpair accept before");
       len = sizeof (sock_in);
       insock = ::accept (sock, (struct sockaddr *) &sock_in, &len);
       if (insock == INVALID_SOCKET)
@@ -402,22 +431,26 @@ fhandler_socket_local::socketpair (int af, int type, int protocol, int flags,
 	  set_winsock_errno ();
 	  goto err;
 	}
+      ARM64_SOCKETPAIR_DIAG ("diag: local socketpair accept after");
       arm64_closesocket (sock);
     }
   else
     {
       /* on datagram sockets, connect vice versa */
+      ARM64_SOCKETPAIR_DIAG ("diag: local socketpair connect listener before");
       if (::connect (sock, (struct sockaddr *) &sock_out,
 		   sizeof (sock_out)) < 0)
 	{
 	  set_winsock_errno ();
 	  goto err;
 	}
+      ARM64_SOCKETPAIR_DIAG ("diag: local socketpair connect listener after");
       insock = sock;
     }
   sock = INVALID_SOCKET;
 
   /* postprocessing */
+  ARM64_SOCKETPAIR_DIAG ("diag: local socketpair postprocess before");
   connect_state (connected);
   fh_out->connect_state (connected);
   if (af == AF_LOCAL && type == SOCK_STREAM)
@@ -428,6 +461,7 @@ fhandler_socket_local::socketpair (int af, int type, int protocol, int flags,
   if (set_socket_handle (insock, af, type, flags) < 0
       || fh_out->set_socket_handle (outsock, af, type, flags) < 0)
     goto err;
+  ARM64_SOCKETPAIR_DIAG ("diag: local socketpair postprocess after");
 
   return 0;
 

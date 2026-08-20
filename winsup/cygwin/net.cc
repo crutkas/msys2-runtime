@@ -2315,13 +2315,13 @@ socketpair (int af, int type, int protocol, int sv[2])
       fh_out = reinterpret_cast<fhandler_socket *> (build_fh_dev (*dev));
       if (fh_in && fh_out)
 	{
-#if defined (__aarch64__) && defined (__WITH_AF_UNIX)
+#if defined (__aarch64__)
 	  if (af == AF_UNIX)
 	    {
-	      if (static_cast<fhandler_socket_unix *> (fh_in)
-		  ->fhandler_socket_unix::socketpair (
+	      if (static_cast<fhandler_socket_local *> (fh_in)
+		  ->fhandler_socket_local::socketpair (
 		       af, type, protocol, flags,
-		       static_cast<fhandler_socket_unix *> (fh_out)) == 0)
+		       static_cast<fhandler_socket_local *> (fh_out)) == 0)
 		{
 		  fd_in = fh_in;
 		  fd_out = fh_out;
