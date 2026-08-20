@@ -73,6 +73,18 @@ arm64_wsa_event_select (SOCKET sock, WSAEVENT evt, long mask)
 }
 
 static int
+arm64_bind (SOCKET sock, const struct sockaddr *name, int namelen)
+{
+  using bind_t = int (WINAPI *) (SOCKET, const struct sockaddr *, int);
+  HMODULE ws2_32 = GetModuleHandleA ("ws2_32.dll");
+  if (!ws2_32)
+    ws2_32 = LoadLibraryA ("ws2_32.dll");
+  bind_t bind =
+    ws2_32 ? (bind_t) GetProcAddress (ws2_32, "bind") : NULL;
+  return bind ? bind (sock, name, namelen) : SOCKET_ERROR;
+}
+
+static int
 arm64_wsa_async_select (SOCKET sock, HWND wnd, unsigned int msg, long mask)
 {
   using wsaasyncselect_t = int (WINAPI *) (SOCKET, HWND, unsigned int, long);
@@ -972,7 +984,12 @@ fhandler_socket_inet::bind (const struct sockaddr *name, int namelen)
 			      (const char *) &on, sizeof on);
       debug_printf ("%d = setsockopt(SO_EXCLUSIVEADDRUSE), %E", ret);
     }
-  if (::bind (get_socket (), name, namelen))
+  if (
+#if defined(__aarch64__)
+      arm64_bind (get_socket (), name, namelen))
+#else
+      ::bind (get_socket (), name, namelen))
+#endif
     set_winsock_errno ();
   else
     res = 0;
