@@ -457,6 +457,15 @@ fhandler_socket_wsock::evaluate_events (const long event_mask, long &events,
   if ((events = events_now) != 0
       || (events = (wsock_events->events & event_mask)) != 0)
     {
+      ARM64_SOCKET_DIAG ("diag: inet eval mask present");
+      if (events & FD_CONNECT)
+	ARM64_SOCKET_DIAG ("diag: inet eval mask fd_connect");
+      if (events & FD_CLOSE)
+	ARM64_SOCKET_DIAG ("diag: inet eval mask fd_close");
+      if (events & FD_READ)
+	ARM64_SOCKET_DIAG ("diag: inet eval mask fd_read");
+      if (events & FD_WRITE)
+	ARM64_SOCKET_DIAG ("diag: inet eval mask fd_write");
       if (events & FD_CONNECT)
 	{
 	  int wsa_err = wsock_events->connect_errorcode;
