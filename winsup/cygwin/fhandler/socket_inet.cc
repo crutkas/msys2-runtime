@@ -401,8 +401,10 @@ fhandler_socket_wsock::evaluate_events (const long event_mask, long &events,
   long events_now = 0;
 
   WSANETWORKEVENTS evts = { 0 };
+  ARM64_SOCKET_DIAG ("diag: inet eval enum before");
   if (!(arm64_wsa_enum_network_events (get_socket (), wsock_evt, &evts)))
     {
+      ARM64_SOCKET_DIAG ("diag: inet eval enum after");
       if (evts.lNetworkEvents)
 	{
 	  LOCK_EVENTS;
@@ -443,6 +445,8 @@ fhandler_socket_wsock::evaluate_events (const long event_mask, long &events,
 	    kill (wsock_events->owner, SIGURG);
 	}
     }
+  else
+    ARM64_SOCKET_DIAG ("diag: inet eval enum error");
 
   LOCK_EVENTS;
   if ((events = events_now) != 0
