@@ -23,7 +23,17 @@ jobs:
         with:
           msystem: MSYS
           update: true
-          install: base-devel cocom gcc git gmp isl libiconv libintl libzstd mpc mpfr zlib
+          # autotools provides /usr/bin/aclocal, /usr/bin/autoconf, and
+          # /usr/bin/automake, which winsup/autogen.sh (invoked below by
+          # the cygtls-lock, autoload, and POSIX-thread-startup checks)
+          # calls directly. It is already part of the (passing) x86_64
+          # build job's package list; this job was simply missing it,
+          # causing a pre-existing, deterministic "aclocal: No such file
+          # or directory" failure here (reproduced on the unmodified base
+          # branch as well, unrelated to the AArch64 wsock autoload fix)
+          # that aborted the job before the _wsock_init disassembly
+          # assertions below could ever run.
+          install: autotools base-devel cocom gcc git gmp isl libiconv libintl libzstd mpc mpfr zlib
 
       - name: Install fork-local AArch64 runtime toolchain
         run: ./.github/checks/install-aarch64-runtime-toolchain.sh
@@ -90,17 +100,13 @@ jobs:
             exit 1
           fi
 
-          gcc \
-            -std=gnu11 \
-            -O2 \
-            -Wall \
-            -Wextra \
-            -Werror \
-            -I"$GITHUB_WORKSPACE/winsup/cygwin/include" \
-            -I"$GITHUB_WORKSPACE/newlib/libc/include" \
-            "$GITHUB_WORKSPACE/.github/checks/aarch64-endian-runtime.c" \
-            -o aarch64-endian-runtime
-          ./aarch64-endian-runtime
+          # The behavioral runtime check (aarch64-endian-runtime.c) is
+          # cross-compiled and linked against the real AArch64 Cygwin
+          # runtime in the aarch64-linker-script job below, then executed
+          # natively on windows-11-arm in aarch64-runtime-smoke. It must
+          # not be compiled/run with the host's own (x86_64) gcc here,
+          # since that both defeats the purpose of the check (the file
+          # gates on __aarch64__) and cannot execute an ARM64 binary.
 
       - name: Compile and disassemble AArch64 cygtls lock
         run: |
@@ -218,10 +224,60 @@ jobs:
           grep -Fq 'api_fatal' aarch64-autoload.relocs
           grep -Fq 'GetProcAddress' aarch64-autoload.relocs
 
-          # Both INIT_WRAPPER instances carry ARM64 Windows unwind records.
+          # Both the std_dll_init INIT_WRAPPER and the _wsock_init hand-off
+          # wrapper carry ARM64 Windows unwind records.
           test "$(grep -Ec '[[:space:]][Tt] _std_dll_init$|[[:space:]][Tt] _wsock_init$' \
             aarch64-autoload.symbols)" -eq 2
           test "$(grep -Ec '[.]pdata|[.]xdata' aarch64-autoload.sections)" -ge 2
+
+          # _wsock_init is entered from dll_chain via "br x1", not a call,
+          # so (unlike _std_dll_init, reached via "blr") x30 does not hold
+          # a usable return address there.  It must recover func_info*
+          # from the [sp, #16] slot dll_chain pushed instead, and must
+          # tail-branch straight into dll_func_load afterwards, reusing
+          # that one func_info frame rather than leaking a second one
+          # through another dll_chain round trip.
+          #
+          # Bound the extracted disassembly strictly to _wsock_init's own
+          # body: start at its "<_wsock_init>:" label and stop at the next
+          # "<symbol>:" label, whatever it happens to be, rather than
+          # hardcoding the following function's name (which is fragile if
+          # symbol order ever changes) or reading to end-of-file (which
+          # would let assertions like "br x16" or "no mov x0, x30" match
+          # unrelated code in later functions, e.g. dll_func_load itself).
+          awk '
+            /^[0-9a-f]+ <_wsock_init>:$/ { found = 1; print; next }
+            found && /^[0-9a-f]+ <[^>]+>:$/ { exit }
+            found { print }
+          ' aarch64-autoload.dis | tee aarch64-wsock-init.dis
+          test -s aarch64-wsock-init.dis
+          if tail -n +2 aarch64-wsock-init.dis \
+              | grep -Eq '^[0-9a-f]+ <[^>]+>:$'; then
+            echo "_wsock_init disassembly slice leaked into another symbol" >&2
+            exit 1
+          fi
+          grep -Eq '[[:space:]]ldr[[:space:]]+x0, \[sp, #16\]' \
+            aarch64-wsock-init.dis
+          grep -Eq '[[:space:]]br[[:space:]]+x16' aarch64-wsock-init.dis
+          if grep -Eq '[[:space:]]mov[[:space:]]+x0, x30' \
+              aarch64-wsock-init.dis; then
+            echo "_wsock_init must not derive func_info* from x30 on AArch64" >&2
+            exit 1
+          fi
+          if grep -Fq '<dll_chain>' aarch64-wsock-init.dis; then
+            echo "_wsock_init must not route back through dll_chain" >&2
+            exit 1
+          fi
+          # wsock_init() (the C worker _wsock_init's "bl wsock_init" calls)
+          # is a local, same-section branch that the assembler/linker
+          # resolves directly -- objdump shows e.g. "bl 288 <wsock_init>"
+          # with no relocation entry, so it can never appear in the
+          # relocs list.  Only dll_func_load is reached via an adrp/add
+          # pair that does require one.  Assert the call target from the
+          # bounded _wsock_init disassembly instead of the relocs list.
+          grep -Eq '[[:space:]]bl[[:space:]]+[0-9a-f]+ <wsock_init>$' \
+            aarch64-wsock-init.dis
+          grep -Fq 'dll_func_load' aarch64-autoload.relocs
 
           mkdir aarch64-autoload-sections
           "$objcopy" \
@@ -356,15 +412,15 @@ jobs:
             '[[:space:]][Tt] check_dcrt0_stack_switch$' \
             aarch64-dcrt0-stack-switch.symbols
           grep -Eq \
-            '[[:space:]]mov[[:space:]]+x29, x[0-9]+' \
+            '[[:space:]]mov[[:space:]]+sp, x[0-9]+' \
             aarch64-dcrt0-stack-switch.dis
           grep -Eq \
-            '[[:space:]]mov[[:space:]]+sp, x29' \
+            '[[:space:]]mov[[:space:]]+x29, xzr' \
             aarch64-dcrt0-stack-switch.dis
           awk '
-            /mov[[:space:]]+x29, x[0-9]+/ { frame = NR }
-            /mov[[:space:]]+sp, x29/ { stack = NR }
-            END { exit !(frame && stack && frame < stack) }
+            /mov[[:space:]]+sp, x[0-9]+/ { stack = NR }
+            /mov[[:space:]]+x29, xzr/ { frame = NR }
+            END { exit !(frame && stack && stack < frame) }
           ' aarch64-dcrt0-stack-switch.dis
           if grep -Eq \
               '[[:space:]]sub[[:space:]]+sp, sp, #0x20' \
@@ -374,26 +430,31 @@ jobs:
 
           grep -Fq '#elif defined(__aarch64__)' \
             "$GITHUB_WORKSPACE/winsup/cygwin/dcrt0.cc"
-          grep -Fq 'mov fp, %[ADDR]' \
+          grep -Fq 'mov sp, %[ADDR]' \
             "$GITHUB_WORKSPACE/winsup/cygwin/dcrt0.cc"
-          grep -Fq 'mov sp, fp' \
+          grep -Fq 'mov fp, xzr' \
+            "$GITHUB_WORKSPACE/winsup/cygwin/dcrt0.cc"
+          grep -Fq '__asm__ __volatile__' \
             "$GITHUB_WORKSPACE/winsup/cygwin/dcrt0.cc"
           grep -Fq \
             'return ((PBYTE) allocationbase + stacksize - 16);' \
             "$GITHUB_WORKSPACE/winsup/cygwin/create_posix_thread.cc"
 
-      - name: Run AArch64 ucontext ABI model
+      - name: Verify AArch64 ucontext ABI model is native-only
         run: |
-          g++ \
-            -std=gnu++17 \
-            -O2 \
-            -Wall \
-            -Wextra \
-            -Werror \
-            -ffixed-x18 \
-            "$GITHUB_WORKSPACE/.github/checks/aarch64-ucontext-model.cc" \
-            -o aarch64-ucontext-model
-          ./aarch64-ucontext-model
+          # aarch64-ucontext-model.cc exercises real AArch64 signal
+          # alternate-stack switching and ucontext-style makecontext
+          # register/stack layout using inline asm against x18/x19/x30
+          # and -ffixed-x18. It must not be compiled or executed with
+          # the host's own (x86_64) g++ here: -ffixed-x18 names an
+          # AArch64-only register (host g++ fails with "unknown
+          # register name"), and the file itself gates on __aarch64__.
+          # It is cross-compiled and linked against the real AArch64
+          # Cygwin runtime in the aarch64-linker-script job below, then
+          # executed natively on windows-11-arm in aarch64-runtime-smoke.
+          test -f "$GITHUB_WORKSPACE/.github/checks/aarch64-ucontext-model.cc"
+          grep -Fq '#if !defined(__aarch64__)' \
+            "$GITHUB_WORKSPACE/.github/checks/aarch64-ucontext-model.cc"
 
       - name: Compile and inspect AArch64 signal and SEH paths
         run: |
@@ -434,6 +495,7 @@ jobs:
             "$GITHUB_WORKSPACE/winsup/cygwin/scripts/gendef" \
               --cpu=aarch64 \
               --output-def=signal-check.def \
+              "$GITHUB_WORKSPACE/winsup/cygwin/aarch64/cygwin.din" \
               "$GITHUB_WORKSPACE/winsup/cygwin/cygwin.din"
             test -s sigfe.s
           )
@@ -751,7 +813,14 @@ jobs:
         with:
           msystem: MSYS
           update: true
-          install: base-devel cocom gcc git gmp isl libiconv libintl libzstd mpc mpfr zlib
+          # autotools provides /usr/bin/aclocal, /usr/bin/autoconf, and
+          # /usr/bin/automake, which winsup/autogen.sh invokes directly
+          # below. It is already part of the (passing) x86_64 build job's
+          # package list; this job was simply missing it, causing a
+          # pre-existing, deterministic "aclocal: No such file or
+          # directory" failure here (reproduced on the unmodified base
+          # branch as well, unrelated to the AArch64 wsock autoload fix).
+          install: autotools base-devel cocom gcc git gmp isl libiconv libintl libzstd mpc mpfr zlib
 
       - name: Install fork-local AArch64 runtime toolchain
         shell: msys2 {0}
@@ -820,6 +889,99 @@ jobs:
             -lkernel32 \
             -lntdll
 
+          aarch64-pc-cygwin-gcc \
+            -D__MSYS__ \
+            -O2 \
+            -g \
+            -Wall \
+            -Werror \
+            -c .github/checks/aarch64-wsock-autoload-smoke.c \
+            -o "$cygwin_build/aarch64-wsock-autoload-smoke.o"
+          aarch64-pc-cygwin-gcc \
+            -nostdlib \
+            -Wl,--no-insert-timestamp \
+            -Wl,--subsystem,console \
+            -Wl,-e,mainCRTStartup \
+            -o "$cygwin_build/aarch64-wsock-autoload-smoke.exe" \
+            "$cygwin_build/crt0.o" \
+            "$gccdir/crtbegin.o" \
+            "$cygwin_build/aarch64-wsock-autoload-smoke.o" \
+            -L"$cygwin_build" \
+            -Wl,--start-group \
+            -lmsys-2.0 \
+            -lgcc \
+            -Wl,--end-group \
+            "$gccdir/crtend.o" \
+            /opt/aarch64-pc-cygwin/lib/default-manifest.o \
+            -lkernel32 \
+            -lntdll
+
+          # Cross-compile and link the AArch64 endian-primitives runtime
+          # check against the real Cygwin runtime, so it can be executed
+          # natively on windows-11-arm in aarch64-runtime-smoke below,
+          # instead of with the host's own (x86_64) gcc, which can never
+          # define __aarch64__ or run the resulting binary.
+          aarch64-pc-cygwin-gcc \
+            -std=gnu11 \
+            -O2 \
+            -Wall \
+            -Wextra \
+            -Werror \
+            -c .github/checks/aarch64-endian-runtime.c \
+            -o "$cygwin_build/aarch64-endian-runtime.o"
+          aarch64-pc-cygwin-gcc \
+            -nostdlib \
+            -Wl,--no-insert-timestamp \
+            -Wl,--subsystem,console \
+            -Wl,-e,mainCRTStartup \
+            -o "$cygwin_build/aarch64-endian-runtime.exe" \
+            "$cygwin_build/crt0.o" \
+            "$gccdir/crtbegin.o" \
+            "$cygwin_build/aarch64-endian-runtime.o" \
+            -L"$cygwin_build" \
+            -Wl,--start-group \
+            -lmsys-2.0 \
+            -lgcc \
+            -Wl,--end-group \
+            "$gccdir/crtend.o" \
+            /opt/aarch64-pc-cygwin/lib/default-manifest.o \
+            -lkernel32 \
+            -lntdll
+
+          # Cross-compile and link the AArch64 ucontext ABI model check
+          # against the real Cygwin runtime, so it can be executed
+          # natively on windows-11-arm in aarch64-runtime-smoke below,
+          # instead of with the host's own (x86_64) g++, which can
+          # never accept -ffixed-x18 (an AArch64-only register name)
+          # or define __aarch64__.
+          aarch64-pc-cygwin-g++ \
+            -std=gnu++17 \
+            -O2 \
+            -Wall \
+            -Wextra \
+            -Werror \
+            -ffixed-x18 \
+            -c .github/checks/aarch64-ucontext-model.cc \
+            -o "$cygwin_build/aarch64-ucontext-model.o"
+          aarch64-pc-cygwin-g++ \
+            -nostdlib \
+            -Wl,--no-insert-timestamp \
+            -Wl,--subsystem,console \
+            -Wl,-e,mainCRTStartup \
+            -o "$cygwin_build/aarch64-ucontext-model.exe" \
+            "$cygwin_build/crt0.o" \
+            "$gccdir/crtbegin.o" \
+            "$cygwin_build/aarch64-ucontext-model.o" \
+            -L"$cygwin_build" \
+            -Wl,--start-group \
+            -lmsys-2.0 \
+            -lgcc \
+            -Wl,--end-group \
+            "$gccdir/crtend.o" \
+            /opt/aarch64-pc-cygwin/lib/default-manifest.o \
+            -lkernel32 \
+            -lntdll
+
           cp "$cygwin_build/new-msys-2.0.dll" \
             "$cygwin_build/new-msys-2.0.first.dll"
           cp "$cygwin_build/libmsys-2.0.a" \
@@ -841,6 +1003,12 @@ jobs:
           cp "$cygwin_build/libmsys-2.0.a" \
             aarch64-runtime-validation/libmsys-2.0.a
           cp "$cygwin_build/aarch64-runtime-smoke.exe" \
+            aarch64-runtime-validation/
+          cp "$cygwin_build/aarch64-wsock-autoload-smoke.exe" \
+            aarch64-runtime-validation/
+          cp "$cygwin_build/aarch64-endian-runtime.exe" \
+            aarch64-runtime-validation/
+          cp "$cygwin_build/aarch64-ucontext-model.exe" \
             aarch64-runtime-validation/
 
       - name: Upload AArch64 runtime validation
@@ -879,6 +1047,51 @@ jobs:
           & (Join-Path $runtime "aarch64-runtime-smoke.exe")
           if ($LASTEXITCODE -ne 0) {
             throw "AArch64 runtime smoke test failed with exit code $LASTEXITCODE"
+          }
+
+      - name: Run AArch64 wsock autoload regression probe
+        shell: pwsh
+        run: |
+          if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture -ne
+              [System.Runtime.InteropServices.Architecture]::Arm64) {
+            throw "A native Windows ARM64 runner is required"
+          }
+          # Run in its own fresh process (not appended to the shared smoke
+          # test) so `socket`/`WSAEventSelect` are still unresolved ws2_32
+          # autoload trampolines and must go through _wsock_init.
+          $runtime = (Resolve-Path `
+            aarch64-runtime-validation/aarch64-runtime-validation).Path
+          & (Join-Path $runtime "aarch64-wsock-autoload-smoke.exe")
+          if ($LASTEXITCODE -ne 0) {
+            throw "AArch64 wsock autoload regression probe failed with exit code $LASTEXITCODE"
+          }
+
+      - name: Run AArch64 endian primitives runtime check
+        shell: pwsh
+        run: |
+          if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture -ne
+              [System.Runtime.InteropServices.Architecture]::Arm64) {
+            throw "A native Windows ARM64 runner is required"
+          }
+          $runtime = (Resolve-Path `
+            aarch64-runtime-validation/aarch64-runtime-validation).Path
+          & (Join-Path $runtime "aarch64-endian-runtime.exe")
+          if ($LASTEXITCODE -ne 0) {
+            throw "AArch64 endian primitives runtime check failed with exit code $LASTEXITCODE"
+          }
+
+      - name: Run AArch64 ucontext ABI model
+        shell: pwsh
+        run: |
+          if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture -ne
+              [System.Runtime.InteropServices.Architecture]::Arm64) {
+            throw "A native Windows ARM64 runner is required"
+          }
+          $runtime = (Resolve-Path `
+            aarch64-runtime-validation/aarch64-runtime-validation).Path
+          & (Join-Path $runtime "aarch64-ucontext-model.exe")
+          if ($LASTEXITCODE -ne 0) {
+            throw "AArch64 ucontext ABI model check failed with exit code $LASTEXITCODE"
           }
 
   configure-winsup:

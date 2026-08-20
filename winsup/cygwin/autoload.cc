@@ -489,9 +489,46 @@ std_dll_init (struct func_info *func)
 
 /* Initialization function for winsock stuff. */
 
-#if defined(__x86_64__) || defined(__aarch64__)
+#if defined(__x86_64__)
 /* See above comment preceeding std_dll_init. */
 INIT_WRAPPER (wsock_init)
+#elif defined(__aarch64__)
+/* _wsock_init cannot reuse INIT_WRAPPER on AArch64.  LoadDLLprime (ws2_32,
+   _wsock_init, 0), below, makes _wsock_init the permanent dll_info->init
+   for ws2_32, so *every* not-yet-resolved ws2_32 function reaches it the
+   same way: via dll_chain's "br x1" tail branch, not a "bl"/"blr" call.
+   Unlike the very first hop into std_dll_init (reached with a "blr" from
+   the autoload trampoline, so x30 is a usable return address), x30 on
+   entry to _wsock_init still holds whatever INIT_WRAPPER(std_dll_init)
+   last put there for its own "ret" into dll_chain, i.e. the address of
+   dll_chain itself.  Treating that as a func_info* (the way
+   INIT_WRAPPER's "mov x0, x30" does) hands wsock_init() a garbage
+   pointer and corrupts the resolver.
+
+   The func_info* is available instead at [sp]: dll_chain always does
+   "stp x0, xzr, [sp, #-16]!" immediately before branching to dll->init,
+   so this wrapper loads its argument from there.  After calling the real
+   wsock_init(), it tail-branches straight into dll_func_load reusing that
+   same 16-byte func_info frame, instead of returning through dll_chain a
+   second time -- dll_chain pushes but never pops, and dll_func_load pops
+   only one such frame, so a second trip through dll_chain would leak 16
+   bytes of stack on every first-use ws2_32 call. */
+__asm__ ( "\n\
+  .text                                                  \n\
+  .p2align 2                                             \n\
+  .seh_proc _wsock_init                                  \n\
+_wsock_init:                                             \n\
+  stp        x29, x30, [sp, #-16]! // wrapper's own frame, above dll_chain's func_info frame\n\
+  .seh_save_fplr_x 16                                    \n\
+  .seh_endprologue                                       \n\
+  ldr        x0, [sp, #16]     // x0 = func_info* pushed by dll_chain at [sp]\n\
+  bl         wsock_init                                  \n\
+  ldp        x29, x30, [sp], #16 // drop wrapper's frame; sp -> dll_chain's func_info frame\n\
+  adrp       x16, dll_func_load                          \n\
+  add        x16, x16, #:lo12:dll_func_load              \n\
+  br         x16               // tail into dll_func_load with the one existing func_info frame\n\
+  .seh_endproc                                           \n\
+");
 #else
 #error unimplemented for this target
 #endif

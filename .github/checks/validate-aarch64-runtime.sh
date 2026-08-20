@@ -247,6 +247,33 @@ if test -f "$smoke"; then
   sha256sum "$smoke" >> "$report/SHA256SUMS"
 fi
 
+wsock_smoke="$cygwin/aarch64-wsock-autoload-smoke.exe"
+if test -f "$wsock_smoke"; then
+  "$objdump" -f -h -p "$wsock_smoke" > "$report/aarch64-wsock-autoload-smoke.txt"
+  grep -Fq 'file format pei-aarch64-little' \
+    "$report/aarch64-wsock-autoload-smoke.txt"
+  grep -Fq 'DLL Name: msys-2.0.dll' "$report/aarch64-wsock-autoload-smoke.txt"
+  sha256sum "$wsock_smoke" >> "$report/SHA256SUMS"
+fi
+
+endian_runtime="$cygwin/aarch64-endian-runtime.exe"
+if test -f "$endian_runtime"; then
+  "$objdump" -f -h -p "$endian_runtime" > "$report/aarch64-endian-runtime.txt"
+  grep -Fq 'file format pei-aarch64-little' \
+    "$report/aarch64-endian-runtime.txt"
+  grep -Fq 'DLL Name: msys-2.0.dll' "$report/aarch64-endian-runtime.txt"
+  sha256sum "$endian_runtime" >> "$report/SHA256SUMS"
+fi
+
+ucontext_model="$cygwin/aarch64-ucontext-model.exe"
+if test -f "$ucontext_model"; then
+  "$objdump" -f -h -p "$ucontext_model" > "$report/aarch64-ucontext-model.txt"
+  grep -Fq 'file format pei-aarch64-little' \
+    "$report/aarch64-ucontext-model.txt"
+  grep -Fq 'DLL Name: msys-2.0.dll' "$report/aarch64-ucontext-model.txt"
+  sha256sum "$ucontext_model" >> "$report/SHA256SUMS"
+fi
+
 {
   printf 'objects\t%s\n' "$object_count"
   printf 'selected_archive_members\t%s\n' "$selected"
