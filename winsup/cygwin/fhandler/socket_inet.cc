@@ -109,6 +109,18 @@ arm64_listen (SOCKET sock, int backlog)
 }
 
 static int
+arm64_connect (SOCKET sock, const struct sockaddr *name, int namelen)
+{
+  using connect_t = int (WINAPI *) (SOCKET, const struct sockaddr *, int);
+  HMODULE ws2_32 = GetModuleHandleA ("ws2_32.dll");
+  if (!ws2_32)
+    ws2_32 = LoadLibraryA ("ws2_32.dll");
+  connect_t connect =
+    ws2_32 ? (connect_t) GetProcAddress (ws2_32, "connect") : NULL;
+  return connect ? connect (sock, name, namelen) : SOCKET_ERROR;
+}
+
+static int
 arm64_setsockopt (SOCKET sock, int level, int optname, const char *optval,
 		  int optlen)
 {
@@ -1082,7 +1094,11 @@ fhandler_socket_inet::connect (const struct sockaddr *name, int namelen)
   if (connect_state () == unconnected || connect_state () == connect_failed)
     connect_state (connect_pending);
 
+#if defined(__aarch64__)
+  int res = arm64_connect (get_socket (), (struct sockaddr *) &sst, namelen);
+#else
   int res = ::connect (get_socket (), (struct sockaddr *) &sst, namelen);
+#endif
   if (!res)
     {
       if (reset)
