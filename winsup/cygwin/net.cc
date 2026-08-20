@@ -30,6 +30,7 @@ details. */
 #undef gethostname
 #include <ifaddrs.h>
 #include <netdb.h>
+#include <stdio.h>
 #include <asm/byteorder.h>
 #include "shared_info.h"
 #include "path.h"
