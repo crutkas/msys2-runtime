@@ -97,6 +97,18 @@ arm64_getsockname (SOCKET sock, struct sockaddr *name, int *namelen)
 }
 
 static int
+arm64_listen (SOCKET sock, int backlog)
+{
+  using listen_t = int (WINAPI *) (SOCKET, int);
+  HMODULE ws2_32 = GetModuleHandleA ("ws2_32.dll");
+  if (!ws2_32)
+    ws2_32 = LoadLibraryA ("ws2_32.dll");
+  listen_t listen =
+    ws2_32 ? (listen_t) GetProcAddress (ws2_32, "listen") : NULL;
+  return listen ? listen (sock, backlog) : SOCKET_ERROR;
+}
+
+static int
 arm64_setsockopt (SOCKET sock, int level, int optname, const char *optval,
 		  int optlen)
 {
@@ -1113,7 +1125,12 @@ fhandler_socket_inet::connect (const struct sockaddr *name, int namelen)
 int
 fhandler_socket_inet::listen (int backlog)
 {
-  int res = ::listen (get_socket (), backlog);
+  int res =
+#if defined(__aarch64__)
+    arm64_listen (get_socket (), backlog);
+#else
+    ::listen (get_socket (), backlog);
+#endif
   if (res && WSAGetLastError () == WSAEINVAL)
     {
       /* It's perfectly valid to call listen on an unbound INET socket.
@@ -1128,7 +1145,12 @@ fhandler_socket_inet::listen (int backlog)
 	  sin.sin_port = 0;
 	  sin.sin_addr.s_addr = INADDR_ANY;
 	  if (!::bind (get_socket (), (struct sockaddr *) &sin, sizeof sin))
-	    res = ::listen (get_socket (), backlog);
+	    res =
+#if defined(__aarch64__)
+	      arm64_listen (get_socket (), backlog);
+#else
+	      ::listen (get_socket (), backlog);
+#endif
 	}
       else if (get_addr_family () == AF_INET6)
 	{
@@ -1136,7 +1158,12 @@ fhandler_socket_inet::listen (int backlog)
 	  memset (&sin6, 0, sizeof sin6);
 	  sin6.sin6_family = AF_INET6;
 	  if (!::bind (get_socket (), (struct sockaddr *) &sin6, sizeof sin6))
-	    res = ::listen (get_socket (), backlog);
+	    res =
+#if defined(__aarch64__)
+	      arm64_listen (get_socket (), backlog);
+#else
+	      ::listen (get_socket (), backlog);
+#endif
 	}
     }
   if (!res)
