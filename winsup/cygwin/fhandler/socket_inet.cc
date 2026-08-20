@@ -29,6 +29,7 @@
 #include <w32api/mstcpip.h>
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
+#include <stdio.h>
 #include <unistd.h>
 #include <asm/byteorder.h>
 #include <sys/socket.h>
@@ -49,6 +50,15 @@
 #define EVENT_MASK (FD_READ|FD_WRITE|FD_OOB|FD_ACCEPT|FD_CONNECT|FD_CLOSE)
 
 #if defined(__aarch64__)
+static void
+arm64_socket_diag (const char *label)
+{
+  fprintf (stderr, "%s\n", label);
+  fflush (stderr);
+}
+
+#define ARM64_SOCKET_DIAG(label) arm64_socket_diag (label)
+
 static int
 arm64_wsa_event_select (SOCKET sock, WSAEVENT evt, long mask)
 {
@@ -109,6 +119,7 @@ arm64_closesocket (SOCKET sock)
 #define arm64_wsa_async_select WSAAsyncSelect
 #define arm64_wsa_enum_network_events WSAEnumNetworkEvents
 #define arm64_closesocket closesocket
+#define ARM64_SOCKET_DIAG(label) do { } while (0)
 #endif
 
 #define LOCK_EVENTS	\
@@ -717,11 +728,14 @@ fhandler_socket_wsock::set_socket_handle (SOCKET sock, int af, int type,
             }
         }
     }
+  ARM64_SOCKET_DIAG ("diag: inet set_socket_handle enter");
   set_handle ((HANDLE) sock);
   set_addr_family (af);
   set_socket_type (type);
+  ARM64_SOCKET_DIAG ("diag: inet init_events before");
   if (!init_events ())
     return -1;
+  ARM64_SOCKET_DIAG ("diag: inet init_events after");
   if (flags & SOCK_NONBLOCK)
     file_flags |= O_NONBLOCK;
   if (flags & SOCK_CLOEXEC)
@@ -734,7 +748,9 @@ fhandler_socket_wsock::set_socket_handle (SOCKET sock, int af, int type,
     {
       init_fixup_before ();
     }
+  ARM64_SOCKET_DIAG ("diag: inet set_unique_id before");
   set_unique_id ();
+  ARM64_SOCKET_DIAG ("diag: inet set_unique_id after");
   if (get_socket_type () == SOCK_DGRAM)
     {
       /* Workaround the problem that a missing listener on a UDP socket
@@ -820,9 +836,11 @@ fhandler_socket_inet::socket (int af, int type, int protocol, int flags)
       ws2_32 = LoadLibraryA ("ws2_32.dll");
     wsasocketw_t wsasocketw =
       ws2_32 ? (wsasocketw_t) GetProcAddress (ws2_32, "WSASocketW") : NULL;
+    ARM64_SOCKET_DIAG ("diag: inet socket raw create before");
     sock = wsasocketw ? wsasocketw (af, type, protocol, NULL, 0,
 				     WSA_FLAG_OVERLAPPED)
 		      : INVALID_SOCKET;
+    ARM64_SOCKET_DIAG ("diag: inet socket raw create after");
   }
 #else
   sock = ::socket (af, type, protocol);
@@ -832,7 +850,9 @@ fhandler_socket_inet::socket (int af, int type, int protocol, int flags)
       set_winsock_errno ();
       return -1;
     }
+  ARM64_SOCKET_DIAG ("diag: inet socket set_socket_handle before");
   ret = set_socket_handle (sock, af, type, flags);
+  ARM64_SOCKET_DIAG ("diag: inet socket set_socket_handle after");
   if (ret < 0)
     arm64_closesocket (sock);
   return ret;
