@@ -779,7 +779,14 @@ jobs:
         with:
           msystem: MSYS
           update: true
-          install: base-devel cocom gcc git gmp isl libiconv libintl libzstd mpc mpfr zlib
+          # autotools provides /usr/bin/aclocal, /usr/bin/autoconf, and
+          # /usr/bin/automake, which winsup/autogen.sh invokes directly
+          # below. It is already part of the (passing) x86_64 build job's
+          # package list; this job was simply missing it, causing a
+          # pre-existing, deterministic "aclocal: No such file or
+          # directory" failure here (reproduced on the unmodified base
+          # branch as well, unrelated to the AArch64 wsock autoload fix).
+          install: autotools base-devel cocom gcc git gmp isl libiconv libintl libzstd mpc mpfr zlib
 
       - name: Install fork-local AArch64 runtime toolchain
         shell: msys2 {0}
