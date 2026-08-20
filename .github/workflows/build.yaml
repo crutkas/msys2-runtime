@@ -458,6 +458,7 @@ jobs:
 
       - name: Compile and inspect AArch64 signal and SEH paths
         run: |
+          set -x
           export PATH="$TOOLCHAIN_DIR/bin:$PATH"
           export CC=aarch64-pc-cygwin-gcc
           export CXX=aarch64-pc-cygwin-g++
