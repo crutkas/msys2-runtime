@@ -67,7 +67,6 @@ main (void)
   int thread_value = 0;
   int server;
   int client;
-  int fds[2];
   ino_t server_ino;
   ino_t client_ino;
   char buf[8] = {};
@@ -127,44 +126,79 @@ main (void)
     return fail_socket (17, "inode server close");
   mark ("diag: inode server close after");
 
-  mark ("diag: socketpair probe start");
-  mark ("diag: socketpair before");
-  if (socketpair (AF_UNIX, SOCK_STREAM, 0, fds) != 0)
-    return fail_socket (18, "socketpair");
-  mark ("diag: socketpair after");
-  server = fds[0];
-  client = fds[1];
+  mark ("diag: loopback probe start");
+  mark ("diag: loopback listener socket before");
+  server = socket (AF_INET, SOCK_STREAM, 0);
+  mark ("diag: loopback listener socket after");
+  if (server < 0)
+    return fail_socket (18, "loopback listener socket");
+  struct sockaddr_in loopback = {};
+  loopback.sin_family = AF_INET;
+  loopback.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
+  loopback.sin_port = 0;
+  mark ("diag: loopback bind before");
+  if (bind (server, (struct sockaddr *) &loopback, sizeof (loopback)) != 0)
+    return fail_socket (19, "loopback bind");
+  mark ("diag: loopback bind after");
+  mark ("diag: loopback getsockname before");
+  socklen_t loopback_len = sizeof (loopback);
+  if (getsockname (server, (struct sockaddr *) &loopback, &loopback_len) != 0)
+    return fail_socket (20, "loopback getsockname");
+  mark ("diag: loopback getsockname after");
+  mark ("diag: loopback listen before");
+  if (listen (server, 1) != 0)
+    return fail_socket (21, "loopback listen");
+  mark ("diag: loopback listen after");
 
-  mark ("diag: socketpair write ping before");
+  mark ("diag: loopback client socket before");
+  client = socket (AF_INET, SOCK_STREAM, 0);
+  mark ("diag: loopback client socket after");
+  if (client < 0)
+    return fail_socket (22, "loopback client socket");
+  mark ("diag: loopback connect before");
+  if (connect (client, (struct sockaddr *) &loopback, sizeof (loopback)) != 0)
+    return fail_socket (23, "loopback connect");
+  mark ("diag: loopback connect after");
+  mark ("diag: loopback accept before");
+  int accepted = accept (server, NULL, NULL);
+  mark ("diag: loopback accept after");
+  if (accepted < 0)
+    return fail_socket (24, "loopback accept");
+
+  mark ("diag: loopback write ping before");
   if (write (client, ping, sizeof (ping)) != (int) sizeof (ping))
-    return fail_socket (19, "write ping");
-  mark ("diag: socketpair write ping after");
-  mark ("diag: socketpair read ping before");
-  if (read (server, buf, sizeof (ping)) != (int) sizeof (ping))
-    return fail_socket (20, "read ping");
-  mark ("diag: socketpair read ping after");
+    return fail_socket (25, "write ping");
+  mark ("diag: loopback write ping after");
+  mark ("diag: loopback read ping before");
+  if (read (accepted, buf, sizeof (ping)) != (int) sizeof (ping))
+    return fail_socket (26, "read ping");
+  mark ("diag: loopback read ping after");
   if (memcmp (buf, ping, sizeof (ping)) != 0)
-    return 21;
+    return 27;
 
-  mark ("diag: socketpair write pong before");
-  if (write (server, pong, sizeof (pong)) != (int) sizeof (pong))
-    return fail_socket (22, "write pong");
-  mark ("diag: socketpair write pong after");
-  mark ("diag: socketpair read pong before");
+  mark ("diag: loopback write pong before");
+  if (write (accepted, pong, sizeof (pong)) != (int) sizeof (pong))
+    return fail_socket (28, "write pong");
+  mark ("diag: loopback write pong after");
+  mark ("diag: loopback read pong before");
   if (read (client, buf, sizeof (pong)) != (int) sizeof (pong))
-    return fail_socket (23, "read pong");
-  mark ("diag: socketpair read pong after");
+    return fail_socket (29, "read pong");
+  mark ("diag: loopback read pong after");
   if (memcmp (buf, pong, sizeof (pong)) != 0)
-    return 24;
+    return 30;
 
-  mark ("diag: socketpair client close before");
+  mark ("diag: loopback client close before");
   if (close (client) != 0)
-    return fail_socket (25, "socketpair client close");
-  mark ("diag: socketpair client close after");
-  mark ("diag: socketpair server close before");
+    return fail_socket (31, "loopback client close");
+  mark ("diag: loopback client close after");
+  mark ("diag: loopback accepted close before");
+  if (close (accepted) != 0)
+    return fail_socket (32, "loopback accepted close");
+  mark ("diag: loopback accepted close after");
+  mark ("diag: loopback server close before");
   if (close (server) != 0)
-    return fail_socket (26, "socketpair server close");
-  mark ("diag: socketpair server close after");
+    return fail_socket (33, "loopback server close");
+  mark ("diag: loopback server close after");
 
   return 0;
 }
