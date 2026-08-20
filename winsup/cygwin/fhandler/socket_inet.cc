@@ -915,7 +915,14 @@ fhandler_socket_wsock::set_socket_handle (SOCKET sock, int af, int type,
       init_fixup_before ();
     }
   ARM64_SOCKET_DIAG ("diag: inet set_unique_id before");
+#if defined(__aarch64__)
+  if (get_socket_type () == SOCK_DGRAM)
+    set_unique_id (get_ino ());
+  else
+    set_unique_id ();
+#else
   set_unique_id ();
+#endif
   ARM64_SOCKET_DIAG ("diag: inet set_unique_id after");
   if (get_socket_type () == SOCK_DGRAM)
     {
