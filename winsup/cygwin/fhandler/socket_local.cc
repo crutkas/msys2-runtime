@@ -135,7 +135,6 @@ arm64_socket (int af, int type, int protocol)
 #define arm64_wsa_event_select WSAEventSelect
 #define arm64_wsa_async_select WSAAsyncSelect
 #define arm64_closesocket closesocket
-#define arm64_socket socket
 #endif
 
 #define ASYNC_MASK (FD_READ|FD_WRITE|FD_OOB|FD_ACCEPT|FD_CONNECT)
@@ -340,7 +339,12 @@ fhandler_socket_local::socket (int af, int type, int protocol, int flags)
       set_errno (EPROTONOSUPPORT);
       return -1;
     }
-  sock = arm64_socket (AF_INET, type, protocol);
+  sock =
+#if defined(__aarch64__)
+    arm64_socket (AF_INET, type, protocol);
+#else
+    ::socket (AF_INET, type, protocol);
+#endif
   if (sock == INVALID_SOCKET)
     {
       set_winsock_errno ();
@@ -376,7 +380,12 @@ fhandler_socket_local::socketpair (int af, int type, int protocol, int flags,
       return -1;
     }
   ARM64_SOCKETPAIR_DIAG ("diag: local socketpair create listener before");
-  sock = arm64_socket (AF_INET, type, 0);
+  sock =
+#if defined(__aarch64__)
+    arm64_socket (AF_INET, type, 0);
+#else
+    ::socket (AF_INET, type, 0);
+#endif
   if (sock == INVALID_SOCKET)
     {
       set_winsock_errno ();
@@ -413,7 +422,12 @@ fhandler_socket_local::socketpair (int af, int type, int protocol, int flags,
   ARM64_SOCKETPAIR_DIAG ("diag: local socketpair listen after");
   /* create connecting socket */
   ARM64_SOCKETPAIR_DIAG ("diag: local socketpair create peer before");
-  outsock = arm64_socket (AF_INET, type, 0);
+  outsock =
+#if defined(__aarch64__)
+    arm64_socket (AF_INET, type, 0);
+#else
+    ::socket (AF_INET, type, 0);
+#endif
   if (outsock == INVALID_SOCKET)
     {
       set_winsock_errno ();
