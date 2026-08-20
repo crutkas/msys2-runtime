@@ -407,6 +407,11 @@ fhandler_socket_wsock::evaluate_events (const long event_mask, long &events,
       ARM64_SOCKET_DIAG ("diag: inet eval enum after");
       if (evts.lNetworkEvents)
 	{
+	  ARM64_SOCKET_DIAG ("diag: inet eval events present");
+	  if (evts.lNetworkEvents & FD_CONNECT)
+	    ARM64_SOCKET_DIAG ("diag: inet eval fd_connect");
+	  if (evts.lNetworkEvents & FD_CLOSE)
+	    ARM64_SOCKET_DIAG ("diag: inet eval fd_close");
 	  LOCK_EVENTS;
 	  wsock_events->events |= evts.lNetworkEvents;
 	  events_now = (wsock_events->events & event_mask);
