@@ -50,6 +50,15 @@
 #define EVENT_MASK (FD_READ|FD_WRITE|FD_OOB|FD_ACCEPT|FD_CONNECT|FD_CLOSE)
 
 #if defined(__aarch64__)
+static void
+arm64_socket_diag (const char *label)
+{
+  fprintf (stderr, "%s\n", label);
+  fflush (stderr);
+}
+
+#define ARM64_SOCKET_DIAG(label) arm64_socket_diag (label)
+
 static int
 arm64_closesocket (SOCKET sock)
 {
@@ -74,7 +83,6 @@ arm64_closesocket (SOCKET sock)
 #define arm64_wsa_connect ::connect
 #define arm64_accept ::accept
 #define arm64_setsockopt ::setsockopt
-#define ARM64_SOCKET_DIAG(label) do { } while (0)
 #else
 #define arm64_wsa_event_select WSAEventSelect
 #define arm64_wsa_async_select WSAAsyncSelect
