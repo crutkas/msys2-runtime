@@ -458,7 +458,6 @@ jobs:
 
       - name: Compile and inspect AArch64 signal and SEH paths
         run: |
-          set -x
           export PATH="$TOOLCHAIN_DIR/bin:$PATH"
           export CC=aarch64-pc-cygwin-gcc
           export CXX=aarch64-pc-cygwin-g++
@@ -496,6 +495,7 @@ jobs:
             "$GITHUB_WORKSPACE/winsup/cygwin/scripts/gendef" \
               --cpu=aarch64 \
               --output-def=signal-check.def \
+              "$GITHUB_WORKSPACE/winsup/cygwin/aarch64/cygwin.din" \
               "$GITHUB_WORKSPACE/winsup/cygwin/cygwin.din"
             test -s sigfe.s
           )
