@@ -954,7 +954,7 @@ jobs:
           # instead of with the host's own (x86_64) g++, which can
           # never accept -ffixed-x18 (an AArch64-only register name)
           # or define __aarch64__.
-          "$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-g++" \
+          aarch64-pc-cygwin-g++ \
             -std=gnu++17 \
             -O2 \
             -Wall \
@@ -963,7 +963,7 @@ jobs:
             -ffixed-x18 \
             -c .github/checks/aarch64-ucontext-model.cc \
             -o "$cygwin_build/aarch64-ucontext-model.o"
-          "$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-g++" \
+          aarch64-pc-cygwin-g++ \
             -nostdlib \
             -Wl,--no-insert-timestamp \
             -Wl,--subsystem,console \
