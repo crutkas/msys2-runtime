@@ -109,15 +109,18 @@ arm64_listen (SOCKET sock, int backlog)
 }
 
 static int
-arm64_connect (SOCKET sock, const struct sockaddr *name, int namelen)
+arm64_wsa_connect (SOCKET sock, const struct sockaddr *name, int namelen)
 {
-  using connect_t = int (WINAPI *) (SOCKET, const struct sockaddr *, int);
+  using wsaconnect_t =
+    int (WINAPI *) (SOCKET, const struct sockaddr *, int, LPWSABUF, LPWSABUF,
+		    LPQOS, LPQOS);
   HMODULE ws2_32 = GetModuleHandleA ("ws2_32.dll");
   if (!ws2_32)
     ws2_32 = LoadLibraryA ("ws2_32.dll");
-  connect_t connect =
-    ws2_32 ? (connect_t) GetProcAddress (ws2_32, "connect") : NULL;
-  return connect ? connect (sock, name, namelen) : SOCKET_ERROR;
+  wsaconnect_t wsaconnect =
+    ws2_32 ? (wsaconnect_t) GetProcAddress (ws2_32, "WSAConnect") : NULL;
+  return wsaconnect ? wsaconnect (sock, name, namelen, NULL, NULL, NULL, NULL)
+		    : SOCKET_ERROR;
 }
 
 static SOCKET
@@ -1114,7 +1117,7 @@ fhandler_socket_inet::connect (const struct sockaddr *name, int namelen)
 
 #if defined(__aarch64__)
   ARM64_SOCKET_DIAG ("diag: inet connect syscall before");
-  int res = arm64_connect (get_socket (), (struct sockaddr *) &sst, namelen);
+  int res = arm64_wsa_connect (get_socket (), (struct sockaddr *) &sst, namelen);
 #else
   ARM64_SOCKET_DIAG ("diag: inet connect syscall before");
   int res = ::connect (get_socket (), (struct sockaddr *) &sst, namelen);
