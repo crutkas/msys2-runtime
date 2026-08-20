@@ -128,77 +128,84 @@ main (void)
   mark ("diag: inode server close after");
 
   mark ("diag: loopback probe start");
-  mark ("diag: loopback listener socket before");
-  server = socket (AF_INET, SOCK_STREAM, 0);
-  mark ("diag: loopback listener socket after");
+  mark ("diag: loopback server socket before");
+  server = socket (AF_INET, SOCK_DGRAM, 0);
+  mark ("diag: loopback server socket after");
   if (server < 0)
-    return fail_socket (18, "loopback listener socket");
-  struct sockaddr_in loopback = {};
-  loopback.sin_family = AF_INET;
-  loopback.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
-  loopback.sin_port = 0;
-  mark ("diag: loopback bind before");
-  if (bind (server, (struct sockaddr *) &loopback, sizeof (loopback)) != 0)
-    return fail_socket (19, "loopback bind");
-  mark ("diag: loopback bind after");
-  mark ("diag: loopback getsockname before");
-  socklen_t loopback_len = sizeof (loopback);
-  if (getsockname (server, (struct sockaddr *) &loopback, &loopback_len) != 0)
-    return fail_socket (20, "loopback getsockname");
-  mark ("diag: loopback getsockname after");
-  mark ("diag: loopback listen before");
-  if (listen (server, 1) != 0)
-    return fail_socket (21, "loopback listen");
-  mark ("diag: loopback listen after");
+    return fail_socket (18, "loopback server socket");
+  struct sockaddr_in server_addr = {};
+  server_addr.sin_family = AF_INET;
+  server_addr.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
+  server_addr.sin_port = 0;
+  mark ("diag: loopback server bind before");
+  if (bind (server, (struct sockaddr *) &server_addr,
+	    sizeof (server_addr)) != 0)
+    return fail_socket (19, "loopback server bind");
+  mark ("diag: loopback server bind after");
+  mark ("diag: loopback server getsockname before");
+  socklen_t server_len = sizeof (server_addr);
+  if (getsockname (server, (struct sockaddr *) &server_addr, &server_len) != 0)
+    return fail_socket (20, "loopback server getsockname");
+  mark ("diag: loopback server getsockname after");
 
   mark ("diag: loopback client socket before");
-  client = socket (AF_INET, SOCK_STREAM, 0);
+  client = socket (AF_INET, SOCK_DGRAM, 0);
   mark ("diag: loopback client socket after");
   if (client < 0)
-    return fail_socket (22, "loopback client socket");
-  mark ("diag: loopback connect before");
-  if (connect (client, (struct sockaddr *) &loopback, sizeof (loopback)) != 0)
-    return fail_socket (23, "loopback connect");
-  mark ("diag: loopback connect after");
-  mark ("diag: loopback accept before");
-  int accepted = accept (server, NULL, NULL);
-  mark ("diag: loopback accept after");
-  if (accepted < 0)
-    return fail_socket (24, "loopback accept");
+    return fail_socket (21, "loopback client socket");
+  struct sockaddr_in client_addr = {};
+  client_addr.sin_family = AF_INET;
+  client_addr.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
+  client_addr.sin_port = 0;
+  mark ("diag: loopback client bind before");
+  if (bind (client, (struct sockaddr *) &client_addr,
+	    sizeof (client_addr)) != 0)
+    return fail_socket (22, "loopback client bind");
+  mark ("diag: loopback client bind after");
+  mark ("diag: loopback client getsockname before");
+  socklen_t client_len = sizeof (client_addr);
+  if (getsockname (client, (struct sockaddr *) &client_addr, &client_len) != 0)
+    return fail_socket (23, "loopback client getsockname");
+  mark ("diag: loopback client getsockname after");
 
   mark ("diag: loopback write ping before");
-  if (write (client, ping, sizeof (ping)) != (int) sizeof (ping))
-    return fail_socket (25, "write ping");
+  if (sendto (client, ping, sizeof (ping), 0,
+	      (struct sockaddr *) &server_addr, sizeof (server_addr))
+      != (int) sizeof (ping))
+    return fail_socket (24, "write ping");
   mark ("diag: loopback write ping after");
   mark ("diag: loopback read ping before");
-  if (read (accepted, buf, sizeof (ping)) != (int) sizeof (ping))
-    return fail_socket (26, "read ping");
+  struct sockaddr_in peer = {};
+  socklen_t peer_len = sizeof (peer);
+  if (recvfrom (server, buf, sizeof (ping), 0,
+		(struct sockaddr *) &peer, &peer_len) != (int) sizeof (ping))
+    return fail_socket (25, "read ping");
   mark ("diag: loopback read ping after");
   if (memcmp (buf, ping, sizeof (ping)) != 0)
-    return 27;
+    return 26;
 
   mark ("diag: loopback write pong before");
-  if (write (accepted, pong, sizeof (pong)) != (int) sizeof (pong))
-    return fail_socket (28, "write pong");
+  if (sendto (server, pong, sizeof (pong), 0,
+	      (struct sockaddr *) &client_addr, sizeof (client_addr))
+      != (int) sizeof (pong))
+    return fail_socket (27, "write pong");
   mark ("diag: loopback write pong after");
   mark ("diag: loopback read pong before");
-  if (read (client, buf, sizeof (pong)) != (int) sizeof (pong))
-    return fail_socket (29, "read pong");
+  peer_len = sizeof (peer);
+  if (recvfrom (client, buf, sizeof (pong), 0,
+		(struct sockaddr *) &peer, &peer_len) != (int) sizeof (pong))
+    return fail_socket (28, "read pong");
   mark ("diag: loopback read pong after");
   if (memcmp (buf, pong, sizeof (pong)) != 0)
-    return 30;
+    return 29;
 
   mark ("diag: loopback client close before");
   if (close (client) != 0)
-    return fail_socket (31, "loopback client close");
+    return fail_socket (30, "loopback client close");
   mark ("diag: loopback client close after");
-  mark ("diag: loopback accepted close before");
-  if (close (accepted) != 0)
-    return fail_socket (32, "loopback accepted close");
-  mark ("diag: loopback accepted close after");
   mark ("diag: loopback server close before");
   if (close (server) != 0)
-    return fail_socket (33, "loopback server close");
+    return fail_socket (31, "loopback server close");
   mark ("diag: loopback server close after");
 
   return 0;
