@@ -457,6 +457,8 @@ fhandler_socket_wsock::evaluate_events (const long event_mask, long &events,
   if ((events = events_now) != 0
       || (events = (wsock_events->events & event_mask)) != 0)
     {
+      fprintf (stderr, "diag: inet eval mask value=%lx ret=%d\n", events, ret);
+      fflush (stderr);
       ARM64_SOCKET_DIAG ("diag: inet eval mask present");
       if (events & FD_CONNECT)
 	ARM64_SOCKET_DIAG ("diag: inet eval mask fd_connect");
@@ -529,6 +531,8 @@ fhandler_socket_wsock::evaluate_events (const long event_mask, long &events,
     }
   UNLOCK_EVENTS;
 
+  fprintf (stderr, "diag: inet eval return=%d events=%lx\n", ret, events);
+  fflush (stderr);
   return ret;
 }
 
@@ -603,6 +607,9 @@ fhandler_socket_wsock::wait_for_events (const long event_mask,
 	}
     }
   ARM64_SOCKET_DIAG ("diag: inet wait_for_events done");
+  fprintf (stderr, "diag: inet wait_for_events return=%d events=%lx\n", ret,
+	   events);
+  fflush (stderr);
   return ret;
 }
 
