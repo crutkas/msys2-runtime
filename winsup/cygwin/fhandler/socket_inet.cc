@@ -1063,6 +1063,7 @@ fhandler_socket_inet::connect (const struct sockaddr *name, int namelen)
   struct sockaddr_storage sst;
   bool reset = (name->sa_family == AF_UNSPEC
 		&& get_socket_type () == SOCK_DGRAM);
+  ARM64_SOCKET_DIAG ("diag: inet connect enter");
 
   if (reset)
     {
@@ -1074,8 +1075,13 @@ fhandler_socket_inet::connect (const struct sockaddr *name, int namelen)
       memset (&sst, 0, sizeof sst);
       sst.ss_family = get_addr_family ();
     }
-  else if (get_inet_addr_inet (name, namelen, &sst, &namelen) == SOCKET_ERROR)
-    return SOCKET_ERROR;
+  else
+    {
+      ARM64_SOCKET_DIAG ("diag: inet connect addr before");
+      if (get_inet_addr_inet (name, namelen, &sst, &namelen) == SOCKET_ERROR)
+	return SOCKET_ERROR;
+      ARM64_SOCKET_DIAG ("diag: inet connect addr after");
+    }
 
   /* Initialize connect state to "connect_pending".  In the SOCK_STREAM
      case, the state is ultimately set to "connected" or "connect_failed" in
@@ -1095,10 +1101,13 @@ fhandler_socket_inet::connect (const struct sockaddr *name, int namelen)
     connect_state (connect_pending);
 
 #if defined(__aarch64__)
+  ARM64_SOCKET_DIAG ("diag: inet connect syscall before");
   int res = arm64_connect (get_socket (), (struct sockaddr *) &sst, namelen);
 #else
+  ARM64_SOCKET_DIAG ("diag: inet connect syscall before");
   int res = ::connect (get_socket (), (struct sockaddr *) &sst, namelen);
 #endif
+  ARM64_SOCKET_DIAG ("diag: inet connect syscall after");
   if (!res)
     {
       if (reset)
