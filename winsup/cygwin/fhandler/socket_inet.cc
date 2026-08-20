@@ -995,9 +995,15 @@ fhandler_socket_inet::bind (const struct sockaddr *name, int namelen)
 	 SO_EXCLUSIVEADDRUSE socket option.  See cygwin_setsockopt()
 	 for a more detailed description. */
       int on = 1;
+#if defined(__aarch64__)
       int ret = arm64_setsockopt (get_socket (), SOL_SOCKET,
 				  SO_EXCLUSIVEADDRUSE,
 				  (const char *) &on, sizeof on);
+#else
+      int ret = ::setsockopt (get_socket (), SOL_SOCKET,
+			      SO_EXCLUSIVEADDRUSE,
+			      (const char *) &on, sizeof on);
+#endif
       debug_printf ("%d = setsockopt(SO_EXCLUSIVEADDRUSE), %E", ret);
       ARM64_SOCKET_DIAG ("diag: inet bind exclusive after");
     }
