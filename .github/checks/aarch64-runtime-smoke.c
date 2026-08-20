@@ -12,6 +12,9 @@
 
 static __thread int tls_value = 17;
 static volatile sig_atomic_t signal_seen;
+static char ping[] = "ping";
+static char pong[] = "pong";
+static char buf[8];
 
 static void
 signal_handler (int sig)
@@ -69,8 +72,6 @@ main (void)
   ino_t server_ino;
   ino_t client_ino;
   char buf[8] = {};
-  char ping[] = "ping";
-  char pong[] = "pong";
 
   if (getpid () <= 0)
     return 1;
