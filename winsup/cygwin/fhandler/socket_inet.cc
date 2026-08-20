@@ -924,6 +924,7 @@ fhandler_socket_wsock::set_socket_handle (SOCKET sock, int af, int type,
   set_unique_id ();
 #endif
   ARM64_SOCKET_DIAG ("diag: inet set_unique_id after");
+#if !defined(__aarch64__)
   if (get_socket_type () == SOCK_DGRAM)
     {
       /* Workaround the problem that a missing listener on a UDP socket
@@ -941,6 +942,7 @@ fhandler_socket_wsock::set_socket_handle (SOCKET sock, int af, int type,
 	debug_printf ("Reset SIO_UDP_CONNRESET: WinSock error %u",
 		      WSAGetLastError ());
     }
+#endif
   rmem () = 212992;
   wmem () = 212992;
   return 0;
