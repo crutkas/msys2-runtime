@@ -41,24 +41,6 @@ jobs:
       - name: Verify pthread initializer architecture split
         run: ./.github/checks/validate-pthread-initializer-macros.sh
 
-      - name: Verify AArch64 pseudo-relocation model
-        run: |
-          g++ \
-            -std=gnu++17 \
-            -O2 \
-            -Wall \
-            -Wextra \
-            -Werror \
-            .github/checks/aarch64-pseudo-reloc-model.cc \
-            -o aarch64-pseudo-reloc-model
-          ./aarch64-pseudo-reloc-model
-
-      - name: Verify AArch64 linker-emitted pseudo relocations
-        run: |
-          export PATH="$TOOLCHAIN_DIR/bin:$PATH"
-          ./.github/checks/validate-aarch64-pseudo-reloc-link.sh \
-            aarch64-pseudo-reloc-link
-
       - name: Verify AArch64 endian primitives
         run: |
           compiler="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-gcc"

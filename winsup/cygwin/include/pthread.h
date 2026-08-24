@@ -54,10 +54,22 @@ extern "C"
 #define PTHREAD_SCOPE_SYSTEM 1
 #define PTHREAD_BARRIER_SERIAL_THREAD (-1)
 
-#if !defined(__INSIDE_CYGWIN__) || !defined(__cplusplus)
+#if defined(__aarch64__) && !defined(__INSIDE_CYGWIN__)
+/* The address of a dllimport object is not a constant expression in GCC.
+   Use the address of the module-local import slot instead.  The runtime
+   resolves the slot contents back to the canonical initializer object. */
+extern struct __pthread_mutex_t __imp___pthread_recursive_mutex_initializer_np;
+extern struct __pthread_mutex_t __imp___pthread_normal_mutex_initializer_np;
+extern struct __pthread_mutex_t __imp___pthread_errorcheck_mutex_initializer_np;
+extern struct __pthread_cond_t __imp___pthread_cond_initializer;
+extern struct __pthread_rwlock_t __imp___pthread_rwlock_initializer;
+#define PTHREAD_COND_INITIALIZER (&__imp___pthread_cond_initializer)
+#define PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP (&__imp___pthread_recursive_mutex_initializer_np)
+#define PTHREAD_NORMAL_MUTEX_INITIALIZER_NP (&__imp___pthread_normal_mutex_initializer_np)
+#define PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP (&__imp___pthread_errorcheck_mutex_initializer_np)
+#define PTHREAD_RWLOCK_INITIALIZER (&__imp___pthread_rwlock_initializer)
+#elif !defined(__INSIDE_CYGWIN__) || !defined(__cplusplus)
 /* Constants for initializer macros */
-/* Keep these declarations free of __IMPORT: GCC does not treat the address of
-   a dllimport object as a constant initializer. */
 extern struct __pthread_mutex_t __pthread_recursive_mutex_initializer_np;
 extern struct __pthread_mutex_t __pthread_normal_mutex_initializer_np;
 extern struct __pthread_mutex_t __pthread_errorcheck_mutex_initializer_np;

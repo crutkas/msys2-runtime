@@ -5,3 +5,9 @@
 #endif
 
 constinit std::mutex abi_std_mutex;
+
+extern "C" __attribute__ ((dllexport)) std::mutex *
+abi_std_mutex_address ()
+{
+  return &abi_std_mutex;
+}

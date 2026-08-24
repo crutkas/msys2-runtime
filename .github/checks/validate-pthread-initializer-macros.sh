@@ -51,6 +51,23 @@ check_symbol_macros()
     "$macros"
 }
 
+check_iat_macros()
+{
+  macros="$1"
+  grep -Eq '^#define PTHREAD_ONCE_INIT \{ PTHREAD_MUTEX_INITIALIZER, 0 \}$' \
+    "$macros"
+  grep -Eq '^#define PTHREAD_COND_INITIALIZER \(&__imp___pthread_cond_initializer\)$' \
+    "$macros"
+  grep -Eq '^#define PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP \(&__imp___pthread_recursive_mutex_initializer_np\)$' \
+    "$macros"
+  grep -Eq '^#define PTHREAD_NORMAL_MUTEX_INITIALIZER_NP \(&__imp___pthread_normal_mutex_initializer_np\)$' \
+    "$macros"
+  grep -Eq '^#define PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP \(&__imp___pthread_errorcheck_mutex_initializer_np\)$' \
+    "$macros"
+  grep -Eq '^#define PTHREAD_RWLOCK_INITIALIZER \(&__imp___pthread_rwlock_initializer\)$' \
+    "$macros"
+}
+
 check_numeric_macros()
 {
   macros="$1"
@@ -67,7 +84,7 @@ check_numeric_macros()
 }
 
 dump_macros aarch64 -D__aarch64__ -U__x86_64__ -U__i386__
-check_symbol_macros "$work/aarch64.macros"
+check_iat_macros "$work/aarch64.macros"
 
 dump_macros aarch64-internal \
   -D__aarch64__ -U__x86_64__ -U__i386__ \

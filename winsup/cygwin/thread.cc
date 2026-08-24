@@ -159,13 +159,49 @@ verifyable_object_isvalid (void const *objectptr, thread_magic_t magic,
 	  (static_ptr5 && *object == static_ptr5) ||
 	  (static_ptr6 && *object == static_ptr6))
 	state = VALID_STATIC_OBJECT;
+#if defined (__aarch64__)
+      else
+	{
+	  /* External AArch64 initializers point at their module-local IAT slot
+	     so they remain constant expressions without a cross-module ADRP.
+	     The loaded slot points at one of the canonical DLL objects. */
+	  void *indirect = *((void **) *object);
+	  if ((static_ptr1 && indirect == static_ptr1) ||
+	      (static_ptr2 && indirect == static_ptr2) ||
+	      (static_ptr3 && indirect == static_ptr3))
+	    state = VALID_STATIC_OBJECT;
+	  else if ((*object)->magic == magic)
+	    state = VALID_OBJECT;
+	}
+#else
       else if ((*object)->magic == magic)
 	state = VALID_OBJECT;
+#endif
     }
   __except (NO_ERROR) {}
   __endtry
   return state;
 }
+
+#if defined (__aarch64__)
+static inline bool
+pthread_initializer_matches (void *initializer, void *canonical,
+			     void *legacy)
+{
+  bool matches = initializer == canonical || initializer == legacy;
+
+  if (!matches && initializer)
+    {
+      __try
+	{
+	  matches = *((void **) initializer) == canonical;
+	}
+      __except (NO_ERROR) {}
+      __endtry
+    }
+  return matches;
+}
+#endif
 
 /* static members */
 inline bool
@@ -2514,23 +2550,29 @@ pthread_mutex::init (pthread_mutex_t *mutex,
 
       if (!attr && initializer)
 	{
-	  if (initializer == PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP
 #if defined (__aarch64__)
-	      || initializer == PTHREAD_RECURSIVE_MUTEX_INITIALIZER_LEGACY
+	  if (pthread_initializer_matches (
+		initializer, PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP,
+		PTHREAD_RECURSIVE_MUTEX_INITIALIZER_LEGACY))
+#else
+	  if (initializer == PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP)
 #endif
-	      )
 	    new_mutex->type = PTHREAD_MUTEX_RECURSIVE;
-	  else if (initializer == PTHREAD_NORMAL_MUTEX_INITIALIZER_NP
 #if defined (__aarch64__)
-		   || initializer == PTHREAD_NORMAL_MUTEX_INITIALIZER_LEGACY
+	  else if (pthread_initializer_matches (
+		     initializer, PTHREAD_NORMAL_MUTEX_INITIALIZER_NP,
+		     PTHREAD_NORMAL_MUTEX_INITIALIZER_LEGACY))
+#else
+	  else if (initializer == PTHREAD_NORMAL_MUTEX_INITIALIZER_NP)
 #endif
-		   )
 	    new_mutex->type = PTHREAD_MUTEX_NORMAL;
-	  else if (initializer == PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP
 #if defined (__aarch64__)
-		   || initializer == PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_LEGACY
+	  else if (pthread_initializer_matches (
+		     initializer, PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP,
+		     PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_LEGACY))
+#else
+	  else if (initializer == PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP)
 #endif
-		   )
 	    new_mutex->type = PTHREAD_MUTEX_ERRORCHECK;
 	}
 

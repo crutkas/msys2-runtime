@@ -63,6 +63,19 @@ common_flags=(
   "${include_flags[@]}"
 )
 
+assert_no_pseudo_relocations()
+{
+  image="$1"
+  symbols="$image.symbols.txt"
+
+  "$nm" -n "$image" > "$symbols"
+  start="$(awk '$3 == "__RUNTIME_PSEUDO_RELOC_LIST__" { print $1; exit }' \
+    "$symbols")"
+  end="$(awk '$3 == "__RUNTIME_PSEUDO_RELOC_LIST_END__" { print $1; exit }' \
+    "$symbols")"
+  test -z "$start" -a -z "$end" || test "$start" = "$end"
+}
+
 pthreadconst="$(find "$cygwin" -type f -name pthreadconst.o -print -quit)"
 test -n "$pthreadconst"
 "$nm" -a "$pthreadconst" > "$report/pthreadconst.symbols.txt"
@@ -103,9 +116,16 @@ compile_pthread_probe()
   "$nm" -u "$object" > "$object.undefined.txt"
   "$objdump" -r "$object" > "$object.relocations.txt"
   for symbol in "${initializer_symbols[@]}"; do
-    grep -Eq "[[:space:]]U[[:space:]]+$symbol$" \
+    iat_symbol="__imp_$symbol"
+    grep -Eq "[[:space:]]U[[:space:]]+$iat_symbol$" \
       "$object.undefined.txt"
-    grep -Fq "$symbol" "$object.relocations.txt"
+    grep -Eq "[[:space:]]$iat_symbol$" "$object.relocations.txt"
+    if grep -Eq "[[:space:]]U[[:space:]]+$symbol$" \
+	"$object.undefined.txt" \
+	|| grep -Eq "[[:space:]]$symbol$" "$object.relocations.txt"; then
+      echo "$language pthread initializer probe referenced $symbol directly" >&2
+      exit 1
+    fi
   done
   if "$nm" -a "$object" | grep -q _GLOBAL__sub_I; then
     echo "$language pthread initializer probe required dynamic initialization" >&2
@@ -117,7 +137,6 @@ compile_pthread_probe()
     -nostdlib \
     -Wl,--no-insert-timestamp \
     -Wl,-e,abi_default_mutex_value \
-    -Wl,-u,_pei386_runtime_relocator \
     -o "$report/aarch64-pthread-initializers-$language.dll" \
     "$object" \
     "${link_flags[@]}" \
@@ -133,6 +152,8 @@ compile_pthread_probe()
     "$report/aarch64-pthread-initializers-$language.dll.txt"
   grep -Fq 'DLL Name: msys-2.0.dll' \
     "$report/aarch64-pthread-initializers-$language.dll.txt"
+  assert_no_pseudo_relocations \
+    "$report/aarch64-pthread-initializers-$language.dll"
 }
 
 compile_pthread_probe c "$cc" gnu11
@@ -147,13 +168,34 @@ compile_pthread_probe c++ "$cxx" gnu++20
   > "$report/aarch64-std-mutex-constinit.symbols.txt"
 "$objdump" -r "$report/aarch64-std-mutex-constinit.o" \
   > "$report/aarch64-std-mutex-constinit.relocations.txt"
-grep -Fq __pthread_normal_mutex_initializer_np \
+grep -Eq '[[:space:]]__imp___pthread_normal_mutex_initializer_np$' \
   "$report/aarch64-std-mutex-constinit.relocations.txt"
+if grep -Eq '[[:space:]]__pthread_normal_mutex_initializer_np$' \
+    "$report/aarch64-std-mutex-constinit.relocations.txt"; then
+  echo "constinit std::mutex referenced the runtime DATA object directly" >&2
+  exit 1
+fi
 if grep -q _GLOBAL__sub_I \
     "$report/aarch64-std-mutex-constinit.symbols.txt"; then
   echo "constinit std::mutex required dynamic initialization" >&2
   exit 1
 fi
+"$cc" \
+  -shared \
+  -nostdlib \
+  -Wl,--no-insert-timestamp \
+  -Wl,-e,abi_std_mutex_address \
+  -o "$report/aarch64-std-mutex-constinit.dll" \
+  "$report/aarch64-std-mutex-constinit.o" \
+  "${link_flags[@]}" \
+  -lmsys-2.0
+"$objdump" -f -p "$report/aarch64-std-mutex-constinit.dll" \
+  > "$report/aarch64-std-mutex-constinit.dll.txt"
+grep -Fq 'file format pei-aarch64-little' \
+  "$report/aarch64-std-mutex-constinit.dll.txt"
+grep -Fq 'DLL Name: msys-2.0.dll' \
+  "$report/aarch64-std-mutex-constinit.dll.txt"
+assert_no_pseudo_relocations "$report/aarch64-std-mutex-constinit.dll"
 
 "$cc" \
   -std=gnu11 \
@@ -181,7 +223,6 @@ for spec in \
     -nostdlib \
     -Wl,--no-insert-timestamp \
     -Wl,-e,"$entry" \
-    -Wl,-u,_pei386_runtime_relocator \
     -o "$report/$dll" \
     "$report/$object" \
     "${link_flags[@]}" \
@@ -194,6 +235,7 @@ for spec in \
   "$objdump" -f -p "$report/$dll" > "$report/$dll.txt"
   grep -Fq 'file format pei-aarch64-little' "$report/$dll.txt"
   grep -Fq 'DLL Name: msys-2.0.dll' "$report/$dll.txt"
+  assert_no_pseudo_relocations "$report/$dll"
 done
 
 gccdir="$(dirname "$("$cc" -print-file-name=libgcc.a)")"
@@ -215,7 +257,6 @@ link_runtime_probe()
     -Wl,--no-insert-timestamp \
     -Wl,--subsystem,console \
     -Wl,-e,mainCRTStartup \
-    -Wl,-u,_pei386_runtime_relocator \
     -o "$report/$output" \
     "$cygwin/crt0.o" \
     "$gccdir/crtbegin.o" \
@@ -270,6 +311,7 @@ sha256sum \
   "$report"/aarch64-pthread-initializers-*.dll \
   "$report"/aarch64-ctype-compat.dll \
   "$report"/aarch64-newlib-ctype-config.dll \
+  "$report"/aarch64-std-mutex-constinit.dll \
   "$report"/aarch64-std-mutex-constinit.o \
   "$report"/aarch64-pthread-initializers.exe \
   "$report"/aarch64-ctype-compat.exe \

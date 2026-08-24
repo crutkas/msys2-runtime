@@ -63,34 +63,6 @@ abi_rwlock_value (void)
   return PTHREAD_RWLOCK_INITIALIZER;
 }
 
-EXPORT const char *
-abi_normal_mutex_plus_one (void)
-{
-  return (const char *)
-    ((uintptr_t) PTHREAD_NORMAL_MUTEX_INITIALIZER_NP + 1);
-}
-
-EXPORT const char *
-abi_normal_mutex_plus_page (void)
-{
-  return (const char *)
-    ((uintptr_t) PTHREAD_NORMAL_MUTEX_INITIALIZER_NP + 0x1000);
-}
-
-EXPORT const char *
-abi_normal_mutex_minus_one (void)
-{
-  return (const char *)
-    ((uintptr_t) PTHREAD_NORMAL_MUTEX_INITIALIZER_NP - 1);
-}
-
-EXPORT const char *
-abi_normal_mutex_minus_page (void)
-{
-  return (const char *)
-    ((uintptr_t) PTHREAD_NORMAL_MUTEX_INITIALIZER_NP - 0x1000);
-}
-
 EXPORT int
 abi_default_mutex_round_trip (void)
 {
@@ -194,15 +166,7 @@ main (void)
       || abi_normal_mutex_value () != abi_normal_mutex
       || abi_errorcheck_mutex_value () != abi_errorcheck_mutex
       || abi_condition_value () != abi_condition
-      || abi_rwlock_value () != abi_rwlock
-      || abi_normal_mutex_plus_one ()
-	 != (const char *) ((uintptr_t) abi_normal_mutex + 1)
-      || abi_normal_mutex_plus_page ()
-	 != (const char *) ((uintptr_t) abi_normal_mutex + 0x1000)
-      || abi_normal_mutex_minus_one ()
-	 != (const char *) ((uintptr_t) abi_normal_mutex - 1)
-      || abi_normal_mutex_minus_page ()
-	 != (const char *) ((uintptr_t) abi_normal_mutex - 0x1000))
+      || abi_rwlock_value () != abi_rwlock)
     return 1;
 
   int ret = exercise_initializers (&abi_default_mutex, &abi_normal_mutex,
