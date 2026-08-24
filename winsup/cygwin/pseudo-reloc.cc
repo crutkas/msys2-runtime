@@ -21,6 +21,9 @@
 #else
 # include "winsup.h"
 # include <sys/cygwin.h>
+# if defined (__aarch64__)
+#  include "aarch64_pseudo_reloc.h"
+# endif
 #endif
 
 #include <stdio.h>
@@ -192,6 +195,36 @@ __write_memory (void *addr, const void *src, size_t len)
 #define RP_VERSION_V1 0
 #define RP_VERSION_V2 1
 
+#if defined (__aarch64__)
+static bool
+do_aarch64_pseudo_reloc (ptrdiff_t reloc_target, ptrdiff_t import_target,
+			 ptrdiff_t addr_imp, unsigned int bits)
+{
+  DWORD instruction = *((DWORD *) reloc_target);
+  aarch64_pseudo_reloc_status status;
+
+  if (bits == 21)
+    status = aarch64_relocate_adrp (&instruction, reloc_target, addr_imp);
+  else if (bits == 12)
+    status = aarch64_relocate_add (&instruction, import_target, addr_imp);
+  else
+    return false;
+
+  if (status == AARCH64_PSEUDO_RELOC_INVALID_INSTRUCTION)
+    __report_error ("Invalid AArch64 pseudo-relocation instruction "
+		    "0x%08x at address %p", *((DWORD *) reloc_target),
+		    reloc_target);
+  if (status == AARCH64_PSEUDO_RELOC_OUT_OF_RANGE)
+    __report_error ("Invalid AArch64 PAGEBASE relocation at address %p: "
+		    "target is outside the +/- 4GiB range", reloc_target);
+
+  __write_memory ((void *) reloc_target, &instruction, sizeof instruction);
+  FlushInstructionCache (GetCurrentProcess (), (void *) reloc_target,
+			 sizeof instruction);
+  return true;
+}
+#endif
+
 static void
 do_pseudo_reloc (void * start, void * end, void * base)
 {
@@ -286,8 +319,14 @@ do_pseudo_reloc (void * start, void * end, void * base)
       /* get sym pointer. It points either to the iat entry
        * of the referenced element, or to the stub function.
        */
-      addr_imp = (ptrdiff_t) base + r->sym;
-      addr_imp = *((ptrdiff_t *) addr_imp);
+      ptrdiff_t import_target = (ptrdiff_t) base + r->sym;
+      addr_imp = *((ptrdiff_t *) import_target);
+
+#if defined (__aarch64__)
+      if (do_aarch64_pseudo_reloc (reloc_target, import_target, addr_imp,
+				   r->flags & 0xff))
+	continue;
+#endif
 
       /* read existing relocation value from image, casting to the
        * bitsize indicated by the 8 LSBs of flags. If the value is

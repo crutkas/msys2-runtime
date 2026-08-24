@@ -125,11 +125,23 @@ __cygwin_lock_unlock (_LOCK_T *lock)
   paranoid_printf ("threadcount %d.  unlocked", MT_INTERFACE->threadcount);
 }
 
+#if defined (__aarch64__)
+#define PTHREAD_RECURSIVE_MUTEX_INITIALIZER_LEGACY ((pthread_mutex_t) 18)
+#define PTHREAD_NORMAL_MUTEX_INITIALIZER_LEGACY ((pthread_mutex_t) 19)
+#define PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_LEGACY ((pthread_mutex_t) 20)
+#define PTHREAD_COND_INITIALIZER_LEGACY ((pthread_cond_t) 21)
+#define PTHREAD_RWLOCK_INITIALIZER_LEGACY ((pthread_rwlock_t) 22)
+#endif
+
+
 static inline verifyable_object_state
 verifyable_object_isvalid (void const *objectptr, thread_magic_t magic,
 			   void *static_ptr1 = NULL,
 			   void *static_ptr2 = NULL,
-			   void *static_ptr3 = NULL)
+			   void *static_ptr3 = NULL,
+			   void *static_ptr4 = NULL,
+			   void *static_ptr5 = NULL,
+			   void *static_ptr6 = NULL)
 {
   verifyable_object_state state = INVALID_OBJECT;
 
@@ -142,7 +154,10 @@ verifyable_object_isvalid (void const *objectptr, thread_magic_t magic,
 
       if ((static_ptr1 && *object == static_ptr1) ||
 	  (static_ptr2 && *object == static_ptr2) ||
-	  (static_ptr3 && *object == static_ptr3))
+	  (static_ptr3 && *object == static_ptr3) ||
+	  (static_ptr4 && *object == static_ptr4) ||
+	  (static_ptr5 && *object == static_ptr5) ||
+	  (static_ptr6 && *object == static_ptr6))
 	state = VALID_STATIC_OBJECT;
       else if ((*object)->magic == magic)
 	state = VALID_OBJECT;
@@ -207,7 +222,13 @@ pthread_mutex::is_initializer (pthread_mutex_t const *mutex)
   if (verifyable_object_isvalid (mutex, PTHREAD_MUTEX_MAGIC,
 				 PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP,
 				 PTHREAD_NORMAL_MUTEX_INITIALIZER_NP,
-				 PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP) != VALID_STATIC_OBJECT)
+				 PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP
+#if defined (__aarch64__)
+				 , PTHREAD_RECURSIVE_MUTEX_INITIALIZER_LEGACY,
+				 PTHREAD_NORMAL_MUTEX_INITIALIZER_LEGACY,
+				 PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_LEGACY
+#endif
+				 ) != VALID_STATIC_OBJECT)
     return false;
   return true;
 }
@@ -218,7 +239,13 @@ pthread_mutex::is_initializer_or_object (pthread_mutex_t const *mutex)
   if (verifyable_object_isvalid (mutex, PTHREAD_MUTEX_MAGIC,
 				 PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP,
 				 PTHREAD_NORMAL_MUTEX_INITIALIZER_NP,
-				 PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP) == INVALID_OBJECT)
+				 PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP
+#if defined (__aarch64__)
+				 , PTHREAD_RECURSIVE_MUTEX_INITIALIZER_LEGACY,
+				 PTHREAD_NORMAL_MUTEX_INITIALIZER_LEGACY,
+				 PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_LEGACY
+#endif
+				 ) == INVALID_OBJECT)
     return false;
   return true;
 }
@@ -264,7 +291,12 @@ pthread_cond::is_good_object (pthread_cond_t const *cond)
 inline bool
 pthread_cond::is_initializer (pthread_cond_t const *cond)
 {
-  if (verifyable_object_isvalid (cond, PTHREAD_COND_MAGIC, PTHREAD_COND_INITIALIZER) != VALID_STATIC_OBJECT)
+  if (verifyable_object_isvalid (cond, PTHREAD_COND_MAGIC,
+				 PTHREAD_COND_INITIALIZER
+#if defined (__aarch64__)
+				 , PTHREAD_COND_INITIALIZER_LEGACY
+#endif
+				 ) != VALID_STATIC_OBJECT)
     return false;
   return true;
 }
@@ -272,7 +304,12 @@ pthread_cond::is_initializer (pthread_cond_t const *cond)
 inline bool
 pthread_cond::is_initializer_or_object (pthread_cond_t const *cond)
 {
-  if (verifyable_object_isvalid (cond, PTHREAD_COND_MAGIC, PTHREAD_COND_INITIALIZER) == INVALID_OBJECT)
+  if (verifyable_object_isvalid (cond, PTHREAD_COND_MAGIC,
+				 PTHREAD_COND_INITIALIZER
+#if defined (__aarch64__)
+				 , PTHREAD_COND_INITIALIZER_LEGACY
+#endif
+				 ) == INVALID_OBJECT)
     return false;
   return true;
 }
@@ -306,7 +343,12 @@ pthread_rwlock::is_good_object (pthread_rwlock_t const *rwlock)
 inline bool
 pthread_rwlock::is_initializer (pthread_rwlock_t const *rwlock)
 {
-  if (verifyable_object_isvalid (rwlock, PTHREAD_RWLOCK_MAGIC, PTHREAD_RWLOCK_INITIALIZER) != VALID_STATIC_OBJECT)
+  if (verifyable_object_isvalid (rwlock, PTHREAD_RWLOCK_MAGIC,
+				 PTHREAD_RWLOCK_INITIALIZER
+#if defined (__aarch64__)
+				 , PTHREAD_RWLOCK_INITIALIZER_LEGACY
+#endif
+				 ) != VALID_STATIC_OBJECT)
     return false;
   return true;
 }
@@ -314,7 +356,12 @@ pthread_rwlock::is_initializer (pthread_rwlock_t const *rwlock)
 inline bool
 pthread_rwlock::is_initializer_or_object (pthread_rwlock_t const *rwlock)
 {
-  if (verifyable_object_isvalid (rwlock, PTHREAD_RWLOCK_MAGIC, PTHREAD_RWLOCK_INITIALIZER) == INVALID_OBJECT)
+  if (verifyable_object_isvalid (rwlock, PTHREAD_RWLOCK_MAGIC,
+				 PTHREAD_RWLOCK_INITIALIZER
+#if defined (__aarch64__)
+				 , PTHREAD_RWLOCK_INITIALIZER_LEGACY
+#endif
+				 ) == INVALID_OBJECT)
     return false;
   return true;
 }
@@ -2467,11 +2514,23 @@ pthread_mutex::init (pthread_mutex_t *mutex,
 
       if (!attr && initializer)
 	{
-	  if (initializer == PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP)
+	  if (initializer == PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP
+#if defined (__aarch64__)
+	      || initializer == PTHREAD_RECURSIVE_MUTEX_INITIALIZER_LEGACY
+#endif
+	      )
 	    new_mutex->type = PTHREAD_MUTEX_RECURSIVE;
-	  else if (initializer == PTHREAD_NORMAL_MUTEX_INITIALIZER_NP)
+	  else if (initializer == PTHREAD_NORMAL_MUTEX_INITIALIZER_NP
+#if defined (__aarch64__)
+		   || initializer == PTHREAD_NORMAL_MUTEX_INITIALIZER_LEGACY
+#endif
+		   )
 	    new_mutex->type = PTHREAD_MUTEX_NORMAL;
-	  else if (initializer == PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP)
+	  else if (initializer == PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP
+#if defined (__aarch64__)
+		   || initializer == PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_LEGACY
+#endif
+		   )
 	    new_mutex->type = PTHREAD_MUTEX_ERRORCHECK;
 	}
 
