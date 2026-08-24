@@ -38,6 +38,9 @@ jobs:
       - name: Install fork-local AArch64 runtime toolchain
         run: ./.github/checks/install-aarch64-runtime-toolchain.sh
 
+      - name: Verify pthread initializer architecture split
+        run: ./.github/checks/validate-pthread-initializer-macros.sh
+
       - name: Verify AArch64 endian primitives
         run: |
           compiler="$TOOLCHAIN_DIR/bin/aarch64-pc-cygwin-gcc"
@@ -998,6 +1001,9 @@ jobs:
           ./.github/checks/validate-aarch64-runtime.sh \
             build-aarch64-runtime \
             aarch64-runtime-validation
+          ./.github/checks/validate-aarch64-public-abi.sh \
+            build-aarch64-runtime \
+            aarch64-runtime-validation
           cp "$cygwin_build/new-msys-2.0.dll" \
             aarch64-runtime-validation/msys-2.0.dll
           cp "$cygwin_build/libmsys-2.0.a" \
@@ -1092,6 +1098,24 @@ jobs:
           & (Join-Path $runtime "aarch64-ucontext-model.exe")
           if ($LASTEXITCODE -ne 0) {
             throw "AArch64 ucontext ABI model check failed with exit code $LASTEXITCODE"
+          }
+
+      - name: Run AArch64 public ABI regression probes
+        shell: pwsh
+        run: |
+          if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture -ne
+              [System.Runtime.InteropServices.Architecture]::Arm64) {
+            throw "A native Windows ARM64 runner is required"
+          }
+          $runtime = (Resolve-Path `
+            aarch64-runtime-validation/aarch64-runtime-validation).Path
+          foreach ($probe in @(
+              "aarch64-pthread-initializers.exe",
+              "aarch64-ctype-compat.exe")) {
+            & (Join-Path $runtime $probe)
+            if ($LASTEXITCODE -ne 0) {
+              throw "$probe failed with exit code $LASTEXITCODE"
+            }
           }
 
   configure-winsup:

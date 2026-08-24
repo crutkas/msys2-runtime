@@ -95,7 +95,7 @@ char _ctype_b[128 + 256] = {
 /* For backward compatibility */
 char __EXPORT *__ctype_ptr__ = DEFAULT_CTYPE_PTR;
 
-#    ifdef __x86_64__
+#    if defined(__x86_64__) || defined(__aarch64__)
 __asm__ ("					\n\
         .data					\n\
 	.globl  _ctype_				\n\

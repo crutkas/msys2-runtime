@@ -68,6 +68,12 @@ TARGET_FILES= \
 	x86_64/wmempcpy.S
 endif
 
+if TARGET_AARCH64
+PTHREADCONST_LIB_FILE=
+else
+PTHREADCONST_LIB_FILE=lib/pthreadconst.S
+endif
+
 LIB_FILES= \
 	lib/_cygwin_crt0_common.cc \
 	lib/atexit.c \
@@ -82,7 +88,7 @@ LIB_FILES= \
 	lib/premain2.c \
 	lib/premain3.c \
 	lib/pseudo-reloc-dummy.c \
-	lib/pthreadconst.S
+	$(PTHREADCONST_LIB_FILE)
 
 FHANDLER_FILES= \
 	fhandler/base.cc \

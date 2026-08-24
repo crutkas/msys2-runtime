@@ -47,9 +47,26 @@ for cpu in aarch64 x86_64; do
   )
 done
 cmp "$report/aarch64-def/msys.def" "$def"
+grep -Eq '^_ctype_[[:space:]]+DATA$' \
+  "$report/aarch64-def/msys.def"
+grep -Eq '^_ctype_[[:space:]]+DATA$' \
+  "$report/x86_64-def/msys.def"
+for symbol in \
+    __pthread_cond_initializer \
+    __pthread_errorcheck_mutex_initializer_np \
+    __pthread_normal_mutex_initializer_np \
+    __pthread_recursive_mutex_initializer_np \
+    __pthread_rwlock_initializer; do
+  grep -Eq "^$symbol[[:space:]]+DATA$" \
+    "$report/aarch64-def/msys.def"
+  if grep -Eq "^$symbol([[:space:]]|$)" \
+      "$report/x86_64-def/msys.def"; then
+    echo "x86_64 definition gained AArch64 initializer export $symbol" >&2
+    exit 1
+  fi
+done
 for symbol in \
     _alloca \
-    _ctype_ \
     _fe_nomask_env \
     fedisableexcept \
     feenableexcept \
@@ -124,6 +141,11 @@ audit_archive()
 
 "$objdump" -f -h -p "$dll" > "$report/msys-2.0.dll.txt"
 "$nm" -a "$dll" > "$report/msys-2.0.dll.symbols.txt"
+"$nm" -A "$implib" > "$report/libmsys-2.0.a.symbols.txt"
+if "$ar" t "$implib" | grep -Eq '(^|/)pthreadconst\.o$'; then
+  echo "AArch64 import library retained its private pthread initializer object" >&2
+  exit 1
+fi
 sha256sum "$dll" "$implib" > "$report/SHA256SUMS"
 
 pe="$report/msys-2.0.dll.txt"
@@ -167,14 +189,23 @@ grep -Eq 'Entry 3 .* Exception Directory' "$pe"
 grep -Eq 'Entry 5 .* Base Relocation Directory' "$pe"
 grep -Eq 'Entry 9 0000000000000000 00000000 Thread Storage Directory' "$pe"
 grep -Fq 'Number in:' "$pe"
-grep -Eq 'Export Address Table[[:space:]]+000006df' "$pe"
+grep -Eq 'Export Address Table[[:space:]]+000006e5' "$pe"
 
-for export in dll_entry msys_detach_dll msys_dll_init; do
+for export in \
+    __locale_ctype_ptr \
+    __pthread_cond_initializer \
+    __pthread_errorcheck_mutex_initializer_np \
+    __pthread_normal_mutex_initializer_np \
+    __pthread_recursive_mutex_initializer_np \
+    __pthread_rwlock_initializer \
+    _ctype_ \
+    dll_entry \
+    msys_detach_dll \
+    msys_dll_init; do
   grep -Eq "[[:space:]][0-9a-f]+[[:space:]]+$export$" "$pe"
 done
 for excluded in \
     _alloca \
-    _ctype_ \
     _fe_nomask_env \
     fedisableexcept \
     feenableexcept \
@@ -183,6 +214,25 @@ for excluded in \
     fesetprec; do
   if grep -Eq "[[:space:]][0-9a-f]+[[:space:]]+$excluded$" "$pe"; then
     echo "AArch64 DLL exported x86-only symbol $excluded" >&2
+    exit 1
+  fi
+done
+
+grep -Eq '[[:space:]]I[[:space:]]+__imp__ctype_$' \
+  "$report/libmsys-2.0.a.symbols.txt"
+grep -Eq '[[:space:]]I[[:space:]]+__imp___locale_ctype_ptr$' \
+  "$report/libmsys-2.0.a.symbols.txt"
+for symbol in \
+    __pthread_cond_initializer \
+    __pthread_errorcheck_mutex_initializer_np \
+    __pthread_normal_mutex_initializer_np \
+    __pthread_recursive_mutex_initializer_np \
+    __pthread_rwlock_initializer; do
+  grep -Eq "[[:space:]]I[[:space:]]+__imp_$symbol$" \
+    "$report/libmsys-2.0.a.symbols.txt"
+  if grep -Eq "[[:space:]][AD][[:space:]]+$symbol$" \
+      "$report/libmsys-2.0.a.symbols.txt"; then
+    echo "AArch64 import library embedded initializer object $symbol" >&2
     exit 1
   fi
 done
@@ -277,7 +327,7 @@ fi
 {
   printf 'objects\t%s\n' "$object_count"
   printf 'selected_archive_members\t%s\n' "$selected"
-  printf 'exports\t1759\n'
+  printf 'exports\t1765\n'
   printf 'entry_symbol\t0x%s\n' "$entry_symbol"
   printf 'image_base\t0x%s\n' "$image_base"
   printf 'pe_tls_directory\tcustom-cygtls-no-pe-directory\n'

@@ -4,3 +4,9 @@
 LIBRARY "msys-2.0.dll" BASE=0x180040000
 
 EXPORTS
+__pthread_cond_initializer DATA
+__pthread_errorcheck_mutex_initializer_np DATA
+__pthread_normal_mutex_initializer_np DATA
+__pthread_recursive_mutex_initializer_np DATA
+__pthread_rwlock_initializer DATA
+_ctype_ DATA
