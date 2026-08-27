@@ -1051,6 +1051,15 @@ jobs:
              aarch64-runtime-validation/
           cp .github/checks/run-aarch64-argv-regression.ps1 \
              aarch64-runtime-validation/
+          mkdir aarch64-runtime-validation/a527-baseline
+          cp "$TOOLCHAIN_DIR/aarch64-pc-msys/bin/msys-2.0.dll" \
+             aarch64-runtime-validation/a527-baseline/
+          cp "$cygwin_build/aarch64-strchr-regression.exe" \
+             "$cygwin_build/aarch64-process-regression.exe" \
+             "$cygwin_build/aarch64-argv-dump.exe" \
+             aarch64-runtime-validation/a527-baseline/
+          cp .github/checks/run-aarch64-argv-regression.ps1 \
+             aarch64-runtime-validation/a527-baseline/
 
       - name: Upload AArch64 runtime validation
         if: always()
@@ -1153,7 +1162,29 @@ jobs:
             }
           }
 
+      - name: Reproduce immutable a527 argv and process failures
+        shell: pwsh
+        run: |
+          $runtime = (Resolve-Path `
+            aarch64-runtime-validation/aarch64-runtime-validation).Path
+          $baseline = Join-Path $runtime "a527-baseline"
+
+          & (Join-Path $baseline "aarch64-strchr-regression.exe")
+          if ($LASTEXITCODE -eq 0) {
+            throw "immutable a527 unexpectedly passed the strchr regression"
+          }
+
+          & (Join-Path $baseline "run-aarch64-argv-regression.ps1") `
+            -RuntimePath $baseline -ExpectCorruption
+
+          & (Join-Path $baseline "aarch64-process-regression.exe") 2>&1 |
+            Tee-Object -FilePath (Join-Path $baseline "expected-process-failure.txt")
+          if ($LASTEXITCODE -eq 0) {
+            throw "immutable a527 unexpectedly passed the process regression"
+          }
+
       - name: Run AArch64 strchr regression probe
+        if: always()
         shell: pwsh
         run: |
           $runtime = (Resolve-Path `
@@ -1164,13 +1195,16 @@ jobs:
           }
 
       - name: Run AArch64 argv regression matrix
+        if: always()
         shell: pwsh
         run: |
           $runtime = (Resolve-Path `
             aarch64-runtime-validation/aarch64-runtime-validation).Path
-          & (Join-Path $runtime "run-aarch64-argv-regression.ps1") $runtime
+          & (Join-Path $runtime "run-aarch64-argv-regression.ps1") `
+            -RuntimePath $runtime
 
       - name: Run AArch64 process regression probe
+        if: always()
         shell: pwsh
         run: |
           $runtime = (Resolve-Path `
@@ -1179,6 +1213,15 @@ jobs:
           if ($LASTEXITCODE -ne 0) {
             throw "AArch64 process regression probe failed with exit code $LASTEXITCODE"
           }
+
+      - name: Upload native AArch64 evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: aarch64-native-runtime-evidence
+          path: |
+            aarch64-runtime-validation/aarch64-runtime-validation/*.txt
+            aarch64-runtime-validation/aarch64-runtime-validation/a527-baseline/*.txt
 
   configure-winsup:
     runs-on: ubuntu-latest

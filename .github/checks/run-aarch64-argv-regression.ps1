@@ -1,3 +1,9 @@
+param(
+  [Parameter(Mandatory = $true)]
+  [string]$RuntimePath,
+  [switch]$ExpectCorruption
+)
+
 $ErrorActionPreference = 'Stop'
 
 if ([Runtime.InteropServices.RuntimeInformation]::OSArchitecture -ne
@@ -5,10 +11,11 @@ if ([Runtime.InteropServices.RuntimeInformation]::OSArchitecture -ne
   throw 'A native Windows ARM64 runner is required'
 }
 
-$runtime = (Resolve-Path $args[0]).Path
+$runtime = (Resolve-Path $RuntimePath).Path
 $child = Join-Path $runtime 'aarch64-argv-dump.exe'
 $marker = 'native-arm64-environment'
 $long = ('0123456789abcdef' * 40)
+$failures = [Collections.Generic.List[string]]::new()
 $corpus = @(
   '',
   'alpha',
@@ -65,7 +72,9 @@ function Assert-Dump([string]$Name, [string[]]$Expected) {
     throw "$Name environment mismatch"
   }
   if ([int]$values.argc -ne $Expected.Count + 1) {
-    throw "$Name argc mismatch: $($values.argc)"
+    $message = "$Name argc mismatch: $($values.argc)"
+    if (-not $ExpectCorruption) { throw $message }
+    $script:failures.Add($message)
   }
   for ($index = 0; $index -lt $Expected.Count; ++$index) {
     $bytes = [Text.Encoding]::UTF8.GetBytes($Expected[$index])
@@ -74,7 +83,9 @@ function Assert-Dump([string]$Name, [string[]]$Expected) {
     $expectedHex = [Convert]::ToHexString($bytes).ToLower()
     if ($actualHex -ne $expectedHex -or
         [int]$values["arg.$actualIndex.len"] -ne $bytes.Length) {
-      throw "$Name argv[$actualIndex] mismatch: '$actualHex' != '$expectedHex'"
+      $message = "$Name argv[$actualIndex] mismatch: '$actualHex' != '$expectedHex'"
+      if (-not $ExpectCorruption) { throw $message }
+      $script:failures.Add($message)
     }
   }
 }
@@ -164,3 +175,10 @@ foreach ($argument in $cmdCorpus) {
 & $env:ComSpec /d /s /c "`"$cmdLine`""
 if ($LASTEXITCODE -ne 0) { throw "cmd child exited $LASTEXITCODE" }
 Assert-Dump 'cmd' $cmdCorpus
+
+if ($ExpectCorruption) {
+  if ($failures.Count -eq 0) {
+    throw 'immutable baseline unexpectedly preserved every argv byte'
+  }
+  $failures | Set-Content (Join-Path $runtime 'expected-argv-failure.txt')
+}
