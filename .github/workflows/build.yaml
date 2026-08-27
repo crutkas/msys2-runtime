@@ -885,6 +885,7 @@ jobs:
             -L"$cygwin_build" \
             -Wl,--start-group \
             -lmsys-2.0 \
+            -lgcc_s \
             -lgcc \
             -Wl,--end-group \
             "$gccdir/crtend.o" \
@@ -915,6 +916,7 @@ jobs:
               -L"$cygwin_build" \
               -Wl,--start-group \
               -lmsys-2.0 \
+              -lgcc_s \
               -lgcc \
               -Wl,--end-group \
               "$gccdir/crtend.o" \
@@ -943,6 +945,7 @@ jobs:
             -L"$cygwin_build" \
             -Wl,--start-group \
             -lmsys-2.0 \
+            -lgcc_s \
             -lgcc \
             -Wl,--end-group \
             "$gccdir/crtend.o" \
@@ -975,6 +978,7 @@ jobs:
             -L"$cygwin_build" \
             -Wl,--start-group \
             -lmsys-2.0 \
+            -lgcc_s \
             -lgcc \
             -Wl,--end-group \
             "$gccdir/crtend.o" \
@@ -1009,6 +1013,7 @@ jobs:
             -L"$cygwin_build" \
             -Wl,--start-group \
             -lmsys-2.0 \
+            -lgcc_s \
             -lgcc \
             -Wl,--end-group \
             "$gccdir/crtend.o" \
@@ -1037,6 +1042,8 @@ jobs:
             aarch64-runtime-validation
           cp "$cygwin_build/new-msys-2.0.dll" \
             aarch64-runtime-validation/msys-2.0.dll
+          cp "$TOOLCHAIN_DIR/lib/gcc/aarch64-pc-msys/msys-gcc_s-seh-1.dll" \
+            aarch64-runtime-validation/
           cp "$cygwin_build/libmsys-2.0.a" \
             aarch64-runtime-validation/libmsys-2.0.a
           cp "$cygwin_build/aarch64-runtime-smoke.exe" \
