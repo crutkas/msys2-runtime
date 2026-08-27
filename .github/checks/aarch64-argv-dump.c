@@ -99,9 +99,15 @@ main (int argc, char **argv)
   USHORT native_machine = 0;
   HMODULE module = GetModuleHandleW (NULL);
   HMODULE kernel32 = GetModuleHandleW (L"kernel32.dll");
-  get_command_line_w_type native_get_command_line =
-    (get_command_line_w_type) GetProcAddress (kernel32, "GetCommandLineW");
-  WCHAR *raw = native_get_command_line ? native_get_command_line () : NULL;
+  union
+  {
+    FARPROC address;
+    get_command_line_w_type function;
+  } native_get_command_line = {
+    .address = GetProcAddress (kernel32, "GetCommandLineW")
+  };
+  WCHAR *raw = native_get_command_line.function
+    ? native_get_command_line.function () : NULL;
 
   DWORD path_size = GetEnvironmentVariableW (L"ARM64_ARGV_OUTPUT", path,
 					      MAX_PATH);
