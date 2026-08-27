@@ -938,6 +938,38 @@ child_info::child_info (unsigned in_cb, child_info_types chtype,
   if (!DuplicateHandle (GetCurrentProcess (), GetCurrentProcess (),
 			GetCurrentProcess (), &parent, perms, TRUE, 0))
     system_printf ("couldn't create handle to myself for child, %E");
+#ifdef __aarch64__
+  else
+    {
+      WCHAR enabled[2];
+      if (GetEnvironmentVariableW (L"MSYS2_ARM64_HANDLE_DIAGNOSTICS",
+				   enabled, 2))
+	{
+	  DWORD flags = 0;
+	  SetLastError (ERROR_SUCCESS);
+	  BOOL valid = GetHandleInformation (parent, &flags);
+	  DWORD valid_error = GetLastError ();
+	  PROCESS_BASIC_INFORMATION pbi = {};
+	  NTSTATUS process_status
+	    = NtQueryInformationProcess (parent, ProcessBasicInformation, &pbi,
+					 sizeof pbi, NULL);
+	  HANDLE duplicate = NULL;
+	  SetLastError (ERROR_SUCCESS);
+	  BOOL duplicated
+	    = DuplicateHandle (GetCurrentProcess (), parent,
+			       GetCurrentProcess (), &duplicate, 0, FALSE,
+			       DUPLICATE_SAME_ACCESS);
+	  DWORD duplicate_error = GetLastError ();
+	  if (duplicate)
+	    CloseHandle (duplicate);
+	  system_printf ("ARM64 parent handle created: handle %p, valid %d, "
+			 "flags %y, valid error %u, process status %y, "
+			 "duplicate %d, duplicate error %u",
+			 parent, valid, flags, valid_error, process_status,
+			 duplicated, duplicate_error);
+	}
+    }
+#endif
 }
 
 child_info::~child_info ()

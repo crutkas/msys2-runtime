@@ -755,8 +755,37 @@ child_copy (HANDLE hp, bool write, bool silentfail, ...)
 	  debug_printf ("%s - hp %p low %p, high %p, res %d", what, hp, low, high, res);
 	  if (!res || todo != done)
 	    {
+	      DWORD copy_error = res ? ERROR_SUCCESS : GetLastError ();
 	      if (!res)
-		__seterrno ();
+		{
+#ifdef __aarch64__
+		  DWORD flags = 0;
+		  SetLastError (ERROR_SUCCESS);
+		  BOOL valid = GetHandleInformation (hp, &flags);
+		  DWORD valid_error = GetLastError ();
+		  PROCESS_BASIC_INFORMATION pbi = {};
+		  NTSTATUS process_status
+		    = NtQueryInformationProcess (hp, ProcessBasicInformation,
+						 &pbi, sizeof pbi, NULL);
+		  HANDLE duplicate = NULL;
+		  SetLastError (ERROR_SUCCESS);
+		  BOOL duplicated
+		    = DuplicateHandle (GetCurrentProcess (), hp,
+				       GetCurrentProcess (), &duplicate, 0,
+				       FALSE, DUPLICATE_SAME_ACCESS);
+		  DWORD duplicate_error = GetLastError ();
+		  if (duplicate)
+		    CloseHandle (duplicate);
+		  system_printf ("ARM64 child copy handle: handle %p, valid %d, "
+				 "flags %y, valid error %u, process status %y, "
+				 "duplicate %d, duplicate error %u, "
+				 "copy error %u",
+				 hp, valid, flags, valid_error, process_status,
+				 duplicated, duplicate_error, copy_error);
+#endif
+		  SetLastError (copy_error);
+		  __seterrno ();
+		}
 	      if (silentfail)
 		debug_printf ("%s %s copy failed, %p..%p, done %lu, windows pid %u, %E",
 			     what, huh[write], low, high, done, myself->dwProcessId);

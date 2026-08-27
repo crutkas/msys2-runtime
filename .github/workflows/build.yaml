@@ -1176,6 +1176,7 @@ jobs:
           $runtime = (Resolve-Path `
             aarch64-runtime-validation/aarch64-runtime-validation).Path
           $baseline = Join-Path $runtime "a527-baseline"
+          $env:MSYS2_ARM64_HANDLE_DIAGNOSTICS = "1"
 
           & (Join-Path $baseline "run-aarch64-argv-regression.ps1") `
             -RuntimePath $baseline -ExpectCorruption
@@ -1201,6 +1202,7 @@ jobs:
         run: |
           $runtime = (Resolve-Path `
             aarch64-runtime-validation/aarch64-runtime-validation).Path
+          $env:MSYS2_ARM64_HANDLE_DIAGNOSTICS = "1"
           & (Join-Path $runtime "aarch64-process-regression.exe")
           if ($LASTEXITCODE -ne 0) {
             throw "AArch64 process regression probe failed with exit code $LASTEXITCODE"
