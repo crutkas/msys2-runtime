@@ -68,6 +68,16 @@ do
   tar.exe -xf "$packages/$package" -C "$root"
 done
 
+# Pacman materializes these package aliases as native filesystem symlinks.
+# Direct tar extraction leaves MSYS symlink files, which a native GCC driver
+# cannot execute, so create private native copies from the identical binaries.
+for tool in addr2line ar as c++filt dlltool dllwrap elfedit gprof ld ld.bfd \
+	    nm objcopy objdump ranlib readelf size strings strip windmc windres
+do
+  cp "$prefix/bin/aarch64-pc-cygwin-$tool.exe" \
+     "$prefix/bin/aarch64-pc-msys-$tool.exe"
+done
+
 # The source tree still uses the historical aarch64-pc-cygwin build triplet.
 # Keep that configure surface while making every compiler invocation execute
 # the exact aarch64-pc-msys GCC above.
@@ -87,7 +97,7 @@ printf '%s  %s\n' \
 
 if test -n "${GITHUB_ENV:-}"; then
   {
-    printf 'TOOLCHAIN_DIR=%s\n' "$(cygpath -am "$prefix")"
-    printf 'TARGET_ROOT=%s\n' "$(cygpath -am "$prefix/aarch64-pc-msys")"
+    printf 'TOOLCHAIN_DIR=%s\n' "$prefix"
+    printf 'TARGET_ROOT=%s\n' "$prefix/aarch64-pc-msys"
   } >> "$GITHUB_ENV"
 fi

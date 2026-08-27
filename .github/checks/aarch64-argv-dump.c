@@ -1,9 +1,6 @@
 #define _WIN32_WINNT 0x0a00
 #include <windows.h>
 #include <stdint.h>
-#include <stdlib.h>
-
-extern char **environ;
 
 static HANDLE output;
 
@@ -58,19 +55,11 @@ hex_bytes (const unsigned char *bytes, size_t size)
     hex_byte (bytes[i]);
 }
 
-static int
-starts_with (const char *value, const char *prefix)
-{
-  while (*prefix)
-    if (*value++ != *prefix++)
-      return 0;
-  return 1;
-}
-
 int
 main (int argc, char **argv)
 {
   WCHAR path[MAX_PATH];
+  char marker[128];
   WCHAR *raw = GetCommandLineW ();
   USHORT process_machine = 0;
   USHORT native_machine = 0;
@@ -127,16 +116,10 @@ main (int argc, char **argv)
     }
 
   text ("environment=");
-  for (char **entry = environ; *entry; ++entry)
-    if (starts_with (*entry, "ARM64_ARGV_MARKER="))
-      {
-	const char *value = *entry + sizeof ("ARM64_ARGV_MARKER=") - 1;
-	size_t length = 0;
-	while (value[length])
-	  ++length;
-	hex_bytes ((const unsigned char *) value, length);
-	break;
-      }
+  DWORD marker_size = GetEnvironmentVariableA ("ARM64_ARGV_MARKER", marker,
+						sizeof marker);
+  if (marker_size && marker_size < sizeof marker)
+    hex_bytes ((const unsigned char *) marker, marker_size);
   text ("\n");
   if (output != GetStdHandle (STD_OUTPUT_HANDLE))
     CloseHandle (output);

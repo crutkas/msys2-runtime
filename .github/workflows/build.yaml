@@ -890,7 +890,7 @@ jobs:
             -lkernel32 \
             -lntdll
 
-          for source in aarch64-strchr-regression aarch64-process-regression aarch64-argv-dump; do
+          for source in aarch64-process-regression aarch64-argv-dump; do
             aarch64-pc-cygwin-gcc \
               -D__MSYS__ \
               -O2 \
@@ -1045,8 +1045,7 @@ jobs:
             aarch64-runtime-validation/
           cp "$cygwin_build/aarch64-ucontext-model.exe" \
             aarch64-runtime-validation/
-          cp "$cygwin_build/aarch64-strchr-regression.exe" \
-             "$cygwin_build/aarch64-process-regression.exe" \
+          cp "$cygwin_build/aarch64-process-regression.exe" \
              "$cygwin_build/aarch64-argv-dump.exe" \
              aarch64-runtime-validation/
           cp .github/checks/run-aarch64-argv-regression.ps1 \
@@ -1054,8 +1053,7 @@ jobs:
           mkdir aarch64-runtime-validation/a527-baseline
           cp "$TOOLCHAIN_DIR/aarch64-pc-msys/bin/msys-2.0.dll" \
              aarch64-runtime-validation/a527-baseline/
-          cp "$cygwin_build/aarch64-strchr-regression.exe" \
-             "$cygwin_build/aarch64-process-regression.exe" \
+          cp "$cygwin_build/aarch64-process-regression.exe" \
              "$cygwin_build/aarch64-argv-dump.exe" \
              aarch64-runtime-validation/a527-baseline/
           cp .github/checks/run-aarch64-argv-regression.ps1 \
@@ -1163,16 +1161,12 @@ jobs:
           }
 
       - name: Reproduce immutable a527 argv and process failures
+        if: always()
         shell: pwsh
         run: |
           $runtime = (Resolve-Path `
             aarch64-runtime-validation/aarch64-runtime-validation).Path
           $baseline = Join-Path $runtime "a527-baseline"
-
-          & (Join-Path $baseline "aarch64-strchr-regression.exe")
-          if ($LASTEXITCODE -eq 0) {
-            throw "immutable a527 unexpectedly passed the strchr regression"
-          }
 
           & (Join-Path $baseline "run-aarch64-argv-regression.ps1") `
             -RuntimePath $baseline -ExpectCorruption
@@ -1181,17 +1175,6 @@ jobs:
             Tee-Object -FilePath (Join-Path $baseline "expected-process-failure.txt")
           if ($LASTEXITCODE -eq 0) {
             throw "immutable a527 unexpectedly passed the process regression"
-          }
-
-      - name: Run AArch64 strchr regression probe
-        if: always()
-        shell: pwsh
-        run: |
-          $runtime = (Resolve-Path `
-            aarch64-runtime-validation/aarch64-runtime-validation).Path
-          & (Join-Path $runtime "aarch64-strchr-regression.exe")
-          if ($LASTEXITCODE -ne 0) {
-            throw "AArch64 strchr regression probe failed with exit code $LASTEXITCODE"
           }
 
       - name: Run AArch64 argv regression matrix

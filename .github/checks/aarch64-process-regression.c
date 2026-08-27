@@ -5,8 +5,6 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-extern char **environ;
-
 static const char child_text[] = "ISO-8859-1|LATIN1|--to-code=UTF-8\n";
 
 static int
@@ -95,6 +93,7 @@ test_spawn (const char *self)
   char *argv[] = {(char *) self, (char *) "--spawn-child",
 		  (char *) "ISO-8859-1", (char *) "LATIN1",
 		  (char *) "--to-code=UTF-8", NULL};
+  char *environment[] = {(char *) "ARM64_PROCESS_MARKER=1", NULL};
   posix_spawn_file_actions_t actions;
   int pipefd[2];
   pid_t pid;
@@ -107,7 +106,7 @@ test_spawn (const char *self)
       || posix_spawn_file_actions_addclose (&actions, pipefd[0]) != 0
       || posix_spawn_file_actions_addclose (&actions, pipefd[1]) != 0)
     return 2;
-  int result = posix_spawn (&pid, self, &actions, NULL, argv, environ);
+  int result = posix_spawn (&pid, self, &actions, NULL, argv, environment);
   posix_spawn_file_actions_destroy (&actions);
   close (pipefd[1]);
   if (result != 0)
