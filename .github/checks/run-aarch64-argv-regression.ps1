@@ -50,7 +50,11 @@ function ConvertTo-WindowsArgument([string]$Value) {
   return $result + ('\' * (2 * $slashes)) + '"'
 }
 
-function Assert-Dump([string]$Name, [string[]]$Expected) {
+function Assert-Dump(
+  [string]$Name,
+  [string[]]$Expected,
+  [string]$ExpectedRawCommandLine = $null
+) {
   $dumpPath = Join-Path $env:RUNNER_TEMP "$Name.txt"
   if (-not (Test-Path $dumpPath)) {
     throw "$Name did not produce an argv dump"
@@ -64,8 +68,20 @@ function Assert-Dump([string]$Name, [string[]]$Expected) {
   }
   if ($values.process_machine -ne '0000' -or
       $values.native_machine -ne 'aa64' -or
-      $values.module_machine -ne 'aa64') {
+      $values['module.main.machine'] -ne 'aa64' -or
+      $values['module.runtime.machine'] -ne 'aa64' -or
+      $values['module.kernel32.machine'] -ne 'aa64') {
     throw "$Name used a non-native process or module"
+  }
+  if ($null -ne $ExpectedRawCommandLine) {
+    $expectedRawHex =
+      [Convert]::ToHexString(
+        [Text.Encoding]::Unicode.GetBytes($ExpectedRawCommandLine)).ToLower()
+    if ($values.raw_utf16 -ne $expectedRawHex) {
+      $message = "$Name native GetCommandLineW mismatch"
+      if (-not $ExpectCorruption) { throw $message }
+      $script:failures.Add($message)
+    }
   }
   if ($values.environment -ne
       [Convert]::ToHexString([Text.Encoding]::UTF8.GetBytes($marker)).ToLower()) {
@@ -162,7 +178,7 @@ if (-not [NativeProcess]::CreateProcessW($child, $mutableCommandLine,
 [void][NativeProcess]::CloseHandle($processInfo.thread)
 [void][NativeProcess]::CloseHandle($processInfo.process)
 if ($exitCode -ne 0) { throw "CreateProcessW child exited $exitCode" }
-Assert-Dump 'native-createprocess' $corpus
+Assert-Dump 'native-createprocess' $corpus $commandLine
 
 $cmdCorpus = @('ISO-8859-1', 'LATIN1', '--to-code=UTF-8',
   'C:\path with spaces\iconv-latin1.bin', 'repeat--aaabbbccc111')
