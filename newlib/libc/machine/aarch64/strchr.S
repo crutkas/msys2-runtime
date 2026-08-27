@@ -84,7 +84,7 @@ ENTRY (strchr)
 	lsl	tmp1, tmp1, #1
 	addp	vend1.16b, vend1.16b, vend2.16b		// 256->128
 	mov	tmp3, #~0
-	addp	vend1.16b, vend1.16b, vend2.16b		// 128->64
+	addp	vend1.16b, vend1.16b, vend1.16b		// 128->64
 	lsr	tmp1, tmp3, tmp1
 
 	mov	tmp3, vend1.d[0]
@@ -110,7 +110,7 @@ L(loop):
 	and	vend1.16b, vhas_nul1.16b, vrepmask_c.16b
 	and	vend2.16b, vhas_nul2.16b, vrepmask_c.16b
 	addp	vend1.16b, vend1.16b, vend2.16b		// 256->128
-	addp	vend1.16b, vend1.16b, vend2.16b		// 128->64
+	addp	vend1.16b, vend1.16b, vend1.16b		// 128->64
 	mov	tmp1, vend1.d[0]
 L(tail):
 	/* Count the trailing zeros, by bit reversing...  */
