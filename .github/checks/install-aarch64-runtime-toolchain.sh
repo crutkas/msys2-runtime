@@ -86,6 +86,7 @@ do
 #!/usr/bin/env bash
 export PATH="$native_tools:\$PATH"
 export COMPILER_PATH="$native_tools\${COMPILER_PATH:+:\$COMPILER_PATH}"
+export COLLECT_LD="$native_tools/ld.exe"
 exec "\$(dirname "\$0")/aarch64-pc-msys-$tool.exe" \
   -B"$native_tools/" "\$@"
 EOF
