@@ -913,7 +913,23 @@ dll_crt0_1 (void *)
     {
       PWCHAR wline = GetCommandLineW ();
       size_t size = sys_wcstombs_no_path (NULL, 0, wline) + 1;
-      char *line = (char *) alloca (size);
+      /* This used to be allocated with alloca.  argv[] entries built by
+	 build_argv below point directly into this buffer, and, since
+	 dll_crt0_1 calls the user's main () from within its own stack
+	 frame (see cygwin_exit call further down) and never returns until
+	 the process exits, that stack allocation has to remain valid,
+	 correctly sized and correctly aligned for the entire lifetime of
+	 the process.  On AArch64 this runtime-computed, non-16-byte-
+	 aligned alloca size was observed to result in silent corruption of
+	 bytes near the end of long trailing command-line arguments.  Using
+	 a heap allocation instead sidesteps any dependence on the stack
+	 layout the compiler generates for this frame; like the alloca it
+	 replaces, this buffer is intentionally never freed since argv[]
+	 must remain valid for the life of the process. */
+      char *line = (char *) malloc (size);
+      if (!line)
+	api_fatal ("unable to allocate %ld bytes for command line",
+		   (long) size);
       sys_wcstombs_no_path (line, size, wline);
 
       /* Scan the command line and build argv.  Expand wildcards if not
