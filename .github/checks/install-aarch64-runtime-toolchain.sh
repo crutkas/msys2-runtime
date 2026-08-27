@@ -68,21 +68,22 @@ do
   tar.exe -xf "$packages/$package" -C "$root"
 done
 
-# Pacman materializes these package aliases as native filesystem symlinks.
-# Direct tar extraction leaves MSYS symlink files, which a native GCC driver
-# cannot execute, so create private native copies from the identical binaries.
-for tool in addr2line ar as c++filt dlltool dllwrap elfedit gprof ld ld.bfd \
-	    nm objcopy objdump ranlib readelf size strings strip windmc windres
-do
-  msys_tool="$prefix/bin/aarch64-pc-msys-$tool.exe"
-  rm -f "$msys_tool"
-  cp "$prefix/bin/aarch64-pc-cygwin-$tool.exe" "$msys_tool"
-done
-
 # The source tree still uses the historical aarch64-pc-cygwin build triplet.
 # Keep that configure surface while making every compiler invocation execute
-# the exact aarch64-pc-msys GCC above.
-for tool in gcc g++ c++ cpp gcc-ar gcc-nm gcc-ranlib
+# the exact aarch64-pc-msys GCC above.  -B bypasses the aarch64-pc-msys
+# symlinks from the extracted package and selects the fixed native binutils
+# executables directly.
+for tool in gcc g++ c++ cpp
+do
+  cat > "$prefix/bin/aarch64-pc-cygwin-$tool" <<EOF
+#!/usr/bin/env bash
+exec "\$(dirname "\$0")/aarch64-pc-msys-$tool.exe" \
+  -B"\$(dirname "\$0")/aarch64-pc-cygwin-" "\$@"
+EOF
+  chmod +x "$prefix/bin/aarch64-pc-cygwin-$tool"
+done
+
+for tool in gcc-ar gcc-nm gcc-ranlib
 do
   cat > "$prefix/bin/aarch64-pc-cygwin-$tool" <<EOF
 #!/usr/bin/env bash
@@ -92,6 +93,13 @@ EOF
 done
 
 test "$("$prefix/bin/aarch64-pc-msys-gcc.exe" -dumpmachine)" = aarch64-pc-msys
+test "$("$prefix/bin/aarch64-pc-cygwin-gcc" -print-prog-name=as)" \
+  = "$prefix/bin/aarch64-pc-cygwin-as.exe"
+printf 'int arm64_toolchain_probe;\n' \
+  | "$prefix/bin/aarch64-pc-cygwin-gcc" -x c -c -o "$root/probe.o" -
+"$prefix/bin/aarch64-pc-cygwin-objdump.exe" -f "$root/probe.o" \
+  | grep -Fq 'file format pe-aarch64-little'
+rm "$root/probe.o"
 printf '%s  %s\n' \
   075ed377a430eb120a994dfdc7c3187e937331239204578d696f08ee1c72fb1f \
   "$prefix/bin/aarch64-pc-cygwin-ld.exe" | sha256sum --check -
