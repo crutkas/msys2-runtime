@@ -76,17 +76,24 @@ do
   cp "$prefix/bin/aarch64-pc-cygwin-$tool.exe" "$native_tools/$tool.exe"
 done
 
+gcc_programs="$prefix/libexec/gcc/aarch64-pc-msys/15.0.1"
+test -x "$gcc_programs/collect2.exe"
+for tool in ld ld.bfd
+do
+  cp "$native_tools/$tool.exe" "$gcc_programs/$tool.exe"
+  cp "$native_tools/$tool.exe" "$gcc_programs/aarch64-pc-msys-$tool.exe"
+done
+
 # The source tree still uses the historical aarch64-pc-cygwin build triplet.
 # Keep that configure surface while making every compiler invocation execute
 # the exact aarch64-pc-msys GCC above.  The private -B directory bypasses the
-# aarch64-pc-msys symlinks from the extracted package for both GCC and collect2.
+# aarch64-pc-msys symlinks from the extracted package.  collect2 receives its
+# own compiler search path from GCC, so place the fixed linker there as well.
 for tool in gcc g++ c++ cpp
 do
   cat > "$prefix/bin/aarch64-pc-cygwin-$tool" <<EOF
 #!/usr/bin/env bash
 export PATH="$native_tools:\$PATH"
-export COMPILER_PATH="$native_tools\${COMPILER_PATH:+:\$COMPILER_PATH}"
-export COLLECT_LD="$native_tools/ld.exe"
 exec "\$(dirname "\$0")/aarch64-pc-msys-$tool.exe" \
   -B"$native_tools/" "\$@"
 EOF
@@ -109,14 +116,15 @@ printf 'void arm64_toolchain_probe (void) {}\n' \
   | "$prefix/bin/aarch64-pc-cygwin-gcc" -x c -c -o "$root/probe.o" -
 "$prefix/bin/aarch64-pc-cygwin-objdump.exe" -f "$root/probe.o" \
   | grep -Fq 'file format pe-aarch64-little'
+printf '%s  %s\n' \
+  075ed377a430eb120a994dfdc7c3187e937331239204578d696f08ee1c72fb1f \
+  "$gcc_programs/ld.exe" | sha256sum --check -
+"$gcc_programs/ld.exe" --version | head -n 1
 "$prefix/bin/aarch64-pc-cygwin-gcc" -nostdlib \
   -Wl,-e,arm64_toolchain_probe "$root/probe.o" -o "$root/probe.exe"
 "$prefix/bin/aarch64-pc-cygwin-objdump.exe" -f "$root/probe.exe" \
   | grep -Fq 'file format pei-aarch64-little'
 rm "$root/probe.o" "$root/probe.exe"
-printf '%s  %s\n' \
-  075ed377a430eb120a994dfdc7c3187e937331239204578d696f08ee1c72fb1f \
-  "$native_tools/ld.exe" | sha256sum --check -
 
 if test -n "${GITHUB_ENV:-}"; then
   {
