@@ -74,8 +74,9 @@ done
 for tool in addr2line ar as c++filt dlltool dllwrap elfedit gprof ld ld.bfd \
 	    nm objcopy objdump ranlib readelf size strings strip windmc windres
 do
-  cp "$prefix/bin/aarch64-pc-cygwin-$tool.exe" \
-     "$prefix/bin/aarch64-pc-msys-$tool.exe"
+  msys_tool="$prefix/bin/aarch64-pc-msys-$tool.exe"
+  rm -f "$msys_tool"
+  cp "$prefix/bin/aarch64-pc-cygwin-$tool.exe" "$msys_tool"
 done
 
 # The source tree still uses the historical aarch64-pc-cygwin build triplet.
@@ -100,4 +101,7 @@ if test -n "${GITHUB_ENV:-}"; then
     printf 'TOOLCHAIN_DIR=%s\n' "$prefix"
     printf 'TARGET_ROOT=%s\n' "$prefix/aarch64-pc-msys"
   } >> "$GITHUB_ENV"
+fi
+if test -n "${GITHUB_PATH:-}"; then
+  cygpath -aw "$prefix/bin" >> "$GITHUB_PATH"
 fi
