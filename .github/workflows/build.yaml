@@ -1061,6 +1061,23 @@ jobs:
           cp .github/checks/run-aarch64-argv-regression.ps1 \
              aarch64-runtime-validation/a527-baseline/
 
+      - name: Disassemble AArch64 argv processing functions
+        shell: bash
+        run: |
+          set -eux
+          cygwin_build="$PWD/build-aarch64-runtime/aarch64-pc-cygwin/winsup/cygwin"
+          mkdir -p aarch64-runtime-validation/disasm
+          for sym in build_argv quoted globify dll_crt0_1 _sys_wcstombs; do
+            aarch64-pc-cygwin-objdump -dr \
+              --disassemble="$sym" \
+              "$cygwin_build/dcrt0.o" \
+              > "aarch64-runtime-validation/disasm/$sym.dis" 2>&1 || true
+          done
+          aarch64-pc-cygwin-objdump -dr \
+            --disassemble=_sys_wcstombs \
+            "$cygwin_build/strfuncs.o" \
+            > "aarch64-runtime-validation/disasm/strfuncs_sys_wcstombs.dis" 2>&1 || true
+
       - name: Upload AArch64 runtime validation
         if: always()
         uses: actions/upload-artifact@v7
