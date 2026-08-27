@@ -892,6 +892,37 @@ jobs:
             -lkernel32 \
             -lntdll
 
+          for source in aarch64-strchr-regression aarch64-process-regression aarch64-argv-dump; do
+            aarch64-pc-cygwin-gcc \
+              -D__MSYS__ \
+              -O2 \
+              -g \
+              -Wall \
+              -Wextra \
+              -Werror \
+              -fno-builtin-strchr \
+              -c ".github/checks/$source.c" \
+              -o "$cygwin_build/$source.o"
+            aarch64-pc-cygwin-gcc \
+              -nostdlib \
+              -Wl,--no-insert-timestamp \
+              -Wl,--subsystem,console \
+              -Wl,-e,mainCRTStartup \
+              -o "$cygwin_build/$source.exe" \
+              "$cygwin_build/crt0.o" \
+              "$gccdir/crtbegin.o" \
+              "$cygwin_build/$source.o" \
+              -L"$cygwin_build" \
+              -Wl,--start-group \
+              -lmsys-2.0 \
+              -lgcc \
+              -Wl,--end-group \
+              "$gccdir/crtend.o" \
+              /opt/aarch64-pc-cygwin/lib/default-manifest.o \
+              -lkernel32 \
+              -lntdll
+          done
+
           aarch64-pc-cygwin-gcc \
             -D__MSYS__ \
             -O2 \
@@ -1016,6 +1047,12 @@ jobs:
             aarch64-runtime-validation/
           cp "$cygwin_build/aarch64-ucontext-model.exe" \
             aarch64-runtime-validation/
+          cp "$cygwin_build/aarch64-strchr-regression.exe" \
+             "$cygwin_build/aarch64-process-regression.exe" \
+             "$cygwin_build/aarch64-argv-dump.exe" \
+             aarch64-runtime-validation/
+          cp .github/checks/run-aarch64-argv-regression.ps1 \
+             aarch64-runtime-validation/
 
       - name: Upload AArch64 runtime validation
         if: always()
@@ -1116,6 +1153,33 @@ jobs:
             if ($LASTEXITCODE -ne 0) {
               throw "$probe failed with exit code $LASTEXITCODE"
             }
+          }
+
+      - name: Run AArch64 strchr regression probe
+        shell: pwsh
+        run: |
+          $runtime = (Resolve-Path `
+            aarch64-runtime-validation/aarch64-runtime-validation).Path
+          & (Join-Path $runtime "aarch64-strchr-regression.exe")
+          if ($LASTEXITCODE -ne 0) {
+            throw "AArch64 strchr regression probe failed with exit code $LASTEXITCODE"
+          }
+
+      - name: Run AArch64 argv regression matrix
+        shell: pwsh
+        run: |
+          $runtime = (Resolve-Path `
+            aarch64-runtime-validation/aarch64-runtime-validation).Path
+          & (Join-Path $runtime "run-aarch64-argv-regression.ps1") $runtime
+
+      - name: Run AArch64 process regression probe
+        shell: pwsh
+        run: |
+          $runtime = (Resolve-Path `
+            aarch64-runtime-validation/aarch64-runtime-validation).Path
+          & (Join-Path $runtime "aarch64-process-regression.exe")
+          if ($LASTEXITCODE -ne 0) {
+            throw "AArch64 process regression probe failed with exit code $LASTEXITCODE"
           }
 
   configure-winsup:
