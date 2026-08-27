@@ -1067,16 +1067,18 @@ jobs:
           set -eux
           cygwin_build="$PWD/build-aarch64-runtime/aarch64-pc-cygwin/winsup/cygwin"
           mkdir -p aarch64-runtime-validation/disasm
-          for sym in build_argv quoted globify dll_crt0_1 _sys_wcstombs; do
-            aarch64-pc-cygwin-objdump -dr \
-              --disassemble="$sym" \
-              "$cygwin_build/dcrt0.o" \
-              > "aarch64-runtime-validation/disasm/$sym.dis" 2>&1 || true
-          done
-          aarch64-pc-cygwin-objdump -dr \
-            --disassemble=_sys_wcstombs \
+          aarch64-pc-cygwin-objdump -dr --no-show-raw-insn \
+            "$cygwin_build/dcrt0.o" \
+            > "aarch64-runtime-validation/disasm/dcrt0.dis" 2>&1 || true
+          aarch64-pc-cygwin-objdump -dr --no-show-raw-insn \
             "$cygwin_build/strfuncs.o" \
-            > "aarch64-runtime-validation/disasm/strfuncs_sys_wcstombs.dis" 2>&1 || true
+            > "aarch64-runtime-validation/disasm/strfuncs.dis" 2>&1 || true
+          aarch64-pc-cygwin-objdump -t \
+            "$cygwin_build/dcrt0.o" \
+            > "aarch64-runtime-validation/disasm/dcrt0.symbols" 2>&1 || true
+          aarch64-pc-cygwin-objdump -t \
+            "$cygwin_build/strfuncs.o" \
+            > "aarch64-runtime-validation/disasm/strfuncs.symbols" 2>&1 || true
 
       - name: Upload AArch64 runtime validation
         if: always()
