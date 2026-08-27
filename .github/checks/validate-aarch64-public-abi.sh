@@ -11,7 +11,7 @@ build="$(cd "$1" && pwd)"
 repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
 target=aarch64-pc-cygwin
 cygwin="$build/$target/winsup/cygwin"
-target_root="${TARGET_ROOT:-/opt/$target}"
+target_root="${TARGET_ROOT:-${TOOLCHAIN_DIR:?TOOLCHAIN_DIR is required}/aarch64-pc-msys}"
 
 cc="${CC:-$target-gcc}"
 cxx="${CXX:-$target-g++}"

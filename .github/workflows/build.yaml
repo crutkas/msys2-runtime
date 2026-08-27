@@ -8,8 +8,6 @@ permissions:
 jobs:
   aarch64-compiler-checks:
     runs-on: windows-latest
-    env:
-      TOOLCHAIN_DIR: /opt
     defaults:
       run:
         shell: msys2 {0}
@@ -832,7 +830,7 @@ jobs:
       - name: Validate AArch64 linker script and PE image
         shell: msys2 {0}
         run: |
-          export PATH="/opt/bin:$PATH"
+          export PATH="$TOOLCHAIN_DIR/bin:$PATH"
           ./.github/checks/validate-aarch64-linker-script.sh \
             aarch64-linker-validation
 
@@ -840,7 +838,7 @@ jobs:
         shell: msys2 {0}
         run: |
           set -euo pipefail
-          export PATH="/opt/bin:$PATH"
+          export PATH="$TOOLCHAIN_DIR/bin:$PATH"
           export SOURCE_DATE_EPOCH="$(git show -s --format=%ct HEAD)"
           export ac_cv_lib_sframe_sframe_decode=no
           export ac_cv_lib_zstd_ZSTD_isError=no
@@ -888,7 +886,7 @@ jobs:
             -lgcc \
             -Wl,--end-group \
             "$gccdir/crtend.o" \
-            /opt/aarch64-pc-cygwin/lib/default-manifest.o \
+            "$TARGET_ROOT/lib/default-manifest.o" \
             -lkernel32 \
             -lntdll
 
@@ -918,7 +916,7 @@ jobs:
               -lgcc \
               -Wl,--end-group \
               "$gccdir/crtend.o" \
-              /opt/aarch64-pc-cygwin/lib/default-manifest.o \
+              "$TARGET_ROOT/lib/default-manifest.o" \
               -lkernel32 \
               -lntdll
           done
@@ -946,7 +944,7 @@ jobs:
             -lgcc \
             -Wl,--end-group \
             "$gccdir/crtend.o" \
-            /opt/aarch64-pc-cygwin/lib/default-manifest.o \
+            "$TARGET_ROOT/lib/default-manifest.o" \
             -lkernel32 \
             -lntdll
 
@@ -978,7 +976,7 @@ jobs:
             -lgcc \
             -Wl,--end-group \
             "$gccdir/crtend.o" \
-            /opt/aarch64-pc-cygwin/lib/default-manifest.o \
+            "$TARGET_ROOT/lib/default-manifest.o" \
             -lkernel32 \
             -lntdll
 
@@ -1012,7 +1010,7 @@ jobs:
             -lgcc \
             -Wl,--end-group \
             "$gccdir/crtend.o" \
-            /opt/aarch64-pc-cygwin/lib/default-manifest.o \
+            "$TARGET_ROOT/lib/default-manifest.o" \
             -lkernel32 \
             -lntdll
 
