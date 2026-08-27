@@ -120,7 +120,7 @@ printf '%s  %s\n' \
   075ed377a430eb120a994dfdc7c3187e937331239204578d696f08ee1c72fb1f \
   "$gcc_programs/ld.exe" | sha256sum --check -
 "$gcc_programs/ld.exe" --version | head -n 1
-"$prefix/bin/aarch64-pc-cygwin-gcc" -nostdlib \
+"$prefix/bin/aarch64-pc-cygwin-gcc" -v -nostdlib \
   -Wl,-e,arm64_toolchain_probe "$root/probe.o" -o "$root/probe.exe"
 "$prefix/bin/aarch64-pc-cygwin-objdump.exe" -f "$root/probe.exe" \
   | grep -Fq 'file format pei-aarch64-little'
