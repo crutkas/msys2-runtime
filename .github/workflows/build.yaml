@@ -19,6 +19,7 @@ jobs:
       - name: setup-msys2
         uses: msys2/setup-msys2@v2
         with:
+          location: ${{ runner.temp }}\aarch64-msys-toolchain
           msystem: MSYS
           update: true
           # autotools provides /usr/bin/aclocal, /usr/bin/autoconf, and
@@ -812,6 +813,7 @@ jobs:
       - name: setup-msys2
         uses: msys2/setup-msys2@v2
         with:
+          location: ${{ runner.temp }}\aarch64-msys-toolchain
           msystem: MSYS
           update: true
           # autotools provides /usr/bin/aclocal, /usr/bin/autoconf, and

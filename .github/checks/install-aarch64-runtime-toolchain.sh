@@ -7,7 +7,13 @@ if test "$#" -gt 1; then
   exit 2
 fi
 
-root="$(cygpath -u "${1:-${RUNNER_TEMP:-$PWD}/aarch64-msys-toolchain}")"
+requested_root="${1:-${RUNNER_TEMP:-$PWD}/aarch64-msys-toolchain}"
+root="$(cygpath -u "$requested_root")"
+if test "$(cygpath -am /)" != "$(cygpath -am "$root")"; then
+  echo "toolchain root must be the root of this private MSYS installation" >&2
+  exit 1
+fi
+root=/
 packages="$root/packages"
 prefix="$root/opt"
 release="https://github.com/crutkas/MSYS2-packages/releases/download"
@@ -61,41 +67,30 @@ download msysarm64-runtime-pr10-a527-20260824 "$runtime" 9893043 \
 download msysarm64-runtime-pr10-a527-20260824 "$runtime_devel" 4426157 \
   c18b51e483991770b8e06cc2d8f7002d06784d3071ac213a8fee24bb831267d1
 
+export MSYS="${MSYS:+$MSYS }winsymlinks:sys"
 for package in \
   "$binutils" "$gcc" "$gcc_libs" "$libstdcxx" "$w32api" \
   "$headers" "$manifest" "$sysroot" "$runtime" "$runtime_devel"
 do
-  tar.exe -xf "$packages/$package" -C "$root"
+  /usr/bin/tar.exe -xf "$packages/$package" -C "$root"
 done
 
-native_tools="$prefix/libexec/aarch64-fixed-binutils"
-mkdir -p "$native_tools"
-for tool in addr2line ar as c++filt dlltool dllwrap elfedit gprof ld ld.bfd \
-	    nm objcopy objdump ranlib readelf size strings strip windmc windres
+mkdir -p "$prefix/aarch64-pc-msys/bin"
+for tool in ar nm ranlib
 do
-  cp "$prefix/bin/aarch64-pc-cygwin-$tool.exe" "$native_tools/$tool.exe"
-done
-
-gcc_programs="$prefix/libexec/gcc/aarch64-pc-msys/15.0.1"
-test -x "$gcc_programs/collect2.exe"
-for tool in ld ld.bfd
-do
-  cp "$native_tools/$tool.exe" "$gcc_programs/$tool.exe"
-  cp "$native_tools/$tool.exe" "$gcc_programs/aarch64-pc-msys-$tool.exe"
+  rm -f "$prefix/aarch64-pc-msys/bin/$tool.exe"
+  ln "$prefix/aarch64-pc-cygwin/bin/$tool.exe" \
+    "$prefix/aarch64-pc-msys/bin/$tool.exe"
 done
 
 # The source tree still uses the historical aarch64-pc-cygwin build triplet.
 # Keep that configure surface while making every compiler invocation execute
-# the exact aarch64-pc-msys GCC above.  The private -B directory bypasses the
-# aarch64-pc-msys symlinks from the extracted package.  collect2 receives its
-# own compiler search path from GCC, so place the fixed linker there as well.
+# the exact aarch64-pc-msys GCC above.
 for tool in gcc g++ c++ cpp
 do
   cat > "$prefix/bin/aarch64-pc-cygwin-$tool" <<EOF
 #!/usr/bin/env bash
-export PATH="$native_tools:\$PATH"
-exec "\$(dirname "\$0")/aarch64-pc-msys-$tool.exe" \
-  -B"$native_tools/" "\$@"
+exec "/opt/bin/aarch64-pc-msys-$tool.exe" "\$@"
 EOF
   chmod +x "$prefix/bin/aarch64-pc-cygwin-$tool"
 done
@@ -104,22 +99,45 @@ for tool in gcc-ar gcc-nm gcc-ranlib
 do
   cat > "$prefix/bin/aarch64-pc-cygwin-$tool" <<EOF
 #!/usr/bin/env bash
-exec "\$(dirname "\$0")/aarch64-pc-msys-$tool.exe" "\$@"
+exec "/opt/bin/aarch64-pc-msys-$tool.exe" "\$@"
 EOF
   chmod +x "$prefix/bin/aarch64-pc-cygwin-$tool"
 done
 
-test "$("$prefix/bin/aarch64-pc-msys-gcc.exe" -dumpmachine)" = aarch64-pc-msys
-test "$("$prefix/bin/aarch64-pc-cygwin-gcc" -print-prog-name=as)" \
-  = "$native_tools/as.exe"
+for alias in \
+  "$prefix/bin/aarch64-pc-msys-gcc.exe" \
+  "$prefix/bin/aarch64-pc-msys-g++.exe" \
+  "$prefix/bin/aarch64-pc-cygwin-as.exe" \
+  "$prefix/bin/aarch64-pc-cygwin-ld.exe"
+do
+  ls -li "$alias"
+  if test -L "$alias"; then
+    readlink "$alias"
+  fi
+  test -x "$alias"
+done
+
+compiler="$prefix/bin/aarch64-pc-msys-gcc.exe"
+test "$("$compiler" -dumpmachine)" = aarch64-pc-msys
+ld_program="$("$compiler" -print-prog-name=ld)"
+case "$ld_program" in
+  /opt/bin/aarch64-pc-cygwin-ld|/opt/bin/aarch64-pc-cygwin-ld.exe) ;;
+  *)
+    echo "unexpected linker program: $ld_program" >&2
+    exit 1
+    ;;
+esac
+test -e "$ld_program" || ld_program="$ld_program.exe"
+test -x "$ld_program"
+printf '%s  %s\n' \
+  075ed377a430eb120a994dfdc7c3187e937331239204578d696f08ee1c72fb1f \
+  "$ld_program" | sha256sum --check -
+"$compiler" -print-search-dirs
+
 printf 'void arm64_toolchain_probe (void) {}\n' \
   | "$prefix/bin/aarch64-pc-cygwin-gcc" -x c -c -o "$root/probe.o" -
 "$prefix/bin/aarch64-pc-cygwin-objdump.exe" -f "$root/probe.o" \
   | grep -Fq 'file format pe-aarch64-little'
-printf '%s  %s\n' \
-  075ed377a430eb120a994dfdc7c3187e937331239204578d696f08ee1c72fb1f \
-  "$gcc_programs/ld.exe" | sha256sum --check -
-"$gcc_programs/ld.exe" --version | head -n 1
 "$prefix/bin/aarch64-pc-cygwin-gcc" -v -nostdlib \
   -Wl,-e,arm64_toolchain_probe "$root/probe.o" -o "$root/probe.exe"
 "$prefix/bin/aarch64-pc-cygwin-objdump.exe" -f "$root/probe.exe" \
