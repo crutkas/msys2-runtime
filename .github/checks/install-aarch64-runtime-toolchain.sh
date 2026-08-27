@@ -68,17 +68,24 @@ do
   tar.exe -xf "$packages/$package" -C "$root"
 done
 
+native_tools="$prefix/libexec/aarch64-fixed-binutils"
+mkdir -p "$native_tools"
+for tool in addr2line ar as c++filt dlltool dllwrap elfedit gprof ld ld.bfd \
+	    nm objcopy objdump ranlib readelf size strings strip windmc windres
+do
+  cp "$prefix/bin/aarch64-pc-cygwin-$tool.exe" "$native_tools/$tool.exe"
+done
+
 # The source tree still uses the historical aarch64-pc-cygwin build triplet.
 # Keep that configure surface while making every compiler invocation execute
-# the exact aarch64-pc-msys GCC above.  -B bypasses the aarch64-pc-msys
-# symlinks from the extracted package and selects the fixed native binutils
-# executables directly.
+# the exact aarch64-pc-msys GCC above.  The private -B directory bypasses the
+# aarch64-pc-msys symlinks from the extracted package for both GCC and collect2.
 for tool in gcc g++ c++ cpp
 do
   cat > "$prefix/bin/aarch64-pc-cygwin-$tool" <<EOF
 #!/usr/bin/env bash
 exec "\$(dirname "\$0")/aarch64-pc-msys-$tool.exe" \
-  -B"\$(dirname "\$0")/aarch64-pc-cygwin-" "\$@"
+  -B"$native_tools/" "\$@"
 EOF
   chmod +x "$prefix/bin/aarch64-pc-cygwin-$tool"
 done
@@ -94,7 +101,7 @@ done
 
 test "$("$prefix/bin/aarch64-pc-msys-gcc.exe" -dumpmachine)" = aarch64-pc-msys
 test "$("$prefix/bin/aarch64-pc-cygwin-gcc" -print-prog-name=as)" \
-  = "$prefix/bin/aarch64-pc-cygwin-as.exe"
+  = "$native_tools/as.exe"
 printf 'int arm64_toolchain_probe;\n' \
   | "$prefix/bin/aarch64-pc-cygwin-gcc" -x c -c -o "$root/probe.o" -
 "$prefix/bin/aarch64-pc-cygwin-objdump.exe" -f "$root/probe.o" \
@@ -102,7 +109,7 @@ printf 'int arm64_toolchain_probe;\n' \
 rm "$root/probe.o"
 printf '%s  %s\n' \
   075ed377a430eb120a994dfdc7c3187e937331239204578d696f08ee1c72fb1f \
-  "$prefix/bin/aarch64-pc-cygwin-ld.exe" | sha256sum --check -
+  "$native_tools/ld.exe" | sha256sum --check -
 
 if test -n "${GITHUB_ENV:-}"; then
   {
