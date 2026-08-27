@@ -84,6 +84,7 @@ for tool in gcc g++ c++ cpp
 do
   cat > "$prefix/bin/aarch64-pc-cygwin-$tool" <<EOF
 #!/usr/bin/env bash
+export PATH="$native_tools:\$PATH"
 exec "\$(dirname "\$0")/aarch64-pc-msys-$tool.exe" \
   -B"$native_tools/" "\$@"
 EOF
@@ -102,11 +103,15 @@ done
 test "$("$prefix/bin/aarch64-pc-msys-gcc.exe" -dumpmachine)" = aarch64-pc-msys
 test "$("$prefix/bin/aarch64-pc-cygwin-gcc" -print-prog-name=as)" \
   = "$native_tools/as.exe"
-printf 'int arm64_toolchain_probe;\n' \
+printf 'void arm64_toolchain_probe (void) {}\n' \
   | "$prefix/bin/aarch64-pc-cygwin-gcc" -x c -c -o "$root/probe.o" -
 "$prefix/bin/aarch64-pc-cygwin-objdump.exe" -f "$root/probe.o" \
   | grep -Fq 'file format pe-aarch64-little'
-rm "$root/probe.o"
+"$prefix/bin/aarch64-pc-cygwin-gcc" -nostdlib \
+  -Wl,-e,arm64_toolchain_probe "$root/probe.o" -o "$root/probe.exe"
+"$prefix/bin/aarch64-pc-cygwin-objdump.exe" -f "$root/probe.exe" \
+  | grep -Fq 'file format pei-aarch64-little'
+rm "$root/probe.o" "$root/probe.exe"
 printf '%s  %s\n' \
   075ed377a430eb120a994dfdc7c3187e937331239204578d696f08ee1c72fb1f \
   "$native_tools/ld.exe" | sha256sum --check -
