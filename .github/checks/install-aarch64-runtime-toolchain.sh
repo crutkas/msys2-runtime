@@ -14,8 +14,8 @@ if test "$(cygpath -am /)" != "$(cygpath -am "$root")"; then
   exit 1
 fi
 root=/
-packages="$root/packages"
-prefix="$root/opt"
+packages=/packages
+prefix=/opt
 release="https://github.com/crutkas/MSYS2-packages/releases/download"
 
 mkdir -p "$packages" "$prefix"
@@ -135,14 +135,14 @@ printf '%s  %s\n' \
 "$compiler" -print-search-dirs
 
 printf 'void arm64_toolchain_probe (void) {}\n' \
-  | "$prefix/bin/aarch64-pc-cygwin-gcc" -x c -c -o "$root/probe.o" -
-"$prefix/bin/aarch64-pc-cygwin-objdump.exe" -f "$root/probe.o" \
+  | "$prefix/bin/aarch64-pc-cygwin-gcc" -x c -c -o /probe.o -
+"$prefix/bin/aarch64-pc-cygwin-objdump.exe" -f /probe.o \
   | grep -Fq 'file format pe-aarch64-little'
 "$prefix/bin/aarch64-pc-cygwin-gcc" -v -nostdlib \
-  -Wl,-e,arm64_toolchain_probe "$root/probe.o" -o "$root/probe.exe"
-"$prefix/bin/aarch64-pc-cygwin-objdump.exe" -f "$root/probe.exe" \
+  -Wl,-e,arm64_toolchain_probe /probe.o -o /probe.exe
+"$prefix/bin/aarch64-pc-cygwin-objdump.exe" -f /probe.exe \
   | grep -Fq 'file format pei-aarch64-little'
-rm "$root/probe.o" "$root/probe.exe"
+rm /probe.o /probe.exe
 
 if test -n "${GITHUB_ENV:-}"; then
   {
