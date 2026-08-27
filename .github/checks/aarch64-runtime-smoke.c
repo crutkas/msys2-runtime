@@ -6,7 +6,15 @@
 #include <ucontext.h>
 #include <unistd.h>
 
-static __thread int tls_value = 17;
+/* Exercise Cygwin's own pthread-key TLS implementation rather than
+   compiler-emitted __thread storage: the latter requires the
+   toolchain's libgcc to provide __emutls_get_address (or native PE
+   TLS relocations), which is a cross-compiler/libgcc concern outside
+   this runtime, not something Cygwin itself implements. Per-thread
+   isolation via pthread_key_t/pthread_setspecific/pthread_getspecific
+   is implemented directly by this runtime and is what this probe
+   means to validate.  */
+static pthread_key_t tls_key;
 static volatile sig_atomic_t signal_seen;
 
 static void
@@ -19,9 +27,10 @@ static void *
 thread_main (void *arg)
 {
   int *result = (int *) arg;
+  static int child_slot = 29;
 
-  tls_value = 29;
-  *result = tls_value;
+  pthread_setspecific (tls_key, &child_slot);
+  *result = *(int *) pthread_getspecific (tls_key);
   return NULL;
 }
 
@@ -33,6 +42,7 @@ main (void)
   struct utsname name;
   ucontext_t context;
   pthread_t thread;
+  int main_slot = 17;
   int thread_value = 0;
   int sock;
 
@@ -47,11 +57,15 @@ main (void)
   if (getcontext (&context) != 0)
     return 5;
 
+  if (pthread_key_create (&tls_key, NULL) != 0)
+    return 6;
+  if (pthread_setspecific (tls_key, &main_slot) != 0)
+    return 6;
   if (pthread_create (&thread, NULL, thread_main, &thread_value) != 0)
     return 6;
   if (pthread_join (thread, NULL) != 0)
     return 7;
-  if (thread_value != 29 || tls_value != 17)
+  if (thread_value != 29 || *(int *) pthread_getspecific (tls_key) != 17)
     return 8;
 
   action.sa_handler = signal_handler;
