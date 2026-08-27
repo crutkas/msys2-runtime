@@ -7,7 +7,7 @@ if test "$#" -gt 1; then
   exit 2
 fi
 
-requested_root="${1:-${RUNNER_TEMP:-$PWD}/aarch64-msys-toolchain}"
+requested_root="${1:-/}"
 root="$(cygpath -u "$requested_root")"
 if test "$(cygpath -am /)" != "$(cygpath -am "$root")"; then
   echo "toolchain root must be the root of this private MSYS installation" >&2
