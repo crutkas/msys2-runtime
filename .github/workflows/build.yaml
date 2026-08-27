@@ -1279,7 +1279,7 @@ jobs:
             37a88c50ccf3bf9afd962055cfcbb8255ae2cda6:winsup/cygwin/create_posix_thread.cc `
             > x86_64-create-posix-thread-base.cc
           git show `
-            088c23f90d80451379d9a3b16b6598f9e6f10f45:winsup/cygwin/dcrt0.cc `
+            54999aa3c34d8c72635ddd8a3b88a56341f9000b:winsup/cygwin/dcrt0.cc `
             > x86_64-dcrt0-base.cc
           git show `
             4705528ab7c32a921a08def1bb8414a31deb75f5:winsup/cygwin/scripts/gendef `
