@@ -128,8 +128,13 @@ jobs:
           make -C build -j"$(nproc)"
           testsuite=$(find build -type d -path '*/winsup/testsuite' -print -quit)
           test -n "$testsuite"
-          make -C "$testsuite" check \
+          make -C "$testsuite" \
+            check-local \
+            winsup.api/argv_spawn.exe \
+            winsup.api/dll_unload.exe
+          make -C "$testsuite" check-TESTS \
             TESTS='winsup.api/argv_spawn winsup.api/dll_unload' \
+            TEST_SUITE_LOG=runtime-diagnostics.log \
             AM_COLOR_TESTS=always
 
       - name: Collect diagnostic metadata and logs only

@@ -341,7 +341,7 @@ winsup.api/dll_unload_helper.dll: \
 		$(LDFLAGS_FOR_TESTDLL) -shared -Wl,--export-all-symbols \
 		-o $@ $< $(LDADD_FOR_TESTDLL)
 
-winsup.api/dll_unload$(EXEEXT): winsup.api/dll_unload_helper.dll
+EXTRA_winsup_api_dll_unload_DEPENDENCIES = winsup.api/dll_unload_helper.dll
 
 # all tests
 TESTS = $(check_PROGRAMS) \
