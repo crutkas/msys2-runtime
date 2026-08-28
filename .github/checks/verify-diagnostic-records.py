@@ -459,10 +459,28 @@ def replace_once(lines, predicate, old, new):
     return changed
 
 
+def replace_record_once(lines, target_predicate, source_predicate):
+    changed = list(lines)
+    targets = [index for index, line in enumerate(changed)
+               if target_predicate(line)]
+    sources = [index for index, line in enumerate(changed)
+               if source_predicate(line)]
+    require(len(targets) == 1 and len(sources) == 1,
+            "record replacement matched %d targets and %d sources"
+            % (len(targets), len(sources)))
+    changed[targets[0]] = changed[sources[0]]
+    return changed
+
+
 def mutation_self_test(records):
     lines = [record[3] for record in records]
     positive = lambda line: (
         line.startswith("DIAG argv_spawn positive model=spawnv ")
+        and "filler_declared=0 " in line
+        and "tail_declared=1 " in line
+    )
+    duplicate_positive = lambda line: (
+        line.startswith("DIAG argv_spawn positive model=execv ")
         and "filler_declared=0 " in line
         and "tail_declared=1 " in line
     )
@@ -472,29 +490,47 @@ def mutation_self_test(records):
         "DIAG dll_unload runtime_root_crosscheck ")
     mutations = [
         ("unknown-record-kind",
-         lines + ["DIAG argv_spawn unexpected payload=1 result=pass"]),
+         replace_once(lines, positive, "DIAG argv_spawn positive ",
+                      "DIAG argv_spawn bogus_kind "),
+         "unknown argv_spawn kind 'bogus_kind'", "unknown-argv-kind"),
         ("unknown-field",
          replace_once(lines, positive, " result=pass",
-                      " unknown=1 result=pass")),
+                      " unknown=1 result=pass"),
+         "argv_spawn/positive fields are", "exact-schema"),
         ("duplicate-field",
          replace_once(lines, positive, " result=pass",
-                      " result=fail result=pass")),
+                      " result=fail result=pass"),
+         "repeats field 'result'", "duplicate-field"),
         ("derived-failure",
-         replace_once(lines, derived, "result=pass", "result=fail")),
+         replace_once(lines, derived, "result=pass", "result=fail"),
+         "derived has result='fail', expected 'pass'", "derived-result"),
         ("dll-summary-failure",
-         replace_once(lines, dll_summary, "result=pass", "result=fail")),
+         replace_once(lines, dll_summary, "result=pass", "result=fail"),
+         "dll summary has result='fail', expected 'pass'",
+         "dll-summary-result"),
         ("crosscheck-not-performed",
-         replace_once(lines, crosscheck, "performed=1", "performed=0")),
-        ("missing-record", lines[1:]),
-        ("extra-duplicate-record", lines + [lines[0]]),
+         replace_once(lines, crosscheck, "performed=1", "performed=0"),
+         "runtime_root crosscheck has performed='0', expected '1'",
+         "runtime-root-performed"),
+        ("missing-record", lines[1:],
+         "expected exactly 220 DIAG records, saw 219", "exact-total"),
+        ("extra-duplicate-record",
+         replace_record_once(lines, positive, duplicate_positive),
+         "duplicate positive record ('execv', '0', '1')",
+         "duplicate-positive-key"),
     ]
-    for name, mutated in mutations:
+    outcomes = []
+    for name, mutated, expected_error, guard in mutations:
         try:
             verify_records(parse_lines(mutated, "mutation-" + name))
-        except RecordError:
+        except RecordError as error:
+            require(expected_error in str(error),
+                    "mutation %r was rejected for the wrong reason: %s"
+                    % (name, error))
+            outcomes.append((name, guard))
             continue
         raise RecordError("mutation %r was accepted" % name)
-    return len(mutations)
+    return outcomes
 
 
 def main(argv):
@@ -512,7 +548,10 @@ def main(argv):
     print("argv_raw_fixtures=%d" % argv_counts["raw_fixtures"])
     print("unload_cycles=%d" % unload_counts["cycles"])
     print("unload_controls=%d" % unload_counts["controls"])
-    print("record_mutation_fixtures=%d" % mutations)
+    for name, guard in mutations:
+        print("record_mutation=%s rejected_by=%s result=pass"
+              % (name, guard))
+    print("record_mutation_fixtures=%d" % len(mutations))
     print("record_contract=closed")
     print("records_verified=ok")
     return 0

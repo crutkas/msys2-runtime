@@ -764,11 +764,11 @@ def require_session_erratum(parsed, invalid_session, correct_session,
 
 
 def main(argv):
-    if len(argv) < 11:
+    if len(argv) < 12:
         raise TrailerError(
             "usage: BASE LEGACY_HEAD LEGACY_SESSION INVALID_HEAD"
             " INVALID_RECORDED_SESSION PRE_ERRATUM_HEAD PRE_ERRATUM_SESSION"
-            " HEAD SESSION DCO REVOKED...")
+            " ERRATUM_HEAD HEAD SESSION DCO REVOKED...")
 
     initialize_git_environment()
     environment_fixtures = environment_self_test()
@@ -784,10 +784,11 @@ def main(argv):
     invalid_session = argv[5]
     pre_erratum_head = resolve_exact_commit("pre-erratum head", argv[6])
     pre_erratum_session = argv[7]
-    head = resolve_exact_commit("head", argv[8])
-    session = argv[9]
-    dco_text = argv[10]
-    revoked_args = argv[11:]
+    erratum_head = resolve_exact_commit("erratum head", argv[8])
+    head = resolve_exact_commit("head", argv[9])
+    session = argv[10]
+    dco_text = argv[11]
+    revoked_args = argv[12:]
 
     for label, value in (("legacy session", legacy_session),
                          ("invalid recorded session", invalid_session),
@@ -823,9 +824,12 @@ def main(argv):
         raise TrailerError(
             "invalid-session head %s is not an ancestor of pre-erratum head %s"
             % (invalid_head, pre_erratum_head))
-    if not is_ancestor(pre_erratum_head, head):
-        raise TrailerError("pre-erratum head %s is not an ancestor of head %s"
-                           % (pre_erratum_head, head))
+    if not is_ancestor(pre_erratum_head, erratum_head):
+        raise TrailerError("pre-erratum head %s is not an ancestor of erratum"
+                           " head %s" % (pre_erratum_head, erratum_head))
+    if not is_ancestor(erratum_head, head):
+        raise TrailerError("erratum head %s is not an ancestor of head %s"
+                           % (erratum_head, head))
 
     invalid_commits = [
         canonical_oid("erratum-covered commit", value.decode("ascii"))
@@ -841,11 +845,11 @@ def main(argv):
         canonical_oid("correction commit", value.decode("ascii"))
         for value in git_bytes(
             "rev-list", "--reverse",
-            "%s..%s" % (pre_erratum_head, head)).split()
+            "%s..%s" % (pre_erratum_head, erratum_head)).split()
     ]
-    if correction_commits != [head]:
+    if correction_commits != [erratum_head]:
         raise TrailerError(
-            "session erratum must be exactly one correcting head commit")
+            "session erratum must be exactly one correcting commit")
     invalid_commit_set = set(invalid_commits)
 
     if len(revoked_args) != EXPECTED_REVOKED:
@@ -878,7 +882,7 @@ def main(argv):
 
     previous = base
     head_tree = None
-    head_record = None
+    erratum_record = None
     for oid in commits:
         commit_session = session.encode("ascii")
         for boundary, boundary_session in boundaries:
@@ -896,12 +900,12 @@ def main(argv):
                 % (oid, parsed["parents"][0], previous))
         previous = oid
         head_tree = parsed["tree"]
-        if oid == head:
-            head_record = parsed
+        if oid == erratum_head:
+            erratum_record = parsed
         if oid in invalid_commit_set:
             print("commit_ok=%s recorded_session=%s session_claim=invalid"
                   " erratum=%s"
-                  % (oid, commit_session.decode("ascii"), head))
+                  % (oid, commit_session.decode("ascii"), erratum_head))
         else:
             print("commit_ok=%s session=%s"
                   % (oid, commit_session.decode("ascii")))
@@ -909,10 +913,10 @@ def main(argv):
     if previous != head:
         raise TrailerError("linear walk ended at %s, expected %s"
                            % (previous, head))
-    if head_record is None:
-        raise TrailerError("correcting head was not parsed")
+    if erratum_record is None:
+        raise TrailerError("correcting commit was not parsed")
     require_session_erratum(
-        head_record, invalid_session, session, invalid_commits)
+        erratum_record, invalid_session, session, invalid_commits)
 
     print("classification=diagnostic")
     print("consumable=false")
@@ -929,12 +933,13 @@ def main(argv):
     print("session_erratum_commits=%d" % len(invalid_commits))
     print("invalid_recorded_session=%s" % invalid_session)
     print("correct_cli_session=%s" % session)
-    print("session_erratum_commit=%s" % head)
+    print("session_erratum_commit=%s" % erratum_head)
     print("audited_commits=%d" % len(commits))
     print("base=%s" % base)
     print("legacy_head=%s" % legacy_head)
     print("invalid_session_head=%s" % invalid_head)
     print("pre_erratum_head=%s" % pre_erratum_head)
+    print("erratum_head=%s" % erratum_head)
     print("head=%s" % head)
     print("tree=%s" % head_tree)
     return 0
