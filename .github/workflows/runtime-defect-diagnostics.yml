@@ -15,11 +15,17 @@ concurrency:
 
 env:
   DIAGNOSTIC_BASE: 8fbd9808447ee78ed485deead9b79cd1e40c07b7
-  REVOKED_BASELINE: a527ace21c23b763bb96841745f0e2d8cd984f4a
   LEGACY_DIAGNOSTIC_HEAD: ab51b0983aec24afd45681340c3b96cfb03d8ca6
   LEGACY_COPILOT_SESSION: 3d80604e-83b4-423e-aa7b-6ab155a5ec8f
-  COPILOT_SESSION: cd672707-4a81-473e-83de-5d7176b3c6bb
+  PRIOR_DIAGNOSTIC_HEAD: bd7d9d7262bf03495c2d8b28f7f9105a919018d3
+  PRIOR_COPILOT_SESSION: cd672707-4a81-473e-83de-5d7176b3c6bb
+  COPILOT_SESSION: 076e09d2-a5a3-4f6f-9148-d4a81881aec3
   DCO_IDENTITY: Clint Rutkas <clint@rutkas.com>
+  REVOKED_COMMITS: >-
+    a527ace21c23b763bb96841745f0e2d8cd984f4a
+    9e616c568dab8a36288456f14dd76e078af41c2d
+    18993f46caab8c71cdb5edaacb79999c87704f63
+    2fc8e6296292a016a019717ff74927324df591c8
 
 jobs:
   diagnostic-provenance:
@@ -41,19 +47,57 @@ jobs:
           test "${GITHUB_REF#refs/pull/}" = "${GITHUB_REF}"
           git fetch --no-tags origin \
             "+refs/heads/msys2-3.6.10:refs/remotes/origin/msys2-3.6.10"
-          git fetch --no-tags origin "${REVOKED_BASELINE}"
           test "$(git rev-parse refs/remotes/origin/msys2-3.6.10)" = \
             "${DIAGNOSTIC_BASE}"
+
+          read -r -a revoked <<< "${REVOKED_COMMITS}"
+          test "${#revoked[@]}" -eq 4
+          for commit in "${revoked[@]}"; do
+            git fetch --no-tags origin "$commit"
+          done
+
           bash .github/checks/audit-diagnostic-commits.sh \
-            "${DIAGNOSTIC_BASE}" "${REVOKED_BASELINE}" "${GITHUB_SHA}" \
+            "${DIAGNOSTIC_BASE}" \
             "${LEGACY_DIAGNOSTIC_HEAD}" "${LEGACY_COPILOT_SESSION}" \
-            "${COPILOT_SESSION}" "${DCO_IDENTITY}" | tee provenance.txt
+            "${PRIOR_DIAGNOSTIC_HEAD}" "${PRIOR_COPILOT_SESSION}" \
+            "${GITHUB_SHA}" "${COPILOT_SESSION}" "${DCO_IDENTITY}" \
+            "${revoked[@]}" | tee provenance.txt
+
+      - name: Record blocked native lanes
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > blocked-lanes.txt <<'EOF'
+          classification=diagnostic
+          consumable=false
+          lane=native-arm64
+          status=blocked
+          reason=no-derivable-native-build-recipe
+          evidence_run=33155035777
+          evidence_job=98797414692
+          evidence_job_name=msys2-tests CLANGARM64-clang
+          evidence_runner_label=windows-11-arm
+          detail=That job sets up CLANGARM64, adds the staging repository,
+          detail=updates, downloads the x64 "install" artifact and runs
+          detail=msys2-tests.  It contains no runtime configure or make step,
+          detail=so no ARM64 build recipe can be derived from it, and its own
+          detail=uname reports an ARM64 host running an x86_64 MSYS process
+          detail=(MINGW64_NT-10.0-26200-ARM64 ... x86_64 Msys).
+          detail=Reproducing it would also require consuming a downloaded
+          detail=build artifact, which this workflow must never do.
+          conclusion=No ARM64 claim is made by this workflow.  The native lane
+          conclusion=stays blocked rather than being reported in a shape that
+          conclusion=could be mistaken for a passing native result.
+          EOF
+          cat blocked-lanes.txt
 
       - name: Upload diagnostic provenance (non-consumable)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: diagnostic-provenance-non-consumable-${{ github.sha }}-${{ github.run_attempt }}
-          path: provenance.txt
+          path: |
+            provenance.txt
+            blocked-lanes.txt
           if-no-files-found: error
           retention-days: 30
 
@@ -68,6 +112,16 @@ jobs:
           ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Assert runner architecture
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & .github/checks/assert-runner-architecture.ps1 `
+            -ExpectedNativeMachine AMD64 `
+            -ExpectedProcessArchitecture X64 `
+            -EvidencePath runner-architecture-diagnostic.txt
+          Get-Content -LiteralPath runner-architecture-diagnostic.txt
 
       - name: Set up run-private mutable MSYS2 toolchain
         id: msys2
@@ -114,6 +168,18 @@ jobs:
             -ExpectedRelativePath $expectedRelativePath `
             -EvidencePath msys2-root-diagnostic.txt
 
+      - name: Assert MSYS process architecture
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          machine=$(uname -m)
+          test "$machine" = x86_64
+          printf 'classification=diagnostic\nconsumable=false\n' \
+            > msys2-architecture-diagnostic.txt
+          printf 'msys_machine=%s\nmsys_uname=%s\n' \
+            "$machine" "$(uname -a)" >> msys2-architecture-diagnostic.txt
+          cat msys2-architecture-diagnostic.txt
+
       - name: Build runtime and run targeted x64 diagnostics
         shell: msys2 {0}
         run: |
@@ -131,7 +197,8 @@ jobs:
           mkdir -p "$testsuite/testinst/tmp"
           make -C "$testsuite" \
             winsup.api/argv_spawn.exe \
-            winsup.api/dll_unload.exe
+            winsup.api/dll_unload.exe \
+            winsup.api/dll_unload_helper.dll
           test_status=0
           make -C "$testsuite" check-TESTS \
             check_PROGRAMS='winsup.api/argv_spawn.exe winsup.api/dll_unload.exe' \
@@ -169,7 +236,13 @@ jobs:
             "${GITHUB_RUN_ID}" "${GITHUB_RUN_ATTEMPT}" "${GITHUB_JOB}" \
             >> "$evidence/identity.txt"
           pacman -Q > "$evidence/packages.txt"
-          cp msys2-root-diagnostic.txt "$evidence/"
+          for report in msys2-root-diagnostic.txt \
+            runner-architecture-diagnostic.txt \
+            msys2-architecture-diagnostic.txt; do
+            if [[ -f "$report" ]]; then
+              cp "$report" "$evidence/"
+            fi
+          done
           find build -type f \( -name '*.log' -o -name '*.trs' \) \
             -exec cp --parents '{}' "$evidence/logs" \;
           (

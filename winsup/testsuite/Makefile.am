@@ -333,6 +333,10 @@ winsup_api_devdsp_LDADD = -lwinmm $(LDADD)
 # Build a Cygwin-aware helper DLL against the runtime under test.
 check_DATA = winsup.api/dll_unload_helper.dll
 
+# The helper is built by a custom rule, so automake cannot infer it as a
+# source and it has to be distributed explicitly.
+EXTRA_DIST = winsup.api/dll_unload_helper.c
+
 winsup.api/dll_unload_helper.dll: \
 	$(srcdir)/winsup.api/dll_unload_helper.c \
 	$(builddir)/../cygwin/libmsys-2.0.a
