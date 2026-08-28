@@ -33,5 +33,5 @@ while read -r commit; do
   fi
 done < <(git rev-list --reverse "$base..$head")
 
-printf 'base=%s\nhead=%s\ntree=%s\n' \
+printf 'classification=diagnostic\nconsumable=false\nbase=%s\nhead=%s\ntree=%s\n' \
   "$base" "$head" "$(git rev-parse "$head^{tree}")"

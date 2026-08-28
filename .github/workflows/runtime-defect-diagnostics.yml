@@ -1,4 +1,4 @@
-name: ARM64 runtime admission
+name: Runtime defect diagnostics (non-consumable)
 
 on:
   push:
@@ -10,17 +10,18 @@ permissions:
   contents: read
 
 concurrency:
-  group: arm64-runtime-admission-${{ github.ref }}
+  group: runtime-defect-diagnostics-${{ github.ref }}
   cancel-in-progress: false
 
 env:
-  ADMISSION_BASE: 8fbd9808447ee78ed485deead9b79cd1e40c07b7
+  DIAGNOSTIC_BASE: 8fbd9808447ee78ed485deead9b79cd1e40c07b7
   REVOKED_BASELINE: a527ace21c23b763bb96841745f0e2d8cd984f4a
   COPILOT_SESSION: 3d80604e-83b4-423e-aa7b-6ab155a5ec8f
   DCO_IDENTITY: Clint Rutkas <clint@rutkas.com>
 
 jobs:
-  provenance:
+  diagnostic-provenance:
+    name: Diagnostic provenance (non-consumable)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout direct head
@@ -40,21 +41,22 @@ jobs:
             "+refs/heads/msys2-3.6.10:refs/remotes/origin/msys2-3.6.10"
           git fetch --no-tags origin "${REVOKED_BASELINE}"
           test "$(git rev-parse refs/remotes/origin/msys2-3.6.10)" = \
-            "${ADMISSION_BASE}"
-          bash .github/checks/audit-admission-commits.sh \
-            "${ADMISSION_BASE}" "${REVOKED_BASELINE}" "${GITHUB_SHA}" \
+            "${DIAGNOSTIC_BASE}"
+          bash .github/checks/audit-diagnostic-commits.sh \
+            "${DIAGNOSTIC_BASE}" "${REVOKED_BASELINE}" "${GITHUB_SHA}" \
             "${COPILOT_SESSION}" "${DCO_IDENTITY}" | tee provenance.txt
 
-      - name: Upload provenance
+      - name: Upload diagnostic provenance (non-consumable)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: provenance-${{ github.sha }}-${{ github.run_attempt }}
+          name: diagnostic-provenance-non-consumable-${{ github.sha }}-${{ github.run_attempt }}
           path: provenance.txt
           if-no-files-found: error
           retention-days: 30
 
-  x64-regressions:
-    needs: provenance
+  x64-diagnostics:
+    name: x64 runtime diagnostics (non-consumable)
+    needs: diagnostic-provenance
     runs-on: windows-2025
     steps:
       - name: Checkout direct head
@@ -64,12 +66,12 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Set up private MSYS2 root
+      - name: Set up run-private mutable MSYS2 toolchain
         id: msys2
         uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884
         with:
           msystem: MSYS
-          location: ${{ runner.temp }}\msys64-runtime-admission
+          location: ${{ runner.temp }}\msys2-runtime-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-nomatrix
           path-type: minimal
           update: true
           cache: false
@@ -89,21 +91,24 @@ jobs:
             mingw-w64-cross-gcc
             mingw-w64-cross-zlib
             perl
+            xmlto
             zlib-devel
 
-      - name: Reject shared MSYS2 root
+      - name: Prove run-private MSYS2 root
         shell: pwsh
         env:
           MSYS2_LOCATION: ${{ steps.msys2.outputs.msys2-location }}
         run: |
           $ErrorActionPreference = 'Stop'
-          if ($env:MSYS2_LOCATION.TrimEnd('\') -ieq 'C:\msys64') {
-            throw 'The admission build must not use shared C:\msys64'
-          }
-          "msys2_location=$env:MSYS2_LOCATION" |
-            Out-File -FilePath msys2-location.txt -Encoding ascii
+          $leaf = "msys2-runtime-diagnostics-$env:GITHUB_RUN_ID-" +
+            "$env:GITHUB_RUN_ATTEMPT-$env:GITHUB_JOB-nomatrix"
+          & .github/checks/assert-private-msys2-root.ps1 `
+            -BasePath $env:RUNNER_TEMP `
+            -CandidatePath $env:MSYS2_LOCATION `
+            -ExpectedLeaf $leaf `
+            -EvidencePath msys2-root-diagnostic.txt
 
-      - name: Build runtime and targeted x64 controls
+      - name: Build runtime and run targeted x64 diagnostics
         shell: msys2 {0}
         run: |
           set -euo pipefail
@@ -111,7 +116,7 @@ jobs:
           mkdir build
           (
             cd build
-            ../configure --disable-dependency-tracking --disable-doc \
+            ../configure --disable-dependency-tracking \
               --with-msys2-runtime-commit="${GITHUB_SHA}"
           )
           make -C build -j"$(nproc)"
@@ -121,19 +126,24 @@ jobs:
             TESTS='winsup.api/argv_spawn winsup.api/dll_unload' \
             AM_COLOR_TESTS=always
 
-      - name: Collect x64 evidence
+      - name: Collect diagnostic metadata and logs only
         if: ${{ always() }}
         shell: msys2 {0}
         run: |
           set -euo pipefail
-          evidence=admission-evidence/x64
+          evidence=diagnostic-evidence-non-consumable/x64
           mkdir -p "$evidence/logs"
-          printf 'head=%s\ntree=%s\nrun=%s\nattempt=%s\n' \
-            "$(git rev-parse HEAD)" "$(git rev-parse 'HEAD^{tree}')" \
-            "${GITHUB_RUN_ID}" "${GITHUB_RUN_ATTEMPT}" \
+          printf '%s\n' \
+            'classification=diagnostic' \
+            'consumable=false' \
+            'toolchain=moving-windows-2025-setup-msys2-update-true-unversioned-packages' \
             > "$evidence/identity.txt"
+          printf 'head=%s\ntree=%s\nrun=%s\nattempt=%s\njob=%s\n' \
+            "$(git rev-parse HEAD)" "$(git rev-parse 'HEAD^{tree}')" \
+            "${GITHUB_RUN_ID}" "${GITHUB_RUN_ATTEMPT}" "${GITHUB_JOB}" \
+            >> "$evidence/identity.txt"
           pacman -Q > "$evidence/packages.txt"
-          cp msys2-location.txt "$evidence/"
+          cp msys2-root-diagnostic.txt "$evidence/"
           find build -type f \( -name '*.log' -o -name '*.trs' \) \
             -exec cp --parents '{}' "$evidence/logs" \;
           (
@@ -142,11 +152,11 @@ jobs:
               | sort -z | xargs -0 sha256sum > SHA256SUMS
           )
 
-      - name: Upload x64 evidence
+      - name: Upload diagnostic metadata and logs (non-consumable)
         if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: x64-regressions-${{ github.sha }}-${{ github.run_attempt }}
-          path: admission-evidence/x64
+          name: x64-runtime-diagnostics-non-consumable-${{ github.sha }}-${{ github.run_attempt }}
+          path: diagnostic-evidence-non-consumable/x64
           if-no-files-found: error
           retention-days: 30
