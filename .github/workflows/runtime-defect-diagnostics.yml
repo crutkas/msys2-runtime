@@ -131,11 +131,25 @@ jobs:
           make -C "$testsuite" \
             winsup.api/argv_spawn.exe \
             winsup.api/dll_unload.exe
+          test_status=0
           make -C "$testsuite" check-TESTS \
             check_PROGRAMS='winsup.api/argv_spawn.exe winsup.api/dll_unload.exe' \
             TESTS='winsup.api/argv_spawn winsup.api/dll_unload' \
             TEST_SUITE_LOG=runtime-diagnostics.log \
-            AM_COLOR_TESTS=always
+            AM_COLOR_TESTS=always || test_status=$?
+          if (( test_status != 0 )); then
+            for log in \
+              "$testsuite"/winsup.api/argv_spawn*.log \
+              "$testsuite"/winsup.api/dll_unload*.log \
+              "$testsuite"/runtime-diagnostics.log; do
+              if [[ -f "$log" ]]; then
+                echo "::group::${log#$testsuite/}"
+                cat "$log"
+                echo "::endgroup::"
+              fi
+            done
+            exit "$test_status"
+          fi
 
       - name: Collect diagnostic metadata and logs only
         if: ${{ always() }}
