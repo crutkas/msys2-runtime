@@ -1298,13 +1298,13 @@ jobs:
             $lines.Add("PRE-build_argv raw buffer is byte-for-byte correct at the long argument's location (offset $matchIndex).")
           } else {
             $lines.Add("PRE-build_argv raw buffer is ALREADY corrupted at the long argument's location (offset $matchIndex).")
-            $lines.AddRange($preDiffs)
+            $lines.AddRange([string[]] $preDiffs)
           }
           if ($postDiffs.Count -eq 0) {
             $lines.Add("POST-build_argv raw buffer is byte-for-byte correct at the long argument's location (offset $matchIndex).")
           } else {
             $lines.Add("POST-build_argv raw buffer is corrupted at the long argument's location (offset $matchIndex).")
-            $lines.AddRange($postDiffs)
+            $lines.AddRange([string[]] $postDiffs)
           }
           if ($preDiffs.Count -eq 0 -and $postDiffs.Count -gt 0) {
             $lines.Add('CONCLUSION: build_argv ()/quoted ()/globify () introduce the corruption; sys_wcstombs_no_path ()/GetCommandLineW () are exonerated.')
@@ -1321,25 +1321,21 @@ jobs:
         run: |
           # Diagnostic-only (fork-only investigation).  The prior step
           # proved the corruption is introduced inside build_argv ()
-          # itself.  Of this test corpus, 'quote"inside' is the only
-          # argument containing a glob-special character
-          # (a literal '"'), so it is the only one for which globify ()
-          # does anything beyond its immediate `strpbrk` early return.
-          # Re-run the same child process twice, once with the full
-          # corpus (control, expected to reproduce the corruption) and
-          # once with 'quote"inside' removed (test, expected to come out
-          # clean if globify ()'s handling of that argument is the
-          # trigger), and directly diff the long trailing argument's hex
-          # dump in each case.
+          # itself.  Progressively shrink the corpus -- full corpus, then
+          # with 'quote"inside' (the only argument containing a
+          # glob-special character) removed, then the long argument
+          # completely alone with no other arguments at all -- and diff
+          # the long trailing argument's exact bytes at each step, to
+          # determine whether the corruption depends on some other
+          # argument's processing or is intrinsic to the long argument
+          # itself.
           $runtime = (Resolve-Path `
             aarch64-runtime-validation/aarch64-runtime-validation).Path
           $child = Join-Path $runtime 'aarch64-argv-dump.exe'
           $long = ('0123456789abcdef' * 40)
           $env:ARM64_ARGV_MARKER = 'native-arm64-environment'
-          $expectedHex = [Convert]::ToHexString(
-            [Text.Encoding]::UTF8.GetBytes($long)).ToLower()
 
-          function Get-LongArgHex([string[]] $corpus, [string] $label) {
+          function Get-LongArgDiff([string[]] $corpus, [string] $label) {
             $outPath = Join-Path $env:RUNNER_TEMP "isolate-$label.txt"
             $env:ARM64_ARGV_OUTPUT = $outPath
             $startInfo = [Diagnostics.ProcessStartInfo]::new($child)
@@ -1359,29 +1355,52 @@ jobs:
               if ($parts.Count -eq 2) { $values[$parts[0]] = $parts[1] }
             }
             $lastIndex = [int]$values.argc - 1
-            return $values["arg.$lastIndex.hex"]
+            $actualHex = $values["arg.$lastIndex.hex"]
+            $actualBytes = for ($i = 0; $i -lt $actualHex.Length; $i += 2) {
+              [Convert]::ToByte($actualHex.Substring($i, 2), 16)
+            }
+            $diffs = [Collections.Generic.List[string]]::new()
+            for ($k = 0; $k -lt $expected.Length -and $k -lt $actualBytes.Length; ++$k) {
+              if ($actualBytes[$k] -ne $expected[$k]) {
+                $diffs.Add("byte $k (relative to long argument's own start): expected 0x$($expected[$k].ToString('x2')) got 0x$($actualBytes[$k].ToString('x2'))")
+              }
+            }
+            if ($actualBytes.Length -ne $expected.Length) {
+              $diffs.Add("length mismatch: expected $($expected.Length) bytes, got $($actualBytes.Length) bytes")
+            }
+            return $diffs
           }
 
+          $expected = [Text.Encoding]::ASCII.GetBytes($long)
           $withQuoted = @('', 'alpha', 'ISO-8859-1', 'LATIN1', '--to-code=UTF-8',
             'C:\path with spaces\iconv-latin1.bin', 'repeat--aaabbbccc111',
             'quote"inside', 'trail\\', 'café-中-🙂', $long)
           $withoutQuoted = @('', 'alpha', 'ISO-8859-1', 'LATIN1', '--to-code=UTF-8',
             'C:\path with spaces\iconv-latin1.bin', 'repeat--aaabbbccc111',
             'trail\\', 'café-中-🙂', $long)
+          $longOnly = @($long)
 
-          $hexWithQuoted = Get-LongArgHex $withQuoted 'with-quoted'
-          $hexWithoutQuoted = Get-LongArgHex $withoutQuoted 'without-quoted'
+          $diffsWithQuoted = Get-LongArgDiff $withQuoted 'with-quoted'
+          $diffsWithoutQuoted = Get-LongArgDiff $withoutQuoted 'without-quoted'
+          $diffsLongOnly = Get-LongArgDiff $longOnly 'long-only'
 
           $summaryPath = Join-Path $runtime 'globify-isolation.txt'
           $lines = [Collections.Generic.List[string]]::new()
-          $lines.Add("Control (with 'quote`"inside' present): long argument $(if ($hexWithQuoted -eq $expectedHex) { 'MATCHES expected' } else { 'is CORRUPTED' }).")
-          $lines.Add("Test (without 'quote`"inside'): long argument $(if ($hexWithoutQuoted -eq $expectedHex) { 'MATCHES expected' } else { 'is CORRUPTED' }).")
-          if ($hexWithQuoted -ne $expectedHex -and $hexWithoutQuoted -eq $expectedHex) {
-            $lines.Add("CONCLUSION: removing 'quote`"inside' eliminates the corruption; globify ()'s processing of that argument (the only corpus entry containing a glob-special character) is the trigger.")
-          } elseif ($hexWithQuoted -eq $expectedHex) {
-            $lines.Add('CONCLUSION: control run unexpectedly did not reproduce the corruption in this job; isolation result is inconclusive for this run.')
+          function Describe([string] $label, [Collections.Generic.List[string]] $diffs) {
+            if ($diffs.Count -eq 0) { return "$label`: long argument MATCHES expected." }
+            return "$label`: long argument is CORRUPTED -- " + ($diffs -join '; ')
+          }
+          $lines.Add((Describe "Full corpus (with 'quote`"inside')" $diffsWithQuoted))
+          $lines.Add((Describe "Without 'quote`"inside'" $diffsWithoutQuoted))
+          $lines.Add((Describe 'Long argument only (no other arguments at all)' $diffsLongOnly))
+          if ($diffsWithQuoted.Count -gt 0 -and $diffsWithoutQuoted.Count -eq 0) {
+            $lines.Add("CONCLUSION: removing 'quote`"inside' eliminates the corruption; globify ()'s processing of that argument is the trigger.")
+          } elseif ($diffsLongOnly.Count -gt 0) {
+            $lines.Add('CONCLUSION: the long argument is corrupted even when it is the ONLY argument on the command line, with no other arguments and no quoted()/globify() special-case processing anywhere else in the command line. The trigger is intrinsic to processing this argument itself (its length/content/position), not caused by any other argument.')
+          } elseif ($diffsWithoutQuoted.Count -gt 0) {
+            $lines.Add("CONCLUSION: removing 'quote`"inside' did NOT eliminate the corruption, but the long argument alone (no other arguments) is clean; some OTHER argument in the reduced corpus (not 'quote`"inside') is responsible.")
           } else {
-            $lines.Add("CONCLUSION: removing 'quote`"inside' did NOT eliminate the corruption; some other argument or mechanism is responsible.")
+            $lines.Add('CONCLUSION: all three variants are clean in this run; corruption did not reproduce.')
           }
           $lines | Tee-Object -FilePath $summaryPath
 
