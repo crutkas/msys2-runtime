@@ -1073,6 +1073,12 @@ jobs:
           aarch64-pc-cygwin-objdump -dr --no-show-raw-insn \
             "$cygwin_build/strfuncs.o" \
             > "aarch64-runtime-validation/disasm/strfuncs.dis" 2>&1 || true
+          aarch64-pc-cygwin-objdump -dlS --no-show-raw-insn \
+            "$cygwin_build/dcrt0.o" \
+            > "aarch64-runtime-validation/disasm/dcrt0.src.dis" 2>&1 || true
+          aarch64-pc-cygwin-objdump -dlS --no-show-raw-insn \
+            "$cygwin_build/strfuncs.o" \
+            > "aarch64-runtime-validation/disasm/strfuncs.src.dis" 2>&1 || true
           aarch64-pc-cygwin-objdump -t \
             "$cygwin_build/dcrt0.o" \
             > "aarch64-runtime-validation/disasm/dcrt0.symbols" 2>&1 || true
