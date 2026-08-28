@@ -320,7 +320,7 @@ check_PROGRAMS = \
 # flags for linking against the just built implib
 # TODO: use -nostdinc and to-be-installed headers as well?
 LDFLAGS_FOR_TESTDLL = -nodefaultlibs
-LDADD_FOR_TESTDLL = $(builddir)/../cygwin/libcygwin.a -lgcc -lkernel32 -luser32
+LDADD_FOR_TESTDLL = $(builddir)/../cygwin/libmsys-2.0.a -lgcc -lkernel32 -luser32
 
 # flags for test executables
 AM_CPPFLAGS = -I$(srcdir)/libltp/include
@@ -335,7 +335,7 @@ check_DATA = winsup.api/dll_unload_helper.dll
 
 winsup.api/dll_unload_helper.dll: \
 	$(srcdir)/winsup.api/dll_unload_helper.c \
-	$(builddir)/../cygwin/libcygwin.a
+	$(builddir)/../cygwin/libmsys-2.0.a
 	$(AM_V_at)$(MKDIR_P) $(@D)
 	$(AM_V_CCLD)$(CC) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) \
 		$(LDFLAGS_FOR_TESTDLL) -shared -Wl,--export-all-symbols \
