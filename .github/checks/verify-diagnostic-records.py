@@ -195,9 +195,20 @@ def verify_dll_unload(records):
     require(len(runtime) == 1, "expected exactly one runtime binding record")
     binding = runtime[0]
     require(binding.get("result") == "pass", "runtime binding is not pass")
-    for key in ("expected", "loaded", "volume", "index"):
+    for key in ("expected", "loaded", "final", "volume", "index"):
         require(binding.get(key) not in (None, "", "-"),
                 "runtime binding lacks %s" % key)
+
+    executable = by_kind.get("executable", [])
+    require(len(executable) == 1, "expected exactly one executable record")
+    require(executable[0].get("path") not in (None, "", "-"),
+            "executable record lacks a path")
+
+    derived = by_kind.get("derived", [])
+    require(len(derived) == 1, "expected exactly one derived-path record")
+    for key in ("helper", "runtime"):
+        require(derived[0].get(key) not in (None, "", "-"),
+                "derived record lacks %s" % key)
 
     export = by_kind.get("export", [])
     require(len(export) == 1, "expected exactly one export record")

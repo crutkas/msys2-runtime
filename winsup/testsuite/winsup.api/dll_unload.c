@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <unistd.h>
 
 /* Registration modes.  winsup.api/dll_unload_helper.c mirrors these. */
@@ -33,7 +34,7 @@
 
 #define DLL_UNLOAD_RUNTIME_NAME "msys-2.0.dll"
 #define DLL_UNLOAD_HELPER_LEAF "/dll_unload_helper.dll"
-#define DLL_UNLOAD_RUNTIME_LEAF "/testinst/bin/" DLL_UNLOAD_RUNTIME_NAME
+#define DLL_UNLOAD_RUNTIME_LEAF "/../testinst/bin/" DLL_UNLOAD_RUNTIME_NAME
 
 /* Registration order inside the helper is A, C, X, Y.  dll_list::detach
    replays the __cxa chain last-in first-out and only afterwards runs the DLL
@@ -50,12 +51,31 @@ typedef const char *(*path_fn) (void);
 typedef int (*identity_fn) (unsigned long *, unsigned long *, unsigned long *);
 typedef int (*bound_fn) (const char *);
 typedef int (*atexit_export_fn) (void (*) (void));
+typedef DWORD (WINAPI *final_path_fn) (HANDLE, LPSTR, DWORD, DWORD);
+
+/* Resolved at runtime because the testsuite does not select a Windows
+   version new enough for the w32api header to expose this entry point. */
+static final_path_fn
+resolve_final_path (void)
+{
+  static final_path_fn cached;
+
+  if (!cached)
+    {
+      HMODULE kernel = GetModuleHandleA ("kernel32.dll");
+      if (kernel)
+	cached = (final_path_fn) (void *)
+	  GetProcAddress (kernel, "GetFinalPathNameByHandleA");
+    }
+  return cached;
+}
 
 struct file_identity
 {
   DWORD volume;
   DWORD index_high;
   DWORD index_low;
+  char final_path[MAX_PATH];
 };
 
 static char helper_log_path[MAX_PATH];
@@ -128,10 +148,12 @@ static int
 query_identity (const char *win32_path, struct file_identity *out)
 {
   BY_HANDLE_FILE_INFORMATION info;
+  final_path_fn final_path = resolve_final_path ();
+  DWORD final;
   BOOL ok;
   HANDLE file;
 
-  if (!win32_path || !*win32_path)
+  if (!win32_path || !*win32_path || !final_path)
     return 0;
   file = CreateFileA (win32_path, 0,
 		      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
@@ -139,9 +161,11 @@ query_identity (const char *win32_path, struct file_identity *out)
   if (file == INVALID_HANDLE_VALUE)
     return 0;
   memset (&info, 0, sizeof (info));
+  memset (out->final_path, 0, sizeof (out->final_path));
   ok = GetFileInformationByHandle (file, &info);
+  final = final_path (file, out->final_path, sizeof (out->final_path), 0);
   CloseHandle (file);
-  if (!ok)
+  if (!ok || final == 0 || final >= sizeof (out->final_path))
     return 0;
   out->volume = info.dwVolumeSerialNumber;
   out->index_high = info.nFileIndexHigh;
@@ -153,7 +177,8 @@ static int
 same_file (const struct file_identity *a, const struct file_identity *b)
 {
   return a->volume == b->volume && a->index_high == b->index_high
-	 && a->index_low == b->index_low;
+	 && a->index_low == b->index_low
+	 && strcasecmp (a->final_path, b->final_path) == 0;
 }
 
 /* Mirrors the helper resolution so the two results can be compared. */
@@ -197,35 +222,26 @@ resolve_runtime_atexit (const char *expected_win32_path,
 }
 
 /* Locate the directory of the running executable, returning the offset of
-   the separator that ends it.  */
+   the separator that ends it.  The runtime lives one level up, but that is
+   expressed with a relative component rather than by counting separators,
+   so the derivation does not depend on how deep the build tree happens to
+   be; the handle-based canonicalisation resolves it.  */
 static int
-executable_directory (char *out, size_t size, size_t *directory,
-		      size_t *parent)
+executable_directory (char *out, size_t size, size_t *directory)
 {
   ssize_t length = readlink ("/proc/self/exe", out, size - 1);
-  size_t seen = 0;
+  size_t found = 0;
 
   if (length <= 0 || (size_t) length >= size)
     return 1;
   out[length] = '\0';
 
-  for (size_t i = (size_t) length; i-- > 0; )
+  for (size_t i = 0; i < (size_t) length; ++i)
     if (out[i] == '/' || out[i] == '\\')
-      {
-	if (seen == 0)
-	  {
-	    *directory = i;
-	    seen = 1;
-	  }
-	else
-	  {
-	    *parent = i;
-	    seen = 2;
-	    break;
-	  }
-      }
-  if (seen != 2 || *directory == 0 || *parent == 0)
+      found = i;
+  if (found == 0)
     return 2;
+  *directory = found;
   return 0;
 }
 
@@ -234,10 +250,9 @@ derive_helper_path (char *out, size_t size)
 {
   char exe_path[MAX_PATH];
   size_t directory = 0;
-  size_t parent = 0;
   struct stat helper;
-  int status = executable_directory (exe_path, sizeof (exe_path), &directory,
-				     &parent);
+  int status = executable_directory (exe_path, sizeof (exe_path), &directory);
+
   if (status)
     return status;
 
@@ -253,25 +268,25 @@ derive_helper_path (char *out, size_t size)
 }
 
 /* The runtime under test is installed by winsup/cygwin/Makefile.am into
-   <testsuite builddir>/testinst/bin, which is the parent directory of the
-   directory holding this executable.  That layout is trusted harness state,
-   so the expected path is derived from it rather than from PATH.  */
+   <testsuite builddir>/testinst/bin, which sits beside the directory holding
+   this executable.  That layout is trusted harness state, so the expected
+   path is derived from it rather than from PATH.  The relative component is
+   resolved by the handle-based canonicalisation below.  */
 static int
 derive_runtime_path (char *out, size_t size)
 {
   char exe_path[MAX_PATH];
   char posix[MAX_PATH];
   size_t directory = 0;
-  size_t parent = 0;
-  int status = executable_directory (exe_path, sizeof (exe_path), &directory,
-				     &parent);
+  int status = executable_directory (exe_path, sizeof (exe_path), &directory);
+
   if (status)
     return status;
 
-  if (parent + sizeof (DLL_UNLOAD_RUNTIME_LEAF) > sizeof (posix))
+  if (directory + sizeof (DLL_UNLOAD_RUNTIME_LEAF) > sizeof (posix))
     return 3;
-  memcpy (posix, exe_path, parent);
-  memcpy (posix + parent, DLL_UNLOAD_RUNTIME_LEAF,
+  memcpy (posix, exe_path, directory);
+  memcpy (posix + directory, DLL_UNLOAD_RUNTIME_LEAF,
 	  sizeof (DLL_UNLOAD_RUNTIME_LEAF));
 
   if (cygwin_conv_path (CCP_POSIX_TO_WIN_A | CCP_ABSOLUTE, posix, out, size))
@@ -394,12 +409,14 @@ load_once (const char *helper_path, unsigned mode)
   addr_fn static_addr = (addr_fn) dlsym (module, "dll_unload_static_atexit");
   path_fn loaded_path
     = (path_fn) dlsym (module, "dll_unload_loaded_runtime_path");
+  path_fn loaded_final
+    = (path_fn) dlsym (module, "dll_unload_loaded_runtime_final_path");
   identity_fn identity
     = (identity_fn) dlsym (module, "dll_unload_runtime_identity");
   bound_fn is_bound
     = (bound_fn) dlsym (module, "dll_unload_path_is_bound_runtime");
   if (!register_callbacks || !touch || !exported_addr || !static_addr
-      || !loaded_path || !identity || !is_bound)
+      || !loaded_path || !loaded_final || !identity || !is_bound)
     {
       fprintf (stderr, "dlsym failed: %s\n", dlerror ());
       dlclose (module);
@@ -460,6 +477,8 @@ load_once (const char *helper_path, unsigned mode)
       print_token (runtime_win32_path);
       fputs (" loaded=", stdout);
       print_token (loaded_path ());
+      fputs (" final=", stdout);
+      print_token (loaded_final ());
       fputs (" result=pass\n", stdout);
       printf ("DIAG dll_unload export resolved=%p static=%p distinct=1"
 	      " result=pass\n", dll_exported, dll_static);
@@ -533,6 +552,21 @@ main (void)
 
   setvbuf (stdout, NULL, _IOLBF, 0);
 
+  {
+    /* Emit the derived layout first, so any derivation failure below is
+       self-explaining rather than needing another run to diagnose.  */
+    char exe[MAX_PATH];
+    ssize_t seen = readlink ("/proc/self/exe", exe, sizeof (exe) - 1);
+
+    if (seen > 0 && (size_t) seen < sizeof (exe))
+      {
+	exe[seen] = '\0';
+	fputs ("DIAG dll_unload executable path=", stdout);
+	print_token (exe);
+	fputs (" result=pass\n", stdout);
+      }
+  }
+
   status = derive_helper_path (helper_path, sizeof (helper_path));
   if (status)
     {
@@ -547,6 +581,11 @@ main (void)
       fprintf (stderr, "runtime path derivation failed: %d\n", status);
       return 2;
     }
+  printf ("DIAG dll_unload derived helper=");
+  print_token (helper_path);
+  fputs (" runtime=", stdout);
+  print_token (runtime_win32_path);
+  fputs (" result=pass\n", stdout);
 
   status = crosscheck_runtime_root (runtime_win32_path, &root_checked);
   if (status)
@@ -560,8 +599,16 @@ main (void)
   status = resolve_runtime_atexit (runtime_win32_path, &exe_runtime_atexit);
   if (status)
     {
-      fprintf (stderr, "runtime atexit export resolution failed: %d\n",
-	       status);
+      char module_path[MAX_PATH];
+      HMODULE runtime = GetModuleHandleA (DLL_UNLOAD_RUNTIME_NAME);
+
+      module_path[0] = '\0';
+      if (runtime)
+	GetModuleFileNameA (runtime, module_path, sizeof (module_path));
+      fprintf (stderr,
+	       "runtime atexit export resolution failed: %d"
+	       " (expected \"%s\", loaded \"%s\")\n",
+	       status, runtime_win32_path, module_path);
       return 4;
     }
 

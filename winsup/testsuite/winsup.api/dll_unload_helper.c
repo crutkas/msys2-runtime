@@ -34,6 +34,7 @@
 #include <windows.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 
 /* Registration modes.  winsup.api/dll_unload.c mirrors these values. */
 #define DLL_UNLOAD_MODE_FULL 0u
@@ -44,12 +45,31 @@
 #define DLL_UNLOAD_RUNTIME_NAME "msys-2.0.dll"
 
 typedef int (*atexit_export_fn) (void (*) (void));
+typedef DWORD (WINAPI *final_path_fn) (HANDLE, LPSTR, DWORD, DWORD);
+
+/* Resolved at runtime because the testsuite does not select a Windows
+   version new enough for the w32api header to expose this entry point. */
+static final_path_fn
+resolve_final_path (void)
+{
+  static final_path_fn cached;
+
+  if (!cached)
+    {
+      HMODULE kernel = GetModuleHandleA ("kernel32.dll");
+      if (kernel)
+	cached = (final_path_fn) (void *)
+	  GetProcAddress (kernel, "GetFinalPathNameByHandleA");
+    }
+  return cached;
+}
 
 struct file_identity
 {
   DWORD volume;
   DWORD index_high;
   DWORD index_low;
+  char final_path[MAX_PATH];
 };
 
 static char log_path[MAX_PATH];
@@ -99,16 +119,18 @@ helper_destructor (void)
 }
 
 /* Canonicalise through an open handle rather than through the textual path,
-   so the comparison is on stable volume and file index rather than on any
-   spelling of the name.  */
+   so the comparison is on the normalised final path plus the stable volume
+   and file index rather than on any spelling of the name.  */
 static int
 query_identity (const char *win32_path, struct file_identity *out)
 {
   BY_HANDLE_FILE_INFORMATION info;
+  final_path_fn final_path = resolve_final_path ();
+  DWORD final;
   BOOL ok;
   HANDLE file;
 
-  if (!win32_path || !*win32_path)
+  if (!win32_path || !*win32_path || !final_path)
     return 0;
   file = CreateFileA (win32_path, 0,
 		      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
@@ -116,9 +138,11 @@ query_identity (const char *win32_path, struct file_identity *out)
   if (file == INVALID_HANDLE_VALUE)
     return 0;
   memset (&info, 0, sizeof (info));
+  memset (out->final_path, 0, sizeof (out->final_path));
   ok = GetFileInformationByHandle (file, &info);
+  final = final_path (file, out->final_path, sizeof (out->final_path), 0);
   CloseHandle (file);
-  if (!ok)
+  if (!ok || final == 0 || final >= sizeof (out->final_path))
     return 0;
   out->volume = info.dwVolumeSerialNumber;
   out->index_high = info.nFileIndexHigh;
@@ -130,7 +154,8 @@ static int
 same_file (const struct file_identity *a, const struct file_identity *b)
 {
   return a->volume == b->volume && a->index_high == b->index_high
-	 && a->index_low == b->index_low;
+	 && a->index_low == b->index_low
+	 && strcasecmp (a->final_path, b->final_path) == 0;
 }
 
 /* Resolve the runtime's exported atexit.  Every step is checked, the loaded
@@ -280,6 +305,12 @@ __attribute__ ((dllexport)) const char *
 dll_unload_loaded_runtime_path (void)
 {
   return loaded_runtime_path;
+}
+
+__attribute__ ((dllexport)) const char *
+dll_unload_loaded_runtime_final_path (void)
+{
+  return loaded_runtime_identity.final_path;
 }
 
 __attribute__ ((dllexport)) int
