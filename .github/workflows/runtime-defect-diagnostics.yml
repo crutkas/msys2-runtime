@@ -132,6 +132,7 @@ jobs:
             winsup.api/argv_spawn.exe \
             winsup.api/dll_unload.exe
           make -C "$testsuite" check-TESTS \
+            check_PROGRAMS='winsup.api/argv_spawn.exe winsup.api/dll_unload.exe' \
             TESTS='winsup.api/argv_spawn winsup.api/dll_unload' \
             TEST_SUITE_LOG=runtime-diagnostics.log \
             AM_COLOR_TESTS=always
