@@ -1498,35 +1498,36 @@ jobs:
               return $diffs
             }
             $dumpBytes = [IO.File]::ReadAllBytes($dumpFile)
-            $nulIndex = -1
-            for ($i = 0; $i -lt $dumpBytes.Length; ++$i) {
-              if ($dumpBytes[$i] -eq 0) { $nulIndex = $i; break }
-            }
-            # A missing NUL, or a NUL that isn't preceded by the expected
-            # "<filler/progname> " separator immediately before the long
-            # argument's own bytes, means the buffer's layout itself is
-            # anomalous (e.g. an embedded/premature NUL, or the buffer is a
-            # different length than expected) -- this is itself evidence of
-            # corruption at (or before) this dump point, quite possibly the
-            # same intermittent, heap-layout-dependent corruption already
-            # observed elsewhere (silent shift vs. hard crash across
-            # otherwise-identical runs).  Report it as data instead of
-            # throwing, so one anomalous corpus/padding combination doesn't
-            # discard every other result this step would otherwise collect.
-            if ($nulIndex -lt 0) {
+            # NOTE: build_argv () NUL-terminates *every* argument in place
+            # (overwriting each inter-argument separator space with a NUL),
+            # not just the last one -- so a POST-build_argv buffer contains
+            # one NUL per argument boundary, not a single trailing NUL as in
+            # the PRE-build_argv buffer.  Anchoring on "the first NUL in the
+            # whole buffer" (as an earlier version of this function did) is
+            # therefore wrong post-build_argv: it finds the NUL terminating
+            # argv[0] instead of the one terminating the long argument,
+            # which produced a false "ANOMALOUS" reading, not a real
+            # corruption finding.  Since $long is always the LAST argument
+            # in every corpus tested here, its bytes always immediately
+            # precede the buffer's own final byte, and nothing after
+            # build_argv () touches that final NUL (see build_argv ()'s
+            # "Terminate `word'" step, which is a no-op for the last word
+            # because *cmd is already 0) -- so anchor directly on the
+            # buffer's own end instead of searching for any NUL at all.
+            if ($dumpBytes.Length -lt 1 -or $dumpBytes[$dumpBytes.Length - 1] -ne 0) {
               $tailStart = [Math]::Max(0, $dumpBytes.Length - 32)
               $tailHex = ($dumpBytes[$tailStart..($dumpBytes.Length - 1)] | ForEach-Object { $_.ToString('x2') }) -join ''
               $diffs = [Collections.Generic.List[string]]::new()
-              $diffs.Add("ANOMALOUS: no NUL terminator found in $($dumpBytes.Length)-byte buffer ($label, $envVarName); last 32 bytes: $tailHex")
+              $diffs.Add("ANOMALOUS: buffer ($label, $envVarName) of length $($dumpBytes.Length) does not end with a NUL byte; last 32 bytes: $tailHex")
               return $diffs
             }
-            $matchIndex = $nulIndex - $expected.Length
+            $matchIndex = $dumpBytes.Length - 1 - $expected.Length
             if ($matchIndex -lt 1 -or $dumpBytes[$matchIndex - 1] -ne 0x20) {
               $ctxStart = [Math]::Max(0, $matchIndex - 16)
-              $ctxEnd = [Math]::Min($dumpBytes.Length - 1, $nulIndex + 1)
+              $ctxEnd = $dumpBytes.Length - 1
               $ctxHex = ($dumpBytes[$ctxStart..$ctxEnd] | ForEach-Object { $_.ToString('x2') }) -join ''
               $diffs = [Collections.Generic.List[string]]::new()
-              $diffs.Add("ANOMALOUS: buffer ($label, $envVarName, length $($dumpBytes.Length)) has NUL at offset $nulIndex but no expected separator at offset $($matchIndex - 1) (expected long argument to start at $matchIndex); context bytes [$ctxStart..$ctxEnd] hex: $ctxHex")
+              $diffs.Add("ANOMALOUS: buffer ($label, $envVarName, length $($dumpBytes.Length)) does not have the expected ' ' separator at offset $($matchIndex - 1) immediately before the long argument's expected start at $matchIndex (buffer's own end); context bytes [$ctxStart..$ctxEnd] hex: $ctxHex")
               return $diffs
             }
             $diffs = [Collections.Generic.List[string]]::new()
