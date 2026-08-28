@@ -83,6 +83,7 @@ jobs:
             automake
             base-devel
             cocom
+            cygutils
             diffutils
             docbook-xsl
             gcc
