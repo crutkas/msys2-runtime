@@ -3,7 +3,7 @@ name: Runtime defect diagnostics (non-consumable)
 on:
   push:
     branches:
-      - crutkas-reconcile-runtime-defects
+      - crutkas-finish-runtime-diagnostics
   workflow_dispatch:
 
 permissions:
@@ -16,7 +16,9 @@ concurrency:
 env:
   DIAGNOSTIC_BASE: 8fbd9808447ee78ed485deead9b79cd1e40c07b7
   REVOKED_BASELINE: a527ace21c23b763bb96841745f0e2d8cd984f4a
-  COPILOT_SESSION: 3d80604e-83b4-423e-aa7b-6ab155a5ec8f
+  LEGACY_DIAGNOSTIC_HEAD: ab51b0983aec24afd45681340c3b96cfb03d8ca6
+  LEGACY_COPILOT_SESSION: 3d80604e-83b4-423e-aa7b-6ab155a5ec8f
+  COPILOT_SESSION: cd672707-4a81-473e-83de-5d7176b3c6bb
   DCO_IDENTITY: Clint Rutkas <clint@rutkas.com>
 
 jobs:
@@ -44,6 +46,7 @@ jobs:
             "${DIAGNOSTIC_BASE}"
           bash .github/checks/audit-diagnostic-commits.sh \
             "${DIAGNOSTIC_BASE}" "${REVOKED_BASELINE}" "${GITHUB_SHA}" \
+            "${LEGACY_DIAGNOSTIC_HEAD}" "${LEGACY_COPILOT_SESSION}" \
             "${COPILOT_SESSION}" "${DCO_IDENTITY}" | tee provenance.txt
 
       - name: Upload diagnostic provenance (non-consumable)
@@ -84,6 +87,7 @@ jobs:
             diffutils
             gcc
             gettext-devel
+            git
             libiconv-devel
             libzstd-devel
             make
@@ -102,10 +106,11 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $leaf = "msys2-runtime-diagnostics-$env:GITHUB_RUN_ID-" +
             "$env:GITHUB_RUN_ATTEMPT-$env:GITHUB_JOB-nomatrix"
+          $expectedRelativePath = Join-Path $leaf 'msys64'
           & .github/checks/assert-private-msys2-root.ps1 `
             -BasePath $env:RUNNER_TEMP `
             -CandidatePath $env:MSYS2_LOCATION `
-            -ExpectedLeaf $leaf `
+            -ExpectedRelativePath $expectedRelativePath `
             -EvidencePath msys2-root-diagnostic.txt
 
       - name: Build runtime and run targeted x64 diagnostics

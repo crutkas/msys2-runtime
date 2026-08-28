@@ -6,7 +6,7 @@ param(
   [string] $CandidatePath,
 
   [Parameter(Mandatory = $true)]
-  [string] $ExpectedLeaf,
+  [string] $ExpectedRelativePath,
 
   [Parameter(Mandatory = $true)]
   [string] $EvidencePath
@@ -97,7 +97,7 @@ function Get-NormalizedPath {
 
 $base = Get-NormalizedPath $BasePath
 $candidate = Get-NormalizedPath $CandidatePath
-$expected = Get-NormalizedPath (Join-Path $base $ExpectedLeaf)
+$expected = Get-NormalizedPath (Join-Path $base $ExpectedRelativePath)
 
 if (-not [string]::Equals(
     $candidate, $expected, [System.StringComparison]::OrdinalIgnoreCase)) {
