@@ -5,7 +5,16 @@
    requires strlen (tail) to equal the declared length before it inspects a
    single tail byte.  A truncated tail sent with the original declared length
    is therefore rejected instead of silently passing as a prefix, and each
-   invocation model is exercised with exactly that negative control.  */
+   invocation model is exercised with exactly that negative control.
+
+   The raw wide command line corroboration is a pure predicate so it can be
+   driven directly with synthetic fixtures covering each of its rejection
+   codes.  Corroboration only means anything while the runtime actually
+   builds argv into the Windows command line, so the wincmdln option state is
+   asserted and recorded rather than assumed.
+
+   Every case emits a machine-readable DIAG record on success as well as on
+   failure, so a passing run carries its own evidence.  */
 
 #include <windows.h>
 #include <process.h>
@@ -105,43 +114,25 @@ parse_length (const char *text, size_t *out)
   return 1;
 }
 
-/* Corroborate the tail against the raw wide command line.  The match must be
-   unique and delimited on both sides by a byte outside the tail alphabet, so
-   a prefix of the expected tail cannot satisfy the check.  */
+/* Pure predicate: the needle must occur exactly once in the raw command line
+   and be delimited on both sides by a byte outside the tail alphabet, so a
+   prefix of the expected tail cannot satisfy the check.  */
 static int
-check_raw_command_line (const char *model, size_t expected)
+check_raw_match (const wchar_t *raw, const wchar_t *needle, size_t expected)
 {
-  const wchar_t *raw = GetCommandLineW ();
   const wchar_t *match;
 
   if (!raw)
-    {
-      fprintf (stderr, "%s child has no raw command line\n", model);
-      return CHILD_RAW_MISSING;
-    }
-
-  match = wcsstr (raw, wide_tail);
+    return CHILD_RAW_MISSING;
+  match = wcsstr (raw, needle);
   if (!match)
-    {
-      fprintf (stderr, "%s child tail absent from raw command line\n", model);
-      return CHILD_RAW_NOT_FOUND;
-    }
-  if (wcsstr (match + 1, wide_tail))
-    {
-      fprintf (stderr, "%s child tail is ambiguous in the raw command line\n",
-	       model);
-      return CHILD_RAW_AMBIGUOUS;
-    }
+    return CHILD_RAW_NOT_FOUND;
+  if (wcsstr (match + 1, needle))
+    return CHILD_RAW_AMBIGUOUS;
   if (match != raw && is_tail_wide (match[-1]))
-    {
-      fprintf (stderr, "%s child raw tail is not left-delimited\n", model);
-      return CHILD_RAW_LEFT;
-    }
+    return CHILD_RAW_LEFT;
   if (is_tail_wide (match[expected]))
-    {
-      fprintf (stderr, "%s child raw tail is not right-delimited\n", model);
-      return CHILD_RAW_RIGHT;
-    }
+    return CHILD_RAW_RIGHT;
   return 0;
 }
 
@@ -200,9 +191,13 @@ child_main (int argc, char **argv)
       return CHILD_WIDE_CONVERT;
     }
 
-  status = check_raw_command_line (argv[2], expected);
+  status = check_raw_match (GetCommandLineW (), wide_tail, expected);
   if (status)
-    return status;
+    {
+      fprintf (stderr, "%s child raw command line rejected with %d\n",
+	       argv[2], status);
+      return status;
+    }
 
   return 0;
 }
@@ -389,11 +384,133 @@ static const struct invocation invocations[] = {
   { "CreateProcessW", run_create_process },
 };
 
+/* MSYS and CYGWIN options are whitespace separated, and a "no" prefix turns
+   the option off.  wincmdln defaults to true in this runtime; if it were
+   disabled the Windows command line would not carry argv for a Cygwin
+   target and the corroboration below would be checking something else.  */
+static int
+option_disabled (const char *value, const char *name)
+{
+  size_t length = strlen (name);
+
+  if (!value)
+    return 0;
+  for (const char *p = value; *p; )
+    {
+      const char *start;
+      size_t token;
+
+      while (*p == ' ' || *p == '\t')
+	++p;
+      start = p;
+      while (*p && *p != ' ' && *p != '\t')
+	++p;
+      token = (size_t) (p - start);
+      if (token == length + 2 && strncmp (start, "no", 2) == 0
+	  && strncmp (start + 2, name, length) == 0)
+	return 1;
+    }
+  return 0;
+}
+
+/* Record values may contain spaces; emit them as single parseable tokens. */
+static void
+print_token (const char *value)
+{
+  if (!value || !*value)
+    {
+      fputs ("-", stdout);
+      return;
+    }
+  for (const char *p = value; *p; ++p)
+    putchar ((*p == ' ' || *p == '\t' || *p == '"') ? '_' : *p);
+}
+
+static int
+assert_wincmdln (void)
+{
+  const char *msys = getenv ("MSYS");
+  const char *cygwin = getenv ("CYGWIN");
+  int disabled = option_disabled (msys, "wincmdln")
+		 || option_disabled (cygwin, "wincmdln");
+
+  printf ("DIAG argv_spawn wincmdln nowincmdln=%d msys=", disabled);
+  print_token (msys);
+  fputs (" cygwin=", stdout);
+  print_token (cygwin);
+  printf (" result=%s\n", disabled ? "fail" : "pass");
+  return disabled;
+}
+
+struct raw_fixture
+{
+  const char *name;
+  const wchar_t *raw;
+  int expected;
+};
+
+/* Drive every rejection code of the raw command line predicate directly, so
+   a passing end-to-end run cannot be mistaken for an unfalsifiable check. */
+static int
+run_raw_fixtures (void)
+{
+  static const wchar_t needle[] = L"ABCDE";
+  static const struct raw_fixture fixtures[] = {
+    { "accepted", L"\"exe\" --child win32 5 \"fff\" \"ABCDE\"", 0 },
+    { "missing-command-line", NULL, CHILD_RAW_MISSING },
+    { "tail-absent", L"\"exe\" --child win32 5 \"fff\" \"ZZZZZ\"",
+      CHILD_RAW_NOT_FOUND },
+    { "tail-ambiguous", L"\"exe\" ABCDE win32 5 \"fff\" \"ABCDE\"",
+      CHILD_RAW_AMBIGUOUS },
+    { "tail-left-glued", L"\"exe\" --child win32 5 \"fff\" \"WABCDE\"",
+      CHILD_RAW_LEFT },
+    { "tail-right-glued", L"\"exe\" --child win32 5 \"fff\" \"ABCDEF\"",
+      CHILD_RAW_RIGHT },
+  };
+
+  for (size_t i = 0; i < ARRAY_SIZE (fixtures); ++i)
+    {
+      int observed = check_raw_match (fixtures[i].raw, needle, 5);
+      if (observed != fixtures[i].expected)
+	{
+	  fprintf (stderr,
+		   "raw fixture %s expected %d, observed %d\n",
+		   fixtures[i].name, fixtures[i].expected, observed);
+	  return -1;
+	}
+      printf ("DIAG argv_spawn raw-fixture case=%s expected=%d observed=%d"
+	      " result=pass\n", fixtures[i].name, fixtures[i].expected,
+	      observed);
+    }
+  return (int) ARRAY_SIZE (fixtures);
+}
+
 int
 main (int argc, char **argv)
 {
+  static const size_t filler_lengths[] = { 0, 1, 15, 16, 17, 31 };
+  static const size_t tail_lengths[] = {
+    1, 23, 24, 511, 640, 1023, 2047, 4095, 4096
+  };
+  long positives = 0;
+  long negatives = 0;
+  int fixtures;
+
   if (argc > 1 && strcmp (argv[1], "--child") == 0)
     return child_main (argc, argv);
+
+  setvbuf (stdout, NULL, _IOLBF, 0);
+
+  if (assert_wincmdln ())
+    {
+      fprintf (stderr, "wincmdln is disabled; raw corroboration would be "
+	       "meaningless\n");
+      return 6;
+    }
+
+  fixtures = run_raw_fixtures ();
+  if (fixtures < 0)
+    return 7;
 
   ssize_t length = readlink ("/proc/self/exe", self_path,
 			     sizeof (self_path) - 1);
@@ -403,9 +520,6 @@ main (int argc, char **argv)
       return 1;
     }
   self_path[length] = '\0';
-
-  static const size_t filler_lengths[] = { 0, 1, 15, 16, 17, 31 };
-  static const size_t tail_lengths[] = { 511, 640, 1023, 2047, 4095 };
 
   for (size_t i = 0; i < ARRAY_SIZE (filler_lengths); ++i)
     for (size_t j = 0; j < ARRAY_SIZE (tail_lengths); ++j)
@@ -434,6 +548,11 @@ main (int argc, char **argv)
 			 tail_lengths[j], child_status);
 		return 3;
 	      }
+	    ++positives;
+	    printf ("DIAG argv_spawn positive model=%s filler=%zu tail=%zu"
+		    " declared=%zu child=0 result=pass\n",
+		    invocations[k].name, filler_lengths[i], tail_lengths[j],
+		    tail_lengths[j]);
 	  }
       }
 
@@ -468,8 +587,18 @@ main (int argc, char **argv)
 		       CHILD_TAIL_LENGTH, child_status, tail_lengths[j]);
 	      return 5;
 	    }
+	  ++negatives;
+	  printf ("DIAG argv_spawn negative model=%s tail=%zu declared=%zu"
+		  " actual=%zu child=%d result=pass\n",
+		  invocations[k].name, tail_lengths[j], tail_lengths[j],
+		  tail_lengths[j] - 1, child_status);
 	}
     }
 
+  printf ("DIAG argv_spawn summary positive=%ld negative=%ld fixtures=%d"
+	  " models=%d fillers=%d tails=%d result=pass\n",
+	  positives, negatives, fixtures, (int) ARRAY_SIZE (invocations),
+	  (int) ARRAY_SIZE (filler_lengths), (int) ARRAY_SIZE (tail_lengths));
+  fflush (stdout);
   return 0;
 }

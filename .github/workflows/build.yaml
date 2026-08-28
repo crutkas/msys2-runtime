@@ -1,12 +1,23 @@
 name: build
 
-on: [push, pull_request]
+on:
+  push:
+    # The runtime diagnostics branch must never publish an ordinary binary
+    # install artifact, so this workflow does not run for it at all. Every
+    # other ref keeps the normal behaviour.
+    branches-ignore:
+      - crutkas-finish-runtime-diagnostics
+  pull_request:
 
 permissions:
   contents: read
 
 jobs:
   build:
+    # A pull request from the diagnostics branch is filtered on its head ref,
+    # which the push filter above cannot express. The dependent jobs need this
+    # one, so skipping it skips them too and no artifact is produced.
+    if: ${{ github.head_ref != 'crutkas-finish-runtime-diagnostics' }}
     runs-on: windows-latest
 
     steps:
@@ -39,6 +50,7 @@ jobs:
           path: _dest/
 
   generate-msys2-tests-matrix:
+    if: ${{ github.head_ref != 'crutkas-finish-runtime-diagnostics' }}
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}

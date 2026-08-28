@@ -205,19 +205,51 @@ jobs:
             TESTS='winsup.api/argv_spawn winsup.api/dll_unload' \
             TEST_SUITE_LOG=runtime-diagnostics.log \
             AM_COLOR_TESTS=always || test_status=$?
-          if (( test_status != 0 )); then
-            for log in \
-              "$testsuite"/winsup.api/argv_spawn*.log \
-              "$testsuite"/winsup.api/dll_unload*.log \
-              "$testsuite"/runtime-diagnostics.log; do
-              if [[ -f "$log" ]]; then
-                echo "::group::${log#$testsuite/}"
-                cat "$log"
-                echo "::endgroup::"
-              fi
-            done
-            exit "$test_status"
-          fi
+
+          # Always surface the suite output, so a passing run publishes its
+          # own per-case evidence instead of only failures being visible.
+          mkdir -p diagnostic-records
+          for log in \
+            "$testsuite"/winsup.api/argv_spawn*.log \
+            "$testsuite"/winsup.api/dll_unload*.log \
+            "$testsuite"/runtime-diagnostics.log; do
+            if [[ -f "$log" ]]; then
+              cp "$log" diagnostic-records/
+              echo "::group::${log#$testsuite/}"
+              cat "$log"
+              echo "::endgroup::"
+            fi
+          done
+          exit "$test_status"
+
+      - name: Verify diagnostic success records
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $logs = @(
+            'diagnostic-records/argv_spawn.log'
+            'diagnostic-records/dll_unload.log'
+          )
+          foreach ($log in $logs) {
+            if (-not (Test-Path -LiteralPath $log)) {
+              throw "Missing diagnostic record log: $log"
+            }
+          }
+          $python = Get-Command python -ErrorAction SilentlyContinue
+          if (-not $python) {
+            $python = Get-Command python3 -ErrorAction SilentlyContinue
+          }
+          if (-not $python) { throw 'No Python interpreter is available' }
+          $output = & $python.Source `
+            .github/checks/verify-diagnostic-records.py @logs 2>&1
+          $code = $LASTEXITCODE
+          $output | ForEach-Object { Write-Host $_ }
+          $output | Out-File `
+            -LiteralPath diagnostic-records/record-verification.txt `
+            -Encoding ascii
+          if ($code -ne 0) {
+            throw "Diagnostic record verification failed with $code"
+          }
 
       - name: Collect diagnostic metadata and logs only
         if: ${{ always() }}
@@ -243,6 +275,9 @@ jobs:
               cp "$report" "$evidence/"
             fi
           done
+          if [[ -d diagnostic-records ]]; then
+            cp -r diagnostic-records "$evidence/records"
+          fi
           find build -type f \( -name '*.log' -o -name '*.trs' \) \
             -exec cp --parents '{}' "$evidence/logs" \;
           (
