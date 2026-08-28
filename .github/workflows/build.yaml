@@ -1461,44 +1461,57 @@ jobs:
           # possibly be responsible.
           $lines.Add('')
           $lines.Add('PRE-build_argv raw buffer check (quote-free/glob-free corpus, same padding levels):')
-          function Get-PreBuildArgvDiff([string[]] $corpus, [string] $label) {
-            $preDump = Join-Path $env:RUNNER_TEMP "pre-dump-$label.bin"
+          # Generalized so the identical raw-buffer capture/diff logic can be
+          # reused at *any* dcrt0.cc dump point (ARM64_ARGV_RAW_DUMP just
+          # before build_argv (), or ARM64_ARGV_POST_DUMP just after it
+          # returns -- same buffer, same offset, different moment) -- this
+          # lets us bisect the remaining gap between "conversion output is
+          # clean" (already proven) and "main ()'s own argv is corrupted"
+          # (already proven): if POST is clean too, corruption happens
+          # strictly after dll_crt0_1 () hands off to main () (premain
+          # hooks / newargv copy / CRT-to-main transition / the test
+          # harness's own stack usage); if POST is already corrupted,
+          # build_argv () itself is responsible despite static analysis
+          # showing no plausible write path, meaning that analysis missed
+          # something and needs to be revisited with fresh eyes.
+          function Get-DcrtBufferDiff([string[]] $corpus, [string] $label, [string] $envVarName) {
+            $dumpFile = Join-Path $env:RUNNER_TEMP "dump-$label.bin"
             $crashCodes = [Collections.Generic.List[string]]::new()
             $process = $null
             for ($attempt = 1; $attempt -le 3; ++$attempt) {
-              if (Test-Path $preDump) { Remove-Item $preDump -Force }
-              $env:ARM64_ARGV_RAW_DUMP = $preDump
-              $env:ARM64_ARGV_OUTPUT = Join-Path $env:RUNNER_TEMP "pre-dump-$label.txt"
+              if (Test-Path $dumpFile) { Remove-Item $dumpFile -Force }
+              Set-Item -Path "Env:\$envVarName" -Value $dumpFile
+              $env:ARM64_ARGV_OUTPUT = Join-Path $env:RUNNER_TEMP "dump-$label.txt"
               $startInfo = [Diagnostics.ProcessStartInfo]::new($child)
               $startInfo.UseShellExecute = $false
               foreach ($argument in $corpus) { $startInfo.ArgumentList.Add($argument) }
               $process = [Diagnostics.Process]::Start($startInfo)
               $process.WaitForExit()
-              Remove-Item Env:\ARM64_ARGV_RAW_DUMP
-              if ($process.ExitCode -eq 0 -and (Test-Path $preDump)) { break }
+              Remove-Item "Env:\$envVarName"
+              if ($process.ExitCode -eq 0 -and (Test-Path $dumpFile)) { break }
               $hex = '0x{0:X8}' -f ($process.ExitCode -band 0xFFFFFFFF)
-              $crashCodes.Add("attempt $attempt exited $($process.ExitCode) ($hex)" + $(if (-not (Test-Path $preDump)) { ' [no dump produced]' } else { '' }))
+              $crashCodes.Add("attempt $attempt exited $($process.ExitCode) ($hex)" + $(if (-not (Test-Path $dumpFile)) { ' [no dump produced]' } else { '' }))
             }
-            if ($process.ExitCode -ne 0 -or -not (Test-Path $preDump)) {
+            if ($process.ExitCode -ne 0 -or -not (Test-Path $dumpFile)) {
               $diffs = [Collections.Generic.List[string]]::new()
               $diffs.Add("CRASHED on all 3 attempts: " + ($crashCodes -join '; '))
               return $diffs
             }
-            $preBytes = [IO.File]::ReadAllBytes($preDump)
+            $dumpBytes = [IO.File]::ReadAllBytes($dumpFile)
             $nulIndex = -1
-            for ($i = 0; $i -lt $preBytes.Length; ++$i) {
-              if ($preBytes[$i] -eq 0) { $nulIndex = $i; break }
+            for ($i = 0; $i -lt $dumpBytes.Length; ++$i) {
+              if ($dumpBytes[$i] -eq 0) { $nulIndex = $i; break }
             }
             if ($nulIndex -lt 0) {
-              throw "raw pre-build_argv buffer ($label) has no NUL terminator"
+              throw "raw buffer ($label, $envVarName) has no NUL terminator"
             }
             $matchIndex = $nulIndex - $expected.Length
-            if ($matchIndex -lt 1 -or $preBytes[$matchIndex - 1] -ne 0x20) {
-              throw "raw pre-build_argv buffer ($label) final bytes before NUL (offset $nulIndex) are not preceded by the expected separator at $($matchIndex - 1)"
+            if ($matchIndex -lt 1 -or $dumpBytes[$matchIndex - 1] -ne 0x20) {
+              throw "raw buffer ($label, $envVarName) final bytes before NUL (offset $nulIndex) are not preceded by the expected separator at $($matchIndex - 1)"
             }
             $diffs = [Collections.Generic.List[string]]::new()
             for ($k = 0; $k -lt $expected.Length; ++$k) {
-              $actualByte = $preBytes[$matchIndex + $k]
+              $actualByte = $dumpBytes[$matchIndex + $k]
               if ($actualByte -ne $expected[$k]) {
                 $diffs.Add("byte $k (relative to long argument's own start): expected 0x$($expected[$k].ToString('x2')) got 0x$($actualByte.ToString('x2'))")
               }
@@ -1510,9 +1523,22 @@ jobs:
           }
           foreach ($padLen in 0, 16, 256) {
             $corpus = if ($padLen -eq 0) { @($long) } else { @(('P' * $padLen), $long) }
-            $preDiffs = Get-PreBuildArgvDiff $corpus "pre-pad-$padLen"
+            $preDiffs = Get-DcrtBufferDiff $corpus "pre-pad-$padLen" "ARM64_ARGV_RAW_DUMP"
             $state = if ($preDiffs.Count -eq 0) { 'clean' } else { 'CORRUPTED (' + ($preDiffs -join '; ') + ')' }
             $lines.Add("  PRE-build_argv padding=$padLen bytes: $state")
+          }
+
+          # Same buffer, same offset, captured immediately AFTER build_argv ()
+          # returns (still inside dll_crt0_1, well before main () or any
+          # premain hook runs) -- see comment on Get-DcrtBufferDiff above for
+          # why this specific bisection point matters.
+          $lines.Add('')
+          $lines.Add('POST-build_argv raw buffer check (quote-free/glob-free corpus, same padding levels):')
+          foreach ($padLen in 0, 16, 256) {
+            $corpus = if ($padLen -eq 0) { @($long) } else { @(('P' * $padLen), $long) }
+            $postDiffs = Get-DcrtBufferDiff $corpus "post-pad-$padLen" "ARM64_ARGV_POST_DUMP"
+            $state = if ($postDiffs.Count -eq 0) { 'clean' } else { 'CORRUPTED (' + ($postDiffs -join '; ') + ')' }
+            $lines.Add("  POST-build_argv padding=$padLen bytes: $state")
           }
 
           $lines | Tee-Object -FilePath $summaryPath
