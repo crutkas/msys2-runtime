@@ -111,7 +111,7 @@ jobs:
           mkdir build
           (
             cd build
-            ../configure --disable-dependency-tracking \
+            ../configure --disable-dependency-tracking --disable-doc \
               --with-msys2-runtime-commit="${GITHUB_SHA}"
           )
           make -C build -j"$(nproc)"
