@@ -1204,17 +1204,19 @@ jobs:
             throw "immutable a527 unexpectedly passed the process regression"
           }
 
-      - name: Bisect argv corruption against pre-build_argv raw buffer
+      - name: Bisect argv corruption against pre/post-build_argv raw buffers
         if: always()
         shell: pwsh
         run: |
           # Diagnostic-only (fork-only investigation): the runtime was built
           # with -DMSYS_ARGV_RAW_DUMP, so aarch64-argv-dump.exe's own dcrt0.cc
-          # startup will, when ARM64_ARGV_RAW_DUMP names a file, write the raw
-          # multibyte command line exactly as produced by
-          # sys_wcstombs_no_path (), before build_argv ()/quoted ()/globify ()
-          # touch it.  Comparing that raw buffer to the long trailing argument
-          # proves whether the byte-625/626 corruption already exists before
+          # startup will, when ARM64_ARGV_RAW_DUMP/ARM64_ARGV_POST_DUMP name
+          # files, write two raw snapshots of the very same multibyte command
+          # line buffer: one exactly as produced by sys_wcstombs_no_path (),
+          # before build_argv ()/quoted ()/globify () touch it, and one
+          # immediately after build_argv () returns.  Comparing both against
+          # the long trailing argument, at the same buffer offset, proves
+          # whether the byte-625/626 corruption already exists before
           # build_argv () runs (implicating GetCommandLineW ()/wcstombs) or is
           # introduced by build_argv ()/quoted ()/globify () themselves.
           $runtime = (Resolve-Path `
@@ -1226,8 +1228,10 @@ jobs:
             'quote"inside', 'trail\\', 'café-中-🙂', $long)
 
           $env:ARM64_ARGV_MARKER = 'native-arm64-environment'
-          $rawDump = Join-Path $env:RUNNER_TEMP 'raw-line-dump.bin'
-          $env:ARM64_ARGV_RAW_DUMP = $rawDump
+          $preDump = Join-Path $env:RUNNER_TEMP 'raw-line-dump-pre.bin'
+          $postDump = Join-Path $env:RUNNER_TEMP 'raw-line-dump-post.bin'
+          $env:ARM64_ARGV_RAW_DUMP = $preDump
+          $env:ARM64_ARGV_POST_DUMP = $postDump
           $env:ARM64_ARGV_OUTPUT = Join-Path $env:RUNNER_TEMP 'raw-dump-argv.txt'
           $startInfo = [Diagnostics.ProcessStartInfo]::new($child)
           $startInfo.UseShellExecute = $false
@@ -1235,14 +1239,19 @@ jobs:
           $process = [Diagnostics.Process]::Start($startInfo)
           $process.WaitForExit()
           Remove-Item Env:\ARM64_ARGV_RAW_DUMP
+          Remove-Item Env:\ARM64_ARGV_POST_DUMP
           if ($process.ExitCode -ne 0) {
             throw "raw-dump child exited $($process.ExitCode)"
           }
-          if (-not (Test-Path $rawDump)) {
+          if (-not (Test-Path $preDump)) {
             throw 'aarch64-argv-dump.exe did not produce a raw pre-build_argv dump; MSYS_ARGV_RAW_DUMP instrumentation did not fire'
           }
+          if (-not (Test-Path $postDump)) {
+            throw 'aarch64-argv-dump.exe did not produce a raw post-build_argv dump; ARM64_ARGV_POST_DUMP instrumentation did not fire'
+          }
 
-          $rawBytes = [IO.File]::ReadAllBytes($rawDump)
+          $preBytes = [IO.File]::ReadAllBytes($preDump)
+          $postBytes = [IO.File]::ReadAllBytes($postDump)
           $expected = [Text.Encoding]::ASCII.GetBytes($long)
 
           # $long is a 16-byte-repeating pattern ('0123456789abcdef' * 40), so
@@ -1251,36 +1260,130 @@ jobs:
           # Anchor on structure instead: $long is always the final corpus
           # argument, and sys_wcstombs_no_path () NUL-terminates the fully
           # converted command line exactly once, so the first NUL byte in the
-          # raw dump marks the true end of the string, independent of any
-          # trailing over-allocation/padding in the dumped buffer.
+          # *pre* dump marks the true end of the string, independent of any
+          # trailing over-allocation/padding in the dumped buffer.  build_argv
+          # ()'s "safe" (quote-preserving) branch of quoted (), which is the
+          # only branch exercised by this corpus, never shifts bytes in
+          # place, so the long argument's absolute offset is identical in
+          # both the pre and post dumps.
           $nulIndex = -1
-          for ($i = 0; $i -lt $rawBytes.Length; ++$i) {
-            if ($rawBytes[$i] -eq 0) { $nulIndex = $i; break }
+          for ($i = 0; $i -lt $preBytes.Length; ++$i) {
+            if ($preBytes[$i] -eq 0) { $nulIndex = $i; break }
           }
           if ($nulIndex -lt 0) {
             throw 'raw pre-build_argv buffer has no NUL terminator'
           }
           $matchIndex = $nulIndex - $expected.Length
-          if ($matchIndex -lt 1 -or $rawBytes[$matchIndex - 1] -ne 0x20) {
+          if ($matchIndex -lt 1 -or $preBytes[$matchIndex - 1] -ne 0x20) {
             throw "raw pre-build_argv buffer's final $($expected.Length) bytes before its NUL terminator (offset $nulIndex) are not preceded by the expected ' ' argument separator at offset $($matchIndex - 1); long argument is not where expected"
           }
 
-          $actual = $rawBytes[$matchIndex..($matchIndex + $expected.Length - 1)]
-          $diffs = [Collections.Generic.List[string]]::new()
-          for ($k = 0; $k -lt $expected.Length; ++$k) {
-            if ($actual[$k] -ne $expected[$k]) {
-              $diffs.Add("byte $k (offset $($matchIndex + $k) in raw buffer): expected 0x$($expected[$k].ToString('x2')) got 0x$($actual[$k].ToString('x2'))")
+          function Diff-Bytes([byte[]] $rawBytes, [byte[]] $expected, [int] $matchIndex) {
+            $actual = $rawBytes[$matchIndex..($matchIndex + $expected.Length - 1)]
+            $diffs = [Collections.Generic.List[string]]::new()
+            for ($k = 0; $k -lt $expected.Length; ++$k) {
+              if ($actual[$k] -ne $expected[$k]) {
+                $diffs.Add("byte $k (offset $($matchIndex + $k) in raw buffer): expected 0x$($expected[$k].ToString('x2')) got 0x$($actual[$k].ToString('x2'))")
+              }
             }
+            return $diffs
           }
+
+          $preDiffs = Diff-Bytes $preBytes $expected $matchIndex
+          $postDiffs = Diff-Bytes $postBytes $expected $matchIndex
+
           $summaryPath = Join-Path $runtime 'raw-buffer-bisection.txt'
-          if ($diffs.Count -eq 0) {
-            "PRE-build_argv raw buffer is byte-for-byte correct at the long argument's location (offset $matchIndex). Corruption is introduced by build_argv ()/quoted ()/globify (), NOT by GetCommandLineW ()/sys_wcstombs_no_path ()." |
-              Tee-Object -FilePath $summaryPath
+          $lines = [Collections.Generic.List[string]]::new()
+          if ($preDiffs.Count -eq 0) {
+            $lines.Add("PRE-build_argv raw buffer is byte-for-byte correct at the long argument's location (offset $matchIndex).")
           } else {
-            "PRE-build_argv raw buffer is ALREADY corrupted at the long argument's location (offset $matchIndex). Corruption is introduced by GetCommandLineW ()/sys_wcstombs_no_path (), NOT by build_argv ()/quoted ()/globify ()." |
-              Tee-Object -FilePath $summaryPath
-            $diffs | Tee-Object -FilePath $summaryPath -Append
+            $lines.Add("PRE-build_argv raw buffer is ALREADY corrupted at the long argument's location (offset $matchIndex).")
+            $lines.AddRange($preDiffs)
           }
+          if ($postDiffs.Count -eq 0) {
+            $lines.Add("POST-build_argv raw buffer is byte-for-byte correct at the long argument's location (offset $matchIndex).")
+          } else {
+            $lines.Add("POST-build_argv raw buffer is corrupted at the long argument's location (offset $matchIndex).")
+            $lines.AddRange($postDiffs)
+          }
+          if ($preDiffs.Count -eq 0 -and $postDiffs.Count -gt 0) {
+            $lines.Add('CONCLUSION: build_argv ()/quoted ()/globify () introduce the corruption; sys_wcstombs_no_path ()/GetCommandLineW () are exonerated.')
+          } elseif ($preDiffs.Count -gt 0) {
+            $lines.Add('CONCLUSION: the corruption already exists before build_argv () runs; GetCommandLineW ()/sys_wcstombs_no_path () are implicated, NOT build_argv ()/quoted ()/globify ().')
+          } else {
+            $lines.Add('CONCLUSION: neither raw snapshot shows corruption at this offset; the final argv[] dump mismatch (if any) must arise after build_argv () returns.')
+          }
+          $lines | Tee-Object -FilePath $summaryPath
+
+      - name: Isolate globify() trigger for argv corruption
+        if: always()
+        shell: pwsh
+        run: |
+          # Diagnostic-only (fork-only investigation).  The prior step
+          # proved the corruption is introduced inside build_argv ()
+          # itself.  Of this test corpus, 'quote"inside' is the only
+          # argument containing a glob-special character
+          # (a literal '"'), so it is the only one for which globify ()
+          # does anything beyond its immediate `strpbrk` early return.
+          # Re-run the same child process twice, once with the full
+          # corpus (control, expected to reproduce the corruption) and
+          # once with 'quote"inside' removed (test, expected to come out
+          # clean if globify ()'s handling of that argument is the
+          # trigger), and directly diff the long trailing argument's hex
+          # dump in each case.
+          $runtime = (Resolve-Path `
+            aarch64-runtime-validation/aarch64-runtime-validation).Path
+          $child = Join-Path $runtime 'aarch64-argv-dump.exe'
+          $long = ('0123456789abcdef' * 40)
+          $env:ARM64_ARGV_MARKER = 'native-arm64-environment'
+          $expectedHex = [Convert]::ToHexString(
+            [Text.Encoding]::UTF8.GetBytes($long)).ToLower()
+
+          function Get-LongArgHex([string[]] $corpus, [string] $label) {
+            $outPath = Join-Path $env:RUNNER_TEMP "isolate-$label.txt"
+            $env:ARM64_ARGV_OUTPUT = $outPath
+            $startInfo = [Diagnostics.ProcessStartInfo]::new($child)
+            $startInfo.UseShellExecute = $false
+            foreach ($argument in $corpus) { $startInfo.ArgumentList.Add($argument) }
+            $process = [Diagnostics.Process]::Start($startInfo)
+            $process.WaitForExit()
+            if ($process.ExitCode -ne 0) {
+              throw "isolation child ($label) exited $($process.ExitCode)"
+            }
+            if (-not (Test-Path $outPath)) {
+              throw "isolation child ($label) did not produce a dump"
+            }
+            $values = @{}
+            foreach ($line in Get-Content $outPath) {
+              $parts = $line -split '=', 2
+              if ($parts.Count -eq 2) { $values[$parts[0]] = $parts[1] }
+            }
+            $lastIndex = [int]$values.argc - 1
+            return $values["arg.$lastIndex.hex"]
+          }
+
+          $withQuoted = @('', 'alpha', 'ISO-8859-1', 'LATIN1', '--to-code=UTF-8',
+            'C:\path with spaces\iconv-latin1.bin', 'repeat--aaabbbccc111',
+            'quote"inside', 'trail\\', 'café-中-🙂', $long)
+          $withoutQuoted = @('', 'alpha', 'ISO-8859-1', 'LATIN1', '--to-code=UTF-8',
+            'C:\path with spaces\iconv-latin1.bin', 'repeat--aaabbbccc111',
+            'trail\\', 'café-中-🙂', $long)
+
+          $hexWithQuoted = Get-LongArgHex $withQuoted 'with-quoted'
+          $hexWithoutQuoted = Get-LongArgHex $withoutQuoted 'without-quoted'
+
+          $summaryPath = Join-Path $runtime 'globify-isolation.txt'
+          $lines = [Collections.Generic.List[string]]::new()
+          $lines.Add("Control (with 'quote`"inside' present): long argument $(if ($hexWithQuoted -eq $expectedHex) { 'MATCHES expected' } else { 'is CORRUPTED' }).")
+          $lines.Add("Test (without 'quote`"inside'): long argument $(if ($hexWithoutQuoted -eq $expectedHex) { 'MATCHES expected' } else { 'is CORRUPTED' }).")
+          if ($hexWithQuoted -ne $expectedHex -and $hexWithoutQuoted -eq $expectedHex) {
+            $lines.Add("CONCLUSION: removing 'quote`"inside' eliminates the corruption; globify ()'s processing of that argument (the only corpus entry containing a glob-special character) is the trigger.")
+          } elseif ($hexWithQuoted -eq $expectedHex) {
+            $lines.Add('CONCLUSION: control run unexpectedly did not reproduce the corruption in this job; isolation result is inconclusive for this run.')
+          } else {
+            $lines.Add("CONCLUSION: removing 'quote`"inside' did NOT eliminate the corruption; some other argument or mechanism is responsible.")
+          }
+          $lines | Tee-Object -FilePath $summaryPath
 
       - name: Run AArch64 argv regression matrix
         if: always()

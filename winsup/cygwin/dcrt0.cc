@@ -377,6 +377,32 @@ build_argv (char *cmd, char **&argv, int &argc, int winshell, int glob)
   debug_printf ("argc %d", argc);
 }
 
+#ifdef MSYS_ARGV_RAW_DUMP
+/* Temporary diagnostic-only helper for the AArch64 argv corruption
+   investigation (fork-only, never shipped in a release build).  When the
+   environment variable named by ENVVAR names a file, write NBYTES raw
+   bytes starting at BUF to that file, using only direct Win32 calls (no
+   cygwin heap/fd machinery), so callers early in CRT startup can safely
+   snapshot the command-line buffer at different points in time for a
+   later byte-for-byte diff.  Remove this (or leave MSYS_ARGV_RAW_DUMP
+   permanently undefined) once the root cause is fixed. */
+static void
+msys_argv_raw_dump (const wchar_t *envvar, const void *buf, size_t nbytes)
+{
+  WCHAR path[MAX_PATH];
+  DWORD path_len = GetEnvironmentVariableW (envvar, path, MAX_PATH);
+  if (!path_len || path_len >= MAX_PATH)
+    return;
+  HANDLE h = CreateFileW (path, GENERIC_WRITE, FILE_SHARE_READ, NULL,
+			   CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+  if (h == INVALID_HANDLE_VALUE)
+    return;
+  DWORD written;
+  WriteFile (h, buf, (DWORD) nbytes, &written, NULL);
+  CloseHandle (h);
+}
+#endif
+
 /* sanity and sync check */
 void
 check_sanity_and_sync (per_process *p)
@@ -935,36 +961,19 @@ dll_crt0_1 (void *)
 #ifdef MSYS_ARGV_RAW_DUMP
       /* Temporary diagnostic-only instrumentation for the AArch64 argv
 	 corruption investigation (fork-only, never shipped in a release
-	 build).  When ARM64_ARGV_RAW_DUMP names a file, write the raw,
-	 fully-converted multibyte command line -- exactly as produced by
-	 sys_wcstombs_no_path (), before build_argv () touches a single
-	 byte of it -- to that file using only direct Win32 calls (no
-	 cygwin heap/fd machinery), so its contents can be diffed against
-	 the final argv[] dump to prove whether the corruption already
-	 exists at this point or is introduced later, by build_argv (),
-	 quoted () or globify ().  This block must be removed (or the
-	 MSYS_ARGV_RAW_DUMP macro left permanently undefined) once the
+	 build).  When the named environment variable names a file, write
+	 the raw `size' bytes of the multibyte command line buffer to
+	 that file using only direct Win32 calls (no cygwin heap/fd
+	 machinery), so a snapshot taken *before* build_argv () runs can
+	 be diffed against a snapshot taken *immediately after* it
+	 returns, at the very same byte offset, to prove whether
+	 build_argv ()/quoted ()/globify () themselves mutate bytes deep
+	 inside an argument's own body (as opposed to the initial
+	 sys_wcstombs_no_path () conversion having gotten it wrong to
+	 begin with).  This helper and its call sites must be removed (or
+	 the MSYS_ARGV_RAW_DUMP macro left permanently undefined) once the
 	 root cause is fixed; it is not part of the fix itself. */
-      {
-	WCHAR rawdump_path[MAX_PATH];
-	DWORD rawdump_path_len
-	  = GetEnvironmentVariableW (L"ARM64_ARGV_RAW_DUMP", rawdump_path,
-				     MAX_PATH);
-	if (rawdump_path_len && rawdump_path_len < MAX_PATH)
-	  {
-	    HANDLE rawdump = CreateFileW (rawdump_path, GENERIC_WRITE,
-					   FILE_SHARE_READ, NULL,
-					   CREATE_ALWAYS,
-					   FILE_ATTRIBUTE_NORMAL, NULL);
-	    if (rawdump != INVALID_HANDLE_VALUE)
-	      {
-		DWORD rawdump_written;
-		WriteFile (rawdump, line, (DWORD) size, &rawdump_written,
-			   NULL);
-		CloseHandle (rawdump);
-	      }
-	  }
-      }
+      msys_argv_raw_dump (L"ARM64_ARGV_RAW_DUMP", line, size);
 #endif
 
       /* Scan the command line and build argv.  Expand wildcards if not
@@ -972,6 +981,16 @@ dll_crt0_1 (void *)
       build_argv (line, __argv, __argc,
 		  NOTSTATE (myself, PID_CYGPARENT),
 		  NOTSTATE (myself, PID_CYGPARENT) && allow_glob);
+
+#ifdef MSYS_ARGV_RAW_DUMP
+      /* Second, post-build_argv snapshot of the very same buffer/offset
+	 range (see comment above); build_argv ()'s only in-place
+	 mutations of this buffer are single NUL word terminators and (in
+	 the "unsafe" quoted () branch, not exercised here) short in-place
+	 left shifts, so `size' remains the buffer's valid, allocated
+	 extent throughout. */
+      msys_argv_raw_dump (L"ARM64_ARGV_POST_DUMP", line, size);
+#endif
 
       /* Convert argv[0] to posix rules if it's currently blatantly
 	 win32 style. */
