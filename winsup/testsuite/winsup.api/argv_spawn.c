@@ -91,7 +91,7 @@ run_spawn (void)
   const char *args[] = {
     self_path, "--child", "spawnv", filler, tail, NULL
   };
-  intptr_t status = spawnv (P_WAIT, self_path, args);
+  intptr_t status = spawnv (_P_WAIT, self_path, args);
   return status < 0 ? 120 : (int) status;
 }
 
