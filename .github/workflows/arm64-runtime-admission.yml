@@ -41,7 +41,7 @@ jobs:
           git fetch --no-tags origin "${REVOKED_BASELINE}"
           test "$(git rev-parse refs/remotes/origin/msys2-3.6.10)" = \
             "${ADMISSION_BASE}"
-          .github/checks/audit-admission-commits.sh \
+          bash .github/checks/audit-admission-commits.sh \
             "${ADMISSION_BASE}" "${REVOKED_BASELINE}" "${GITHUB_SHA}" \
             "${COPILOT_SESSION}" "${DCO_IDENTITY}" | tee provenance.txt
 
