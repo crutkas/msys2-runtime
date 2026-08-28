@@ -82,7 +82,6 @@ jobs:
             autoconf
             automake
             base-devel
-            busybox
             cocom
             diffutils
             docbook-xsl
@@ -128,8 +127,8 @@ jobs:
           make -C build -j"$(nproc)"
           testsuite=$(find build -type d -path '*/winsup/testsuite' -print -quit)
           test -n "$testsuite"
+          mkdir -p "$testsuite/testinst/tmp"
           make -C "$testsuite" \
-            check-local \
             winsup.api/argv_spawn.exe \
             winsup.api/dll_unload.exe
           make -C "$testsuite" check-TESTS \
