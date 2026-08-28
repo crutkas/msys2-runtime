@@ -1338,19 +1338,34 @@ jobs:
           function Get-LongArgDiff([string[]] $corpus, [string] $label) {
             $outPath = Join-Path $env:RUNNER_TEMP "isolate-$label.txt"
             $sizePath = Join-Path $env:RUNNER_TEMP "isolate-$label.size.txt"
-            if (Test-Path $sizePath) { Remove-Item $sizePath -Force }
-            $env:ARM64_ARGV_OUTPUT = $outPath
-            $env:ARM64_ARGV_SIZE_DUMP = $sizePath
-            $startInfo = [Diagnostics.ProcessStartInfo]::new($child)
-            $startInfo.UseShellExecute = $false
-            foreach ($argument in $corpus) { $startInfo.ArgumentList.Add($argument) }
-            $process = [Diagnostics.Process]::Start($startInfo)
-            $process.WaitForExit()
-            if ($process.ExitCode -ne 0) {
-              throw "isolation child ($label) exited $($process.ExitCode)"
+            $convertedPath = Join-Path $env:RUNNER_TEMP "isolate-$label.converted.txt"
+            $crashCodes = [Collections.Generic.List[string]]::new()
+            $process = $null
+            for ($attempt = 1; $attempt -le 3; ++$attempt) {
+              if (Test-Path $outPath) { Remove-Item $outPath -Force }
+              if (Test-Path $sizePath) { Remove-Item $sizePath -Force }
+              if (Test-Path $convertedPath) { Remove-Item $convertedPath -Force }
+              $env:ARM64_ARGV_OUTPUT = $outPath
+              $env:ARM64_ARGV_SIZE_DUMP = $sizePath
+              $env:ARM64_ARGV_CONVERTED_DUMP = $convertedPath
+              $startInfo = [Diagnostics.ProcessStartInfo]::new($child)
+              $startInfo.UseShellExecute = $false
+              foreach ($argument in $corpus) { $startInfo.ArgumentList.Add($argument) }
+              $process = [Diagnostics.Process]::Start($startInfo)
+              $process.WaitForExit()
+              if ($process.ExitCode -eq 0 -and (Test-Path $outPath)) { break }
+              $hex = '0x{0:X8}' -f ($process.ExitCode -band 0xFFFFFFFF)
+              $crashCodes.Add("attempt $attempt exited $($process.ExitCode) ($hex)" + $(if (-not (Test-Path $outPath)) { ' [no dump produced]' } else { '' }))
             }
-            if (-not (Test-Path $outPath)) {
-              throw "isolation child ($label) did not produce a dump"
+            if ($process.ExitCode -ne 0 -or -not (Test-Path $outPath)) {
+              # Every attempt crashed/failed to produce a dump.  Report this
+              # as data instead of throwing, so a single intermittent
+              # native crash doesn't abort the whole diagnostic step and
+              # lose every other corpus/padding-level result it would
+              # otherwise have collected in this same run.
+              $diffs = [Collections.Generic.List[string]]::new()
+              $diffs.Add("CRASHED on all 3 attempts: " + ($crashCodes -join '; '))
+              return [PSCustomObject]@{ Diffs = $diffs; Size = '(crashed)'; Converted = '(crashed)'; Consistency = '(crashed)' }
             }
             $values = @{}
             foreach ($line in Get-Content $outPath) {
@@ -1371,9 +1386,21 @@ jobs:
             if ($actualBytes.Length -ne $expected.Length) {
               $diffs.Add("length mismatch: expected $($expected.Length) bytes, got $($actualBytes.Length) bytes")
             }
+            if ($crashCodes.Count -gt 0) {
+              $diffs.Add("NOTE: succeeded only after retry -- prior attempt(s) crashed: " + ($crashCodes -join '; '))
+            }
             $size = if (Test-Path $sizePath) { (Get-Content $sizePath -Raw).Trim() } else { '(no size dump)' }
-            return [PSCustomObject]@{ Diffs = $diffs; Size = $size }
+            $converted = if (Test-Path $convertedPath) { (Get-Content $convertedPath -Raw).Trim() } else { '(no converted dump)' }
+            $consistency = if ($converted -eq '(no converted dump)' -or $size -eq '(no size dump)') {
+              '(not captured)'
+            } elseif ([int]$converted -eq ([int]$size - 1)) {
+              'CONSISTENT (converted == size - 1)'
+            } else {
+              "INCONSISTENT (converted=$converted, expected size-1=$([int]$size - 1)) -- sys_wcstombs_no_path () returned a DIFFERENT byte count on its real (dst!=NULL) call than its sizing (dst==NULL) call for the identical input!"
+            }
+            return [PSCustomObject]@{ Diffs = $diffs; Size = $size; Converted = $converted; Consistency = $consistency }
           }
+
 
           $expected = [Text.Encoding]::ASCII.GetBytes($long)
           $withQuoted = @('', 'alpha', 'ISO-8859-1', 'LATIN1', '--to-code=UTF-8',
@@ -1392,9 +1419,9 @@ jobs:
           $lines = [Collections.Generic.List[string]]::new()
           function Describe([string] $label, [PSCustomObject] $result) {
             if ($result.Diffs.Count -eq 0) {
-              return "$label (buffer size $($result.Size)): long argument MATCHES expected."
+              return "$label (buffer size $($result.Size), $($result.Consistency)): long argument MATCHES expected."
             }
-            return "$label (buffer size $($result.Size)): long argument is CORRUPTED -- " + ($result.Diffs -join '; ')
+            return "$label (buffer size $($result.Size), $($result.Consistency)): long argument is CORRUPTED -- " + ($result.Diffs -join '; ')
           }
           $lines.Add((Describe "Full corpus (with 'quote`"inside')" $resultWithQuoted))
           $lines.Add((Describe "Without 'quote`"inside'" $resultWithoutQuoted))
@@ -1420,7 +1447,7 @@ jobs:
             $corpus = if ($padLen -eq 0) { @($long) } else { @(('P' * $padLen), $long) }
             $result = Get-LongArgDiff $corpus "pad-$padLen"
             $state = if ($result.Diffs.Count -eq 0) { 'clean' } else { 'CORRUPTED (' + ($result.Diffs -join '; ') + ')' }
-            $lines.Add("  padding=$padLen bytes, buffer size=$($result.Size): $state")
+            $lines.Add("  padding=$padLen bytes, buffer size=$($result.Size), $($result.Consistency): $state")
           }
 
           # Direct pre-build_argv raw-buffer check for a quote-free,
@@ -1436,20 +1463,26 @@ jobs:
           $lines.Add('PRE-build_argv raw buffer check (quote-free/glob-free corpus, same padding levels):')
           function Get-PreBuildArgvDiff([string[]] $corpus, [string] $label) {
             $preDump = Join-Path $env:RUNNER_TEMP "pre-dump-$label.bin"
-            if (Test-Path $preDump) { Remove-Item $preDump -Force }
-            $env:ARM64_ARGV_RAW_DUMP = $preDump
-            $env:ARM64_ARGV_OUTPUT = Join-Path $env:RUNNER_TEMP "pre-dump-$label.txt"
-            $startInfo = [Diagnostics.ProcessStartInfo]::new($child)
-            $startInfo.UseShellExecute = $false
-            foreach ($argument in $corpus) { $startInfo.ArgumentList.Add($argument) }
-            $process = [Diagnostics.Process]::Start($startInfo)
-            $process.WaitForExit()
-            Remove-Item Env:\ARM64_ARGV_RAW_DUMP
-            if ($process.ExitCode -ne 0) {
-              throw "pre-build_argv child ($label) exited $($process.ExitCode)"
+            $crashCodes = [Collections.Generic.List[string]]::new()
+            $process = $null
+            for ($attempt = 1; $attempt -le 3; ++$attempt) {
+              if (Test-Path $preDump) { Remove-Item $preDump -Force }
+              $env:ARM64_ARGV_RAW_DUMP = $preDump
+              $env:ARM64_ARGV_OUTPUT = Join-Path $env:RUNNER_TEMP "pre-dump-$label.txt"
+              $startInfo = [Diagnostics.ProcessStartInfo]::new($child)
+              $startInfo.UseShellExecute = $false
+              foreach ($argument in $corpus) { $startInfo.ArgumentList.Add($argument) }
+              $process = [Diagnostics.Process]::Start($startInfo)
+              $process.WaitForExit()
+              Remove-Item Env:\ARM64_ARGV_RAW_DUMP
+              if ($process.ExitCode -eq 0 -and (Test-Path $preDump)) { break }
+              $hex = '0x{0:X8}' -f ($process.ExitCode -band 0xFFFFFFFF)
+              $crashCodes.Add("attempt $attempt exited $($process.ExitCode) ($hex)" + $(if (-not (Test-Path $preDump)) { ' [no dump produced]' } else { '' }))
             }
-            if (-not (Test-Path $preDump)) {
-              throw "pre-build_argv child ($label) did not produce a raw dump"
+            if ($process.ExitCode -ne 0 -or -not (Test-Path $preDump)) {
+              $diffs = [Collections.Generic.List[string]]::new()
+              $diffs.Add("CRASHED on all 3 attempts: " + ($crashCodes -join '; '))
+              return $diffs
             }
             $preBytes = [IO.File]::ReadAllBytes($preDump)
             $nulIndex = -1
@@ -1469,6 +1502,9 @@ jobs:
               if ($actualByte -ne $expected[$k]) {
                 $diffs.Add("byte $k (relative to long argument's own start): expected 0x$($expected[$k].ToString('x2')) got 0x$($actualByte.ToString('x2'))")
               }
+            }
+            if ($crashCodes.Count -gt 0) {
+              $diffs.Add("NOTE: succeeded only after retry -- prior attempt(s) crashed: " + ($crashCodes -join '; '))
             }
             return $diffs
           }

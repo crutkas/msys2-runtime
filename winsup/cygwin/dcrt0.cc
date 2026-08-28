@@ -984,7 +984,11 @@ dll_crt0_1 (void *)
       if (!line)
 	api_fatal ("unable to allocate %ld bytes for command line",
 		   (long) size);
+#ifdef MSYS_ARGV_RAW_DUMP
+      size_t converted = sys_wcstombs_no_path (line, size, wline);
+#else
       sys_wcstombs_no_path (line, size, wline);
+#endif
 
 #ifdef MSYS_ARGV_RAW_DUMP
       /* Temporary diagnostic-only instrumentation for the AArch64 argv
@@ -1003,6 +1007,15 @@ dll_crt0_1 (void *)
 	 root cause is fixed; it is not part of the fix itself. */
       msys_argv_raw_dump (L"ARM64_ARGV_RAW_DUMP", line, size);
       msys_argv_size_dump (L"ARM64_ARGV_SIZE_DUMP", size);
+
+      /* The real conversion call's return value ("converted", above) used
+	 to be discarded entirely.  Dump it so a CI probe can directly
+	 compare it against `size - 1' (the count the sizing pass -- the
+	 same function, called moments earlier with dst==NULL for the very
+	 same `wline' -- computed) to prove or refute whether
+	 sys_wcstombs_no_path () returns a self-consistent byte count
+	 across its two invocations for identical input. */
+      msys_argv_size_dump (L"ARM64_ARGV_CONVERTED_DUMP", converted);
 #endif
 
       /* Scan the command line and build argv.  Expand wildcards if not
