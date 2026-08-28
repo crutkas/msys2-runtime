@@ -1,0 +1,152 @@
+name: ARM64 runtime admission
+
+on:
+  push:
+    branches:
+      - crutkas-reconcile-runtime-defects
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: arm64-runtime-admission-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  ADMISSION_BASE: 8fbd9808447ee78ed485deead9b79cd1e40c07b7
+  REVOKED_BASELINE: a527ace21c23b763bb96841745f0e2d8cd984f4a
+  COPILOT_SESSION: 3d80604e-83b4-423e-aa7b-6ab155a5ec8f
+  DCO_IDENTITY: Clint Rutkas <clint@rutkas.com>
+
+jobs:
+  provenance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout direct head
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Reject synthetic or revoked ancestry
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${GITHUB_EVENT_NAME}" != pull_request
+          test "${GITHUB_REF#refs/pull/}" = "${GITHUB_REF}"
+          git fetch --no-tags origin \
+            "+refs/heads/msys2-3.6.10:refs/remotes/origin/msys2-3.6.10"
+          git fetch --no-tags origin "${REVOKED_BASELINE}"
+          test "$(git rev-parse refs/remotes/origin/msys2-3.6.10)" = \
+            "${ADMISSION_BASE}"
+          .github/checks/audit-admission-commits.sh \
+            "${ADMISSION_BASE}" "${REVOKED_BASELINE}" "${GITHUB_SHA}" \
+            "${COPILOT_SESSION}" "${DCO_IDENTITY}" | tee provenance.txt
+
+      - name: Upload provenance
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: provenance-${{ github.sha }}-${{ github.run_attempt }}
+          path: provenance.txt
+          if-no-files-found: error
+          retention-days: 30
+
+  x64-regressions:
+    needs: provenance
+    runs-on: windows-2025
+    steps:
+      - name: Checkout direct head
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up private MSYS2 root
+        id: msys2
+        uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884
+        with:
+          msystem: MSYS
+          location: ${{ runner.temp }}\msys64-runtime-admission
+          path-type: minimal
+          update: true
+          cache: false
+          install: >-
+            autoconf
+            automake
+            base-devel
+            busybox
+            cocom
+            diffutils
+            gcc
+            gettext-devel
+            libiconv-devel
+            libzstd-devel
+            make
+            mingw-w64-cross-crt
+            mingw-w64-cross-gcc
+            mingw-w64-cross-zlib
+            perl
+            zlib-devel
+
+      - name: Reject shared MSYS2 root
+        shell: pwsh
+        env:
+          MSYS2_LOCATION: ${{ steps.msys2.outputs.msys2-location }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:MSYS2_LOCATION.TrimEnd('\') -ieq 'C:\msys64') {
+            throw 'The admission build must not use shared C:\msys64'
+          }
+          "msys2_location=$env:MSYS2_LOCATION" |
+            Out-File -FilePath msys2-location.txt -Encoding ascii
+
+      - name: Build runtime and targeted x64 controls
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          (cd winsup && ./autogen.sh)
+          mkdir build
+          (
+            cd build
+            ../configure --disable-dependency-tracking \
+              --with-msys2-runtime-commit="${GITHUB_SHA}"
+          )
+          make -C build -j"$(nproc)"
+          testsuite=$(find build -type d -path '*/winsup/testsuite' -print -quit)
+          test -n "$testsuite"
+          make -C "$testsuite" check \
+            TESTS='winsup.api/argv_spawn winsup.api/dll_unload' \
+            AM_COLOR_TESTS=always
+
+      - name: Collect x64 evidence
+        if: ${{ always() }}
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          evidence=admission-evidence/x64
+          mkdir -p "$evidence/logs"
+          printf 'head=%s\ntree=%s\nrun=%s\nattempt=%s\n' \
+            "$(git rev-parse HEAD)" "$(git rev-parse 'HEAD^{tree}')" \
+            "${GITHUB_RUN_ID}" "${GITHUB_RUN_ATTEMPT}" \
+            > "$evidence/identity.txt"
+          pacman -Q > "$evidence/packages.txt"
+          cp msys2-location.txt "$evidence/"
+          find build -type f \( -name '*.log' -o -name '*.trs' \) \
+            -exec cp --parents '{}' "$evidence/logs" \;
+          (
+            cd "$evidence"
+            find . -type f ! -name SHA256SUMS -print0 \
+              | sort -z | xargs -0 sha256sum > SHA256SUMS
+          )
+
+      - name: Upload x64 evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: x64-regressions-${{ github.sha }}-${{ github.run_attempt }}
+          path: admission-evidence/x64
+          if-no-files-found: error
+          retention-days: 30
