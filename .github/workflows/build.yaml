@@ -1243,20 +1243,28 @@ jobs:
           }
 
           $rawBytes = [IO.File]::ReadAllBytes($rawDump)
-          $needle = [Text.Encoding]::ASCII.GetBytes($long.Substring(0, 32))
-          $matchIndex = -1
-          for ($i = $rawBytes.Length - $needle.Length; $i -ge 0; --$i) {
-            $isMatch = $true
-            for ($j = 0; $j -lt $needle.Length; ++$j) {
-              if ($rawBytes[$i + $j] -ne $needle[$j]) { $isMatch = $false; break }
-            }
-            if ($isMatch) { $matchIndex = $i; break }
+          $expected = [Text.Encoding]::ASCII.GetBytes($long)
+
+          # $long is a 16-byte-repeating pattern ('0123456789abcdef' * 40), so
+          # any short prefix/needle search would spuriously match *inside* the
+          # block at every 16-byte-aligned offset, not just at its true start.
+          # Anchor on structure instead: $long is always the final corpus
+          # argument, and sys_wcstombs_no_path () NUL-terminates the fully
+          # converted command line exactly once, so the first NUL byte in the
+          # raw dump marks the true end of the string, independent of any
+          # trailing over-allocation/padding in the dumped buffer.
+          $nulIndex = -1
+          for ($i = 0; $i -lt $rawBytes.Length; ++$i) {
+            if ($rawBytes[$i] -eq 0) { $nulIndex = $i; break }
           }
-          if ($matchIndex -lt 0) {
-            throw 'could not locate long argument prefix in raw pre-build_argv buffer'
+          if ($nulIndex -lt 0) {
+            throw 'raw pre-build_argv buffer has no NUL terminator'
+          }
+          $matchIndex = $nulIndex - $expected.Length
+          if ($matchIndex -lt 1 -or $rawBytes[$matchIndex - 1] -ne 0x20) {
+            throw "raw pre-build_argv buffer's final $($expected.Length) bytes before its NUL terminator (offset $nulIndex) are not preceded by the expected ' ' argument separator at offset $($matchIndex - 1); long argument is not where expected"
           }
 
-          $expected = [Text.Encoding]::ASCII.GetBytes($long)
           $actual = $rawBytes[$matchIndex..($matchIndex + $expected.Length - 1)]
           $diffs = [Collections.Generic.List[string]]::new()
           for ($k = 0; $k -lt $expected.Length; ++$k) {
