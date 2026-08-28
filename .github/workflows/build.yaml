@@ -1502,12 +1502,32 @@ jobs:
             for ($i = 0; $i -lt $dumpBytes.Length; ++$i) {
               if ($dumpBytes[$i] -eq 0) { $nulIndex = $i; break }
             }
+            # A missing NUL, or a NUL that isn't preceded by the expected
+            # "<filler/progname> " separator immediately before the long
+            # argument's own bytes, means the buffer's layout itself is
+            # anomalous (e.g. an embedded/premature NUL, or the buffer is a
+            # different length than expected) -- this is itself evidence of
+            # corruption at (or before) this dump point, quite possibly the
+            # same intermittent, heap-layout-dependent corruption already
+            # observed elsewhere (silent shift vs. hard crash across
+            # otherwise-identical runs).  Report it as data instead of
+            # throwing, so one anomalous corpus/padding combination doesn't
+            # discard every other result this step would otherwise collect.
             if ($nulIndex -lt 0) {
-              throw "raw buffer ($label, $envVarName) has no NUL terminator"
+              $tailStart = [Math]::Max(0, $dumpBytes.Length - 32)
+              $tailHex = ($dumpBytes[$tailStart..($dumpBytes.Length - 1)] | ForEach-Object { $_.ToString('x2') }) -join ''
+              $diffs = [Collections.Generic.List[string]]::new()
+              $diffs.Add("ANOMALOUS: no NUL terminator found in $($dumpBytes.Length)-byte buffer ($label, $envVarName); last 32 bytes: $tailHex")
+              return $diffs
             }
             $matchIndex = $nulIndex - $expected.Length
             if ($matchIndex -lt 1 -or $dumpBytes[$matchIndex - 1] -ne 0x20) {
-              throw "raw buffer ($label, $envVarName) final bytes before NUL (offset $nulIndex) are not preceded by the expected separator at $($matchIndex - 1)"
+              $ctxStart = [Math]::Max(0, $matchIndex - 16)
+              $ctxEnd = [Math]::Min($dumpBytes.Length - 1, $nulIndex + 1)
+              $ctxHex = ($dumpBytes[$ctxStart..$ctxEnd] | ForEach-Object { $_.ToString('x2') }) -join ''
+              $diffs = [Collections.Generic.List[string]]::new()
+              $diffs.Add("ANOMALOUS: buffer ($label, $envVarName, length $($dumpBytes.Length)) has NUL at offset $nulIndex but no expected separator at offset $($matchIndex - 1) (expected long argument to start at $matchIndex); context bytes [$ctxStart..$ctxEnd] hex: $ctxHex")
+              return $diffs
             }
             $diffs = [Collections.Generic.List[string]]::new()
             for ($k = 0; $k -lt $expected.Length; ++$k) {
