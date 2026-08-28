@@ -1,0 +1,17 @@
+Add pre-build_argv check for quote-free filler+long corpus
+
+The size-sweep proved corruption occurs for ANY nonzero filler padding
+regardless of content/length, using a filler ('P'*N) with no glob or
+quote characters. Direct reading of globify() (dcrt0.cc:207-210) shows
+it early-returns immediately whenever the word contains none of the
+glob-special characters and does not start with '~' -- true for both
+the plain filler and $long themselves. quoted() is likewise never
+invoked (no quote characters in this corpus). Since $long is always
+the final argument, build_argv()'s own scan loop performs no in-place
+write to it either (the terminating write is skipped when the cursor
+is already at the buffer's pre-existing NUL). This means, for this
+specific corpus, build_argv()/quoted()/globify() cannot be the
+corruption source -- so add a direct pre-build_argv raw-buffer diff
+(reusing the NUL-anchor technique from the prior bisection step) at
+padding 0/16/256 to determine whether the corruption already exists
+before build_argv() runs for this quote-free/glob-free case.
