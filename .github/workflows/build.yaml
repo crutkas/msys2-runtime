@@ -1522,12 +1522,23 @@ jobs:
               return $diffs
             }
             $matchIndex = $dumpBytes.Length - 1 - $expected.Length
-            if ($matchIndex -lt 1 -or $dumpBytes[$matchIndex - 1] -ne 0x20) {
-              $ctxStart = [Math]::Max(0, $matchIndex - 16)
-              $ctxEnd = $dumpBytes.Length - 1
-              $ctxHex = ($dumpBytes[$ctxStart..$ctxEnd] | ForEach-Object { $_.ToString('x2') }) -join ''
+            # NOTE: an earlier version of this check also required the byte
+            # immediately before matchIndex to be a literal space (0x20), as
+            # a sanity check that the anchor landed on a real argument
+            # boundary.  That is valid PRE-build_argv (separators are still
+            # spaces at that point) but is systematically wrong
+            # POST-build_argv: build_argv () NUL-terminates *every*
+            # argument in place, including the one immediately preceding
+            # the long argument, so that byte is a NUL post-build_argv, not
+            # a space -- checking for a space there produced a false
+            # "ANOMALOUS" report on every padding level, not a real
+            # corruption finding.  matchIndex is derived purely from the
+            # buffer's own (independently verified, unchanging) length, so
+            # no separator sanity check is needed at all; just diff the
+            # final expected.Length bytes before the buffer's trailing NUL.
+            if ($matchIndex -lt 0) {
               $diffs = [Collections.Generic.List[string]]::new()
-              $diffs.Add("ANOMALOUS: buffer ($label, $envVarName, length $($dumpBytes.Length)) does not have the expected ' ' separator at offset $($matchIndex - 1) immediately before the long argument's expected start at $matchIndex (buffer's own end); context bytes [$ctxStart..$ctxEnd] hex: $ctxHex")
+              $diffs.Add("ANOMALOUS: buffer ($label, $envVarName) of length $($dumpBytes.Length) is too short to contain the $($expected.Length)-byte long argument")
               return $diffs
             }
             $diffs = [Collections.Generic.List[string]]::new()
