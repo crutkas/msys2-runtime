@@ -2,8 +2,9 @@
 
 set -euo pipefail
 
-if test "$#" -lt 9; then
-  echo "usage: $0 BASE LEGACY_HEAD LEGACY_SESSION PRIOR_HEAD PRIOR_SESSION" \
+if test "$#" -lt 11; then
+  echo "usage: $0 BASE LEGACY_HEAD LEGACY_SESSION INVALID_HEAD" \
+    "INVALID_RECORDED_SESSION PRE_ERRATUM_HEAD PRE_ERRATUM_SESSION" \
     "HEAD SESSION DCO REVOKED..." >&2
   exit 1
 fi
