@@ -932,6 +932,41 @@ dll_crt0_1 (void *)
 		   (long) size);
       sys_wcstombs_no_path (line, size, wline);
 
+#ifdef MSYS_ARGV_RAW_DUMP
+      /* Temporary diagnostic-only instrumentation for the AArch64 argv
+	 corruption investigation (fork-only, never shipped in a release
+	 build).  When ARM64_ARGV_RAW_DUMP names a file, write the raw,
+	 fully-converted multibyte command line -- exactly as produced by
+	 sys_wcstombs_no_path (), before build_argv () touches a single
+	 byte of it -- to that file using only direct Win32 calls (no
+	 cygwin heap/fd machinery), so its contents can be diffed against
+	 the final argv[] dump to prove whether the corruption already
+	 exists at this point or is introduced later, by build_argv (),
+	 quoted () or globify ().  This block must be removed (or the
+	 MSYS_ARGV_RAW_DUMP macro left permanently undefined) once the
+	 root cause is fixed; it is not part of the fix itself. */
+      {
+	WCHAR rawdump_path[MAX_PATH];
+	DWORD rawdump_path_len
+	  = GetEnvironmentVariableW (L"ARM64_ARGV_RAW_DUMP", rawdump_path,
+				     MAX_PATH);
+	if (rawdump_path_len && rawdump_path_len < MAX_PATH)
+	  {
+	    HANDLE rawdump = CreateFileW (rawdump_path, GENERIC_WRITE,
+					   FILE_SHARE_READ, NULL,
+					   CREATE_ALWAYS,
+					   FILE_ATTRIBUTE_NORMAL, NULL);
+	    if (rawdump != INVALID_HANDLE_VALUE)
+	      {
+		DWORD rawdump_written;
+		WriteFile (rawdump, line, (DWORD) size, &rawdump_written,
+			   NULL);
+		CloseHandle (rawdump);
+	      }
+	  }
+      }
+#endif
+
       /* Scan the command line and build argv.  Expand wildcards if not
 	 called from another cygwin process. */
       build_argv (line, __argv, __argc,

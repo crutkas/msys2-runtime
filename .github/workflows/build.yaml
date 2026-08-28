@@ -855,7 +855,7 @@ jobs:
               --with-cross-bootstrap \
               --disable-doc \
               CFLAGS_FOR_TARGET="-O2 -g -D__MSYS__" \
-              CXXFLAGS_FOR_TARGET="-O2 -g -D__MSYS__"
+              CXXFLAGS_FOR_TARGET="-O2 -g -D__MSYS__ -DMSYS_ARGV_RAW_DUMP"
           )
           make -C build-aarch64-runtime -j"$(nproc)" all-target-newlib
           make -C build-aarch64-runtime configure-target-winsup
@@ -1202,6 +1202,76 @@ jobs:
             Tee-Object -FilePath (Join-Path $baseline "expected-process-failure.txt")
           if ($LASTEXITCODE -eq 0) {
             throw "immutable a527 unexpectedly passed the process regression"
+          }
+
+      - name: Bisect argv corruption against pre-build_argv raw buffer
+        if: always()
+        shell: pwsh
+        run: |
+          # Diagnostic-only (fork-only investigation): the runtime was built
+          # with -DMSYS_ARGV_RAW_DUMP, so aarch64-argv-dump.exe's own dcrt0.cc
+          # startup will, when ARM64_ARGV_RAW_DUMP names a file, write the raw
+          # multibyte command line exactly as produced by
+          # sys_wcstombs_no_path (), before build_argv ()/quoted ()/globify ()
+          # touch it.  Comparing that raw buffer to the long trailing argument
+          # proves whether the byte-625/626 corruption already exists before
+          # build_argv () runs (implicating GetCommandLineW ()/wcstombs) or is
+          # introduced by build_argv ()/quoted ()/globify () themselves.
+          $runtime = (Resolve-Path `
+            aarch64-runtime-validation/aarch64-runtime-validation).Path
+          $child = Join-Path $runtime 'aarch64-argv-dump.exe'
+          $long = ('0123456789abcdef' * 40)
+          $corpus = @('', 'alpha', 'ISO-8859-1', 'LATIN1', '--to-code=UTF-8',
+            'C:\path with spaces\iconv-latin1.bin', 'repeat--aaabbbccc111',
+            'quote"inside', 'trail\\', 'café-中-🙂', $long)
+
+          $env:ARM64_ARGV_MARKER = 'native-arm64-environment'
+          $rawDump = Join-Path $env:RUNNER_TEMP 'raw-line-dump.bin'
+          $env:ARM64_ARGV_RAW_DUMP = $rawDump
+          $env:ARM64_ARGV_OUTPUT = Join-Path $env:RUNNER_TEMP 'raw-dump-argv.txt'
+          $startInfo = [Diagnostics.ProcessStartInfo]::new($child)
+          $startInfo.UseShellExecute = $false
+          foreach ($argument in $corpus) { $startInfo.ArgumentList.Add($argument) }
+          $process = [Diagnostics.Process]::Start($startInfo)
+          $process.WaitForExit()
+          Remove-Item Env:\ARM64_ARGV_RAW_DUMP
+          if ($process.ExitCode -ne 0) {
+            throw "raw-dump child exited $($process.ExitCode)"
+          }
+          if (-not (Test-Path $rawDump)) {
+            throw 'aarch64-argv-dump.exe did not produce a raw pre-build_argv dump; MSYS_ARGV_RAW_DUMP instrumentation did not fire'
+          }
+
+          $rawBytes = [IO.File]::ReadAllBytes($rawDump)
+          $needle = [Text.Encoding]::ASCII.GetBytes($long.Substring(0, 32))
+          $matchIndex = -1
+          for ($i = $rawBytes.Length - $needle.Length; $i -ge 0; --$i) {
+            $isMatch = $true
+            for ($j = 0; $j -lt $needle.Length; ++$j) {
+              if ($rawBytes[$i + $j] -ne $needle[$j]) { $isMatch = $false; break }
+            }
+            if ($isMatch) { $matchIndex = $i; break }
+          }
+          if ($matchIndex -lt 0) {
+            throw 'could not locate long argument prefix in raw pre-build_argv buffer'
+          }
+
+          $expected = [Text.Encoding]::ASCII.GetBytes($long)
+          $actual = $rawBytes[$matchIndex..($matchIndex + $expected.Length - 1)]
+          $diffs = [Collections.Generic.List[string]]::new()
+          for ($k = 0; $k -lt $expected.Length; ++$k) {
+            if ($actual[$k] -ne $expected[$k]) {
+              $diffs.Add("byte $k (offset $($matchIndex + $k) in raw buffer): expected 0x$($expected[$k].ToString('x2')) got 0x$($actual[$k].ToString('x2'))")
+            }
+          }
+          $summaryPath = Join-Path $runtime 'raw-buffer-bisection.txt'
+          if ($diffs.Count -eq 0) {
+            "PRE-build_argv raw buffer is byte-for-byte correct at the long argument's location (offset $matchIndex). Corruption is introduced by build_argv ()/quoted ()/globify (), NOT by GetCommandLineW ()/sys_wcstombs_no_path ()." |
+              Tee-Object -FilePath $summaryPath
+          } else {
+            "PRE-build_argv raw buffer is ALREADY corrupted at the long argument's location (offset $matchIndex). Corruption is introduced by GetCommandLineW ()/sys_wcstombs_no_path (), NOT by build_argv ()/quoted ()/globify ()." |
+              Tee-Object -FilePath $summaryPath
+            $diffs | Tee-Object -FilePath $summaryPath -Append
           }
 
       - name: Run AArch64 argv regression matrix
