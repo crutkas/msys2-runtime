@@ -182,9 +182,11 @@ def require_schema(record):
     test, kind, data, unused_raw, source = record
     del unused_raw
     if test == "argv_spawn":
-        require(kind in ARGV_SCHEMAS,
-                "%s has unknown argv_spawn kind %r" % (source, kind))
-        expected = ARGV_SCHEMAS[kind]
+        expected = ARGV_SCHEMAS.get(kind)
+        if expected is None:
+            require(False, "%s has unknown argv_spawn kind %r"
+                    % (source, kind))
+            return
     else:
         if kind == "control":
             name = data.get("control")
@@ -447,6 +449,14 @@ def verify_records(records):
     return argv_counts, unload_counts
 
 
+def verify_record_schemas(records):
+    require(len(records) == EXPECTED_TOTAL,
+            "expected exactly %d DIAG records, saw %d"
+            % (EXPECTED_TOTAL, len(records)))
+    for record in records:
+        require_schema(record)
+
+
 def replace_once(lines, predicate, old, new):
     changed = list(lines)
     indexes = [index for index, line in enumerate(changed)
@@ -492,37 +502,44 @@ def mutation_self_test(records):
         ("unknown-record-kind",
          replace_once(lines, positive, "DIAG argv_spawn positive ",
                       "DIAG argv_spawn bogus_kind "),
-         "unknown argv_spawn kind 'bogus_kind'", "unknown-argv-kind"),
+         "unknown argv_spawn kind 'bogus_kind'", "unknown-argv-kind",
+         verify_record_schemas),
         ("unknown-field",
          replace_once(lines, positive, " result=pass",
                       " unknown=1 result=pass"),
-         "argv_spawn/positive fields are", "exact-schema"),
+         "argv_spawn/positive fields are", "exact-schema", verify_records),
         ("duplicate-field",
          replace_once(lines, positive, " result=pass",
                       " result=fail result=pass"),
-         "repeats field 'result'", "duplicate-field"),
+         "repeats field 'result'", "duplicate-field", verify_records),
         ("derived-failure",
          replace_once(lines, derived, "result=pass", "result=fail"),
-         "derived has result='fail', expected 'pass'", "derived-result"),
+         "derived has result='fail', expected 'pass'", "derived-result",
+         verify_records),
         ("dll-summary-failure",
          replace_once(lines, dll_summary, "result=pass", "result=fail"),
          "dll summary has result='fail', expected 'pass'",
-         "dll-summary-result"),
+         "dll-summary-result", verify_records),
         ("crosscheck-not-performed",
          replace_once(lines, crosscheck, "performed=1", "performed=0"),
          "runtime_root crosscheck has performed='0', expected '1'",
-         "runtime-root-performed"),
+         "runtime-root-performed", verify_records),
         ("missing-record", lines[1:],
-         "expected exactly 220 DIAG records, saw 219", "exact-total"),
+         "expected exactly 220 DIAG records, saw 219", "exact-total",
+         verify_records),
         ("extra-duplicate-record",
          replace_record_once(lines, positive, duplicate_positive),
          "duplicate positive record ('execv', '0', '1')",
-         "duplicate-positive-key"),
+         "duplicate-positive-key", verify_records),
     ]
     outcomes = []
-    for name, mutated, expected_error, guard in mutations:
+    for name, mutated, expected_error, guard, verifier in mutations:
+        expected_count = EXPECTED_TOTAL - (name == "missing-record")
+        require(len(mutated) == expected_count,
+                "mutation %r has %d records, expected %d"
+                % (name, len(mutated), expected_count))
         try:
-            verify_records(parse_lines(mutated, "mutation-" + name))
+            verifier(parse_lines(mutated, "mutation-" + name))
         except RecordError as error:
             require(expected_error in str(error),
                     "mutation %r was rejected for the wrong reason: %s"
