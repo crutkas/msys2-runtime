@@ -401,6 +401,34 @@ msys_argv_raw_dump (const wchar_t *envvar, const void *buf, size_t nbytes)
   WriteFile (h, buf, (DWORD) nbytes, &written, NULL);
   CloseHandle (h);
 }
+
+/* Temporary diagnostic-only helper (see msys_argv_raw_dump above): when
+   the environment variable named by ENVVAR names a file, write NBYTES
+   (the heap-allocated size of the command-line conversion buffer, i.e.
+   the `size' local in dll_crt0_1) to that file as decimal ASCII text, so
+   a CI probe can correlate the presence/absence of the argv corruption
+   with the buffer's total allocated size across many different corpora
+   without having to separately reconstruct that size from the raw dump
+   itself. */
+static void
+msys_argv_size_dump (const wchar_t *envvar, size_t nbytes)
+{
+  WCHAR path[MAX_PATH];
+  DWORD path_len = GetEnvironmentVariableW (envvar, path, MAX_PATH);
+  if (!path_len || path_len >= MAX_PATH)
+    return;
+  HANDLE h = CreateFileW (path, GENERIC_WRITE, FILE_SHARE_READ, NULL,
+			   CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+  if (h == INVALID_HANDLE_VALUE)
+    return;
+  char text[32];
+  int len = __builtin_snprintf (text, sizeof (text), "%lu",
+				 (unsigned long) nbytes);
+  DWORD written;
+  if (len > 0)
+    WriteFile (h, text, (DWORD) len, &written, NULL);
+  CloseHandle (h);
+}
 #endif
 
 /* sanity and sync check */
@@ -974,6 +1002,7 @@ dll_crt0_1 (void *)
 	 the MSYS_ARGV_RAW_DUMP macro left permanently undefined) once the
 	 root cause is fixed; it is not part of the fix itself. */
       msys_argv_raw_dump (L"ARM64_ARGV_RAW_DUMP", line, size);
+      msys_argv_size_dump (L"ARM64_ARGV_SIZE_DUMP", size);
 #endif
 
       /* Scan the command line and build argv.  Expand wildcards if not

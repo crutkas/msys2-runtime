@@ -1337,7 +1337,10 @@ jobs:
 
           function Get-LongArgDiff([string[]] $corpus, [string] $label) {
             $outPath = Join-Path $env:RUNNER_TEMP "isolate-$label.txt"
+            $sizePath = Join-Path $env:RUNNER_TEMP "isolate-$label.size.txt"
+            if (Test-Path $sizePath) { Remove-Item $sizePath -Force }
             $env:ARM64_ARGV_OUTPUT = $outPath
+            $env:ARM64_ARGV_SIZE_DUMP = $sizePath
             $startInfo = [Diagnostics.ProcessStartInfo]::new($child)
             $startInfo.UseShellExecute = $false
             foreach ($argument in $corpus) { $startInfo.ArgumentList.Add($argument) }
@@ -1368,7 +1371,8 @@ jobs:
             if ($actualBytes.Length -ne $expected.Length) {
               $diffs.Add("length mismatch: expected $($expected.Length) bytes, got $($actualBytes.Length) bytes")
             }
-            return $diffs
+            $size = if (Test-Path $sizePath) { (Get-Content $sizePath -Raw).Trim() } else { '(no size dump)' }
+            return [PSCustomObject]@{ Diffs = $diffs; Size = $size }
           }
 
           $expected = [Text.Encoding]::ASCII.GetBytes($long)
@@ -1380,28 +1384,45 @@ jobs:
             'trail\\', 'café-中-🙂', $long)
           $longOnly = @($long)
 
-          $diffsWithQuoted = Get-LongArgDiff $withQuoted 'with-quoted'
-          $diffsWithoutQuoted = Get-LongArgDiff $withoutQuoted 'without-quoted'
-          $diffsLongOnly = Get-LongArgDiff $longOnly 'long-only'
+          $resultWithQuoted = Get-LongArgDiff $withQuoted 'with-quoted'
+          $resultWithoutQuoted = Get-LongArgDiff $withoutQuoted 'without-quoted'
+          $resultLongOnly = Get-LongArgDiff $longOnly 'long-only'
 
           $summaryPath = Join-Path $runtime 'globify-isolation.txt'
           $lines = [Collections.Generic.List[string]]::new()
-          function Describe([string] $label, [Collections.Generic.List[string]] $diffs) {
-            if ($diffs.Count -eq 0) { return "$label`: long argument MATCHES expected." }
-            return "$label`: long argument is CORRUPTED -- " + ($diffs -join '; ')
+          function Describe([string] $label, [PSCustomObject] $result) {
+            if ($result.Diffs.Count -eq 0) {
+              return "$label (buffer size $($result.Size)): long argument MATCHES expected."
+            }
+            return "$label (buffer size $($result.Size)): long argument is CORRUPTED -- " + ($result.Diffs -join '; ')
           }
-          $lines.Add((Describe "Full corpus (with 'quote`"inside')" $diffsWithQuoted))
-          $lines.Add((Describe "Without 'quote`"inside'" $diffsWithoutQuoted))
-          $lines.Add((Describe 'Long argument only (no other arguments at all)' $diffsLongOnly))
-          if ($diffsWithQuoted.Count -gt 0 -and $diffsWithoutQuoted.Count -eq 0) {
+          $lines.Add((Describe "Full corpus (with 'quote`"inside')" $resultWithQuoted))
+          $lines.Add((Describe "Without 'quote`"inside'" $resultWithoutQuoted))
+          $lines.Add((Describe 'Long argument only (no other arguments at all)' $resultLongOnly))
+          if ($resultWithQuoted.Diffs.Count -gt 0 -and $resultWithoutQuoted.Diffs.Count -eq 0) {
             $lines.Add("CONCLUSION: removing 'quote`"inside' eliminates the corruption; globify ()'s processing of that argument is the trigger.")
-          } elseif ($diffsLongOnly.Count -gt 0) {
+          } elseif ($resultLongOnly.Diffs.Count -gt 0) {
             $lines.Add('CONCLUSION: the long argument is corrupted even when it is the ONLY argument on the command line, with no other arguments and no quoted()/globify() special-case processing anywhere else in the command line. The trigger is intrinsic to processing this argument itself (its length/content/position), not caused by any other argument.')
-          } elseif ($diffsWithoutQuoted.Count -gt 0) {
+          } elseif ($resultWithoutQuoted.Diffs.Count -gt 0) {
             $lines.Add("CONCLUSION: removing 'quote`"inside' did NOT eliminate the corruption, but the long argument alone (no other arguments) is clean; some OTHER argument in the reduced corpus (not 'quote`"inside') is responsible.")
           } else {
             $lines.Add('CONCLUSION: all three variants are clean in this run; corruption did not reproduce.')
           }
+
+          # Size sweep: prepend a single filler argument of increasing
+          # length before the long argument, to directly correlate the
+          # heap-allocated command-line buffer size with the presence of
+          # the corruption and pinpoint the exact size threshold at which
+          # it starts appearing.
+          $lines.Add('')
+          $lines.Add('SIZE SWEEP (single short filler argument, increasing length, prepended before the long argument):')
+          foreach ($padLen in 0, 8, 16, 24, 32, 48, 64, 96, 128, 160, 192, 224, 256) {
+            $corpus = if ($padLen -eq 0) { @($long) } else { @(('P' * $padLen), $long) }
+            $result = Get-LongArgDiff $corpus "pad-$padLen"
+            $state = if ($result.Diffs.Count -eq 0) { 'clean' } else { 'CORRUPTED (' + ($result.Diffs -join '; ') + ')' }
+            $lines.Add("  padding=$padLen bytes, buffer size=$($result.Size): $state")
+          }
+
           $lines | Tee-Object -FilePath $summaryPath
 
       - name: Run AArch64 argv regression matrix
