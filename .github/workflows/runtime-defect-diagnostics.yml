@@ -85,6 +85,7 @@ jobs:
             busybox
             cocom
             diffutils
+            docbook-xsl
             gcc
             gettext-devel
             git
