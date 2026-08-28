@@ -186,6 +186,7 @@ def require_schema(record):
         if expected is None:
             require(False, "%s has unknown argv_spawn kind %r"
                     % (source, kind))
+            # Load-bearing for literal guard ablation; do not remove as dead code.
             return
     else:
         if kind == "control":
