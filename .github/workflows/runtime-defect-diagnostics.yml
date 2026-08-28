@@ -63,6 +63,13 @@ jobs:
             "${GITHUB_SHA}" "${COPILOT_SESSION}" "${DCO_IDENTITY}" \
             "${revoked[@]}" | tee provenance.txt
 
+      - name: Verify ordinary build artifact policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/checks/verify-build-artifact-policy.py \
+            .github/workflows/build.yaml | tee build-artifact-policy.txt
+
       - name: Record blocked native lanes
         shell: bash
         run: |
@@ -97,6 +104,7 @@ jobs:
           name: diagnostic-provenance-non-consumable-${{ github.sha }}-${{ github.run_attempt }}
           path: |
             provenance.txt
+            build-artifact-policy.txt
             blocked-lanes.txt
           if-no-files-found: error
           retention-days: 30

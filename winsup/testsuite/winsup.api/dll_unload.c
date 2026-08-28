@@ -4,22 +4,26 @@
    mechanisms and this program checks the exact marker sequence the runtime
    replays.  See winsup.api/dll_unload_helper.c for the marker vocabulary.
 
-   Three negative controls run inside this test so that a passing result
-   cannot be vacuous:
+   Negative and alias controls run inside this test so a passing result cannot
+   be vacuous:
 
      * an omitted-registration variant, which proves the positive marker
        expectation is falsifiable rather than trivially satisfied,
      * a mis-associated registration, made through the very same runtime
        export but from executable code, which must never be replayed when
        the helper DLL is unloaded, and
-     * a decoy file that shares the runtime base name, which must not
-       satisfy the runtime identity binding.
+     * a decoy file and a hardlink spelling, which must not satisfy the
+       final-path-plus-file-index binding, and
+     * case, path-prefix, file-symlink, directory-junction and directory
+       reparse spellings, which must canonicalise back to the bound file.
 
    Every check emits a machine-readable DIAG record on success as well as on
    failure, so a passing run carries its own evidence.  */
 
 #include <windows.h>
+#include <ctype.h>
 #include <dlfcn.h>
+#include <stddef.h>
 #include <sys/cygwin.h>
 #include <sys/stat.h>
 #include <stdio.h>
@@ -27,6 +31,7 @@
 #include <string.h>
 #include <strings.h>
 #include <unistd.h>
+#include <wchar.h>
 
 /* Registration modes.  winsup.api/dll_unload_helper.c mirrors these. */
 #define DLL_UNLOAD_MODE_FULL 0u
@@ -35,6 +40,7 @@
 #define DLL_UNLOAD_RUNTIME_NAME "msys-2.0.dll"
 #define DLL_UNLOAD_HELPER_LEAF "/dll_unload_helper.dll"
 #define DLL_UNLOAD_RUNTIME_LEAF "/../testinst/bin/" DLL_UNLOAD_RUNTIME_NAME
+#define ARRAY_SIZE(a) (sizeof (a) / sizeof ((a)[0]))
 
 /* Registration order inside the helper is A, C, X, Y.  dll_list::detach
    replays the __cxa chain last-in first-out and only afterwards runs the DLL
@@ -48,10 +54,43 @@ typedef int (*register_fn) (const char *, unsigned, void (*) (void),
 typedef int (*touch_fn) (void);
 typedef void *(*addr_fn) (void);
 typedef const char *(*path_fn) (void);
-typedef int (*identity_fn) (unsigned long *, unsigned long *, unsigned long *);
+typedef int (*identity_fn) (unsigned long *, unsigned long *, unsigned long *,
+			    int *, int *);
 typedef int (*bound_fn) (const char *);
 typedef int (*atexit_export_fn) (void (*) (void));
 typedef DWORD (WINAPI *final_path_fn) (HANDLE, LPSTR, DWORD, DWORD);
+typedef BOOLEAN (WINAPI *symbolic_link_fn) (LPCSTR, LPCSTR, DWORD);
+
+#ifndef SYMBOLIC_LINK_FLAG_DIRECTORY
+#define SYMBOLIC_LINK_FLAG_DIRECTORY 0x1
+#endif
+#ifndef SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE
+#define SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE 0x2
+#endif
+#ifndef FILE_FLAG_OPEN_REPARSE_POINT
+#define FILE_FLAG_OPEN_REPARSE_POINT 0x00200000
+#endif
+#ifndef IO_REPARSE_TAG_MOUNT_POINT
+#define IO_REPARSE_TAG_MOUNT_POINT 0xa0000003
+#endif
+#ifndef FSCTL_SET_REPARSE_POINT
+#define FSCTL_SET_REPARSE_POINT 0x000900a4
+#endif
+#ifndef FSCTL_DELETE_REPARSE_POINT
+#define FSCTL_DELETE_REPARSE_POINT 0x000900ac
+#endif
+
+struct junction_reparse_buffer
+{
+  DWORD tag;
+  WORD data_length;
+  WORD reserved;
+  WORD substitute_offset;
+  WORD substitute_length;
+  WORD print_offset;
+  WORD print_length;
+  WCHAR path_buffer[2 * MAX_PATH + 16];
+};
 
 /* Resolved at runtime because the testsuite does not select a Windows
    version new enough for the w32api header to expose this entry point. */
@@ -70,8 +109,24 @@ resolve_final_path (void)
   return cached;
 }
 
+static symbolic_link_fn
+resolve_symbolic_link (void)
+{
+  static symbolic_link_fn cached;
+
+  if (!cached)
+    {
+      HMODULE kernel = GetModuleHandleA ("kernel32.dll");
+      if (kernel)
+	cached = (symbolic_link_fn) (void *)
+	  GetProcAddress (kernel, "CreateSymbolicLinkA");
+    }
+  return cached;
+}
+
 struct file_identity
 {
+  HANDLE handle;
   DWORD volume;
   DWORD index_high;
   DWORD index_low;
@@ -81,9 +136,33 @@ struct file_identity
 static char helper_log_path[MAX_PATH];
 static char runtime_win32_path[MAX_PATH];
 static atexit_export_fn exe_runtime_atexit;
+static struct file_identity expected_runtime_identity;
+static struct file_identity loaded_runtime_identity;
 static volatile int misassociated_runs;
 static int controls_passed;
 static int runtime_records_emitted;
+
+struct identity_fixtures
+{
+  char root[MAX_PATH];
+  char decoy[MAX_PATH];
+  char hardlink[MAX_PATH];
+  char file_symlink[MAX_PATH];
+  char junction[MAX_PATH];
+  char junction_runtime[MAX_PATH];
+  char reparse[MAX_PATH];
+  char reparse_runtime[MAX_PATH];
+  char case_path[MAX_PATH];
+  char prefix_path[MAX_PATH];
+  int root_created;
+  int decoy_created;
+  int hardlink_created;
+  int file_symlink_created;
+  int junction_created;
+  int reparse_created;
+};
+
+static struct identity_fixtures identity_fixtures;
 
 static int
 append_marker (char marker)
@@ -153,10 +232,12 @@ query_identity (const char *win32_path, struct file_identity *out)
   BOOL ok;
   HANDLE file;
 
+  memset (out, 0, sizeof (*out));
+  out->handle = INVALID_HANDLE_VALUE;
   if (!win32_path || !*win32_path || !final_path)
     return 0;
   file = CreateFileA (win32_path, 0,
-		      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+		      FILE_SHARE_READ | FILE_SHARE_WRITE,
 		      NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
   if (file == INVALID_HANDLE_VALUE)
     return 0;
@@ -164,13 +245,30 @@ query_identity (const char *win32_path, struct file_identity *out)
   memset (out->final_path, 0, sizeof (out->final_path));
   ok = GetFileInformationByHandle (file, &info);
   final = final_path (file, out->final_path, sizeof (out->final_path), 0);
-  CloseHandle (file);
   if (!ok || final == 0 || final >= sizeof (out->final_path))
-    return 0;
+    {
+      CloseHandle (file);
+      return 0;
+    }
+  out->handle = file;
   out->volume = info.dwVolumeSerialNumber;
   out->index_high = info.nFileIndexHigh;
   out->index_low = info.nFileIndexLow;
   return 1;
+}
+
+static void
+close_identity (struct file_identity *identity)
+{
+  if (identity->handle && identity->handle != INVALID_HANDLE_VALUE)
+    CloseHandle (identity->handle);
+  identity->handle = INVALID_HANDLE_VALUE;
+}
+
+static int
+identity_open (const struct file_identity *identity)
+{
+  return identity->handle && identity->handle != INVALID_HANDLE_VALUE;
 }
 
 static int
@@ -186,37 +284,64 @@ static int
 resolve_runtime_atexit (const char *expected_win32_path,
 			atexit_export_fn *out)
 {
-  struct file_identity expected;
-  struct file_identity loaded;
   MEMORY_BASIC_INFORMATION info;
   char module_path[MAX_PATH];
   HMODULE runtime;
   FARPROC entry;
   DWORD length;
 
-  if (!query_identity (expected_win32_path, &expected))
+  if (!query_identity (expected_win32_path, &expected_runtime_identity))
     return 1;
   runtime = GetModuleHandleA (DLL_UNLOAD_RUNTIME_NAME);
   if (!runtime)
-    return 2;
+    {
+      close_identity (&expected_runtime_identity);
+      return 2;
+    }
   length = GetModuleFileNameA (runtime, module_path, sizeof (module_path));
   if (length == 0 || length >= sizeof (module_path))
-    return 3;
-  if (!query_identity (module_path, &loaded))
-    return 4;
-  if (!same_file (&expected, &loaded))
-    return 5;
+    {
+      close_identity (&expected_runtime_identity);
+      return 3;
+    }
+  if (!query_identity (module_path, &loaded_runtime_identity))
+    {
+      close_identity (&expected_runtime_identity);
+      return 4;
+    }
+  if (!same_file (&expected_runtime_identity, &loaded_runtime_identity))
+    {
+      close_identity (&loaded_runtime_identity);
+      close_identity (&expected_runtime_identity);
+      return 5;
+    }
   entry = GetProcAddress (runtime, "atexit");
   if (!entry)
-    return 6;
+    {
+      close_identity (&loaded_runtime_identity);
+      close_identity (&expected_runtime_identity);
+      return 6;
+    }
   memset (&info, 0, sizeof (info));
   if (VirtualQuery ((const void *) entry, &info, sizeof (info))
       != sizeof (info))
-    return 7;
+    {
+      close_identity (&loaded_runtime_identity);
+      close_identity (&expected_runtime_identity);
+      return 7;
+    }
   if (info.AllocationBase != (void *) runtime)
-    return 8;
+    {
+      close_identity (&loaded_runtime_identity);
+      close_identity (&expected_runtime_identity);
+      return 8;
+    }
   if ((void *) entry == (void *) &atexit)
-    return 9;
+    {
+      close_identity (&loaded_runtime_identity);
+      close_identity (&expected_runtime_identity);
+      return 9;
+    }
   *out = (atexit_export_fn) (void *) entry;
   return 0;
 }
@@ -294,9 +419,9 @@ derive_runtime_path (char *out, size_t size)
   return 0;
 }
 
-/* When the harness exports runtime_root, require it to name the very same
-   file.  This never relaxes the derivation above; it only adds a second
-   independent agreement when the variable is available.  */
+/* The harness-provided runtime_root must name the very same file.  This never
+   relaxes the source-derived path above; it adds a mandatory second agreement
+   from independently supplied harness state.  */
 static int
 crosscheck_runtime_root (const char *expected_win32_path, int *checked)
 {
@@ -310,20 +435,30 @@ crosscheck_runtime_root (const char *expected_win32_path, int *checked)
 
   *checked = 0;
   if (!root || !*root)
-    return 0;
+    return 1;
   length = strlen (root);
   if (length + sizeof (leaf) > sizeof (posix))
-    return 1;
+    return 2;
   memcpy (posix, root, length);
   memcpy (posix + length, leaf, sizeof (leaf));
   if (cygwin_conv_path (CCP_POSIX_TO_WIN_A | CCP_ABSOLUTE, posix, win32,
 			sizeof (win32)))
-    return 2;
-  if (!query_identity (win32, &from_root)
-      || !query_identity (expected_win32_path, &expected))
     return 3;
-  if (!same_file (&from_root, &expected))
+  if (!query_identity (win32, &from_root))
     return 4;
+  if (!query_identity (expected_win32_path, &expected))
+    {
+      close_identity (&from_root);
+      return 4;
+    }
+  if (!same_file (&from_root, &expected))
+    {
+      close_identity (&expected);
+      close_identity (&from_root);
+      return 5;
+    }
+  close_identity (&expected);
+  close_identity (&from_root);
   *checked = 1;
   return 0;
 }
@@ -360,35 +495,295 @@ matches_repeated (const char *actual, size_t length, const char *unit,
   return 1;
 }
 
-/* Build a decoy file that shares the runtime base name in an unrelated
-   directory, so the identity binding can be shown to reject it.  */
 static int
-make_decoy_runtime (char *directory, size_t directory_size, char *file,
-		    size_t file_size)
+join_path (char *out, size_t size, const char *directory, const char *leaf)
 {
-  char temp[MAX_PATH];
-  HANDLE handle;
+  int written = snprintf (out, size, "%s\\%s", directory, leaf);
+  return written >= 0 && (size_t) written < size;
+}
+
+static int
+create_empty_file (const char *path)
+{
+  HANDLE handle = CreateFileA (path, GENERIC_WRITE, 0, NULL, CREATE_NEW,
+			       FILE_ATTRIBUTE_NORMAL, NULL);
+  if (handle == INVALID_HANDLE_VALUE)
+    return 0;
+  CloseHandle (handle);
+  return 1;
+}
+
+static int
+create_native_symlink (const char *link, const char *target, DWORD flags)
+{
+  symbolic_link_fn create = resolve_symbolic_link ();
+
+  if (!create)
+    return 0;
+  if (create (link, target,
+	      flags | SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE))
+    return 1;
+  if (create (link, target, flags))
+    return 1;
+  return 0;
+}
+
+static int
+create_junction (const char *link, const char *target)
+{
+  struct junction_reparse_buffer buffer;
+  WCHAR target_w[MAX_PATH];
+  WCHAR substitute[MAX_PATH + 4];
+  const char *dos_target = target;
+  DWORD returned;
+  HANDLE directory;
+  size_t substitute_bytes;
+  size_t print_bytes;
+  DWORD input_size;
+
+  if (strncmp (dos_target, "\\\\?\\", 4) == 0)
+    dos_target += 4;
+  if (!MultiByteToWideChar (CP_ACP, 0, dos_target, -1, target_w,
+			    (int) ARRAY_SIZE (target_w)))
+    return 0;
+  if (swprintf (substitute, ARRAY_SIZE (substitute), L"\\??\\%ls",
+		target_w) < 0)
+    return 0;
+  if (!CreateDirectoryA (link, NULL))
+    return 0;
+
+  directory = CreateFileA (
+    link, GENERIC_WRITE, 0, NULL, OPEN_EXISTING,
+    FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS, NULL);
+  if (directory == INVALID_HANDLE_VALUE)
+    {
+      RemoveDirectoryA (link);
+      return 0;
+    }
+
+  memset (&buffer, 0, sizeof (buffer));
+  substitute_bytes = wcslen (substitute) * sizeof (WCHAR);
+  print_bytes = wcslen (target_w) * sizeof (WCHAR);
+  if (substitute_bytes + sizeof (WCHAR) + print_bytes + sizeof (WCHAR)
+      > sizeof (buffer.path_buffer))
+    {
+      CloseHandle (directory);
+      RemoveDirectoryA (link);
+      return 0;
+    }
+  buffer.tag = IO_REPARSE_TAG_MOUNT_POINT;
+  buffer.substitute_offset = 0;
+  buffer.substitute_length = (WORD) substitute_bytes;
+  buffer.print_offset = (WORD) (substitute_bytes + sizeof (WCHAR));
+  buffer.print_length = (WORD) print_bytes;
+  memcpy (buffer.path_buffer, substitute, substitute_bytes + sizeof (WCHAR));
+  memcpy ((char *) buffer.path_buffer + buffer.print_offset, target_w,
+	  print_bytes + sizeof (WCHAR));
+  buffer.data_length = (WORD) (
+    4 * sizeof (WORD) + substitute_bytes + sizeof (WCHAR)
+    + print_bytes + sizeof (WCHAR));
+  input_size = 8 + buffer.data_length;
+
+  BOOL ok = DeviceIoControl (directory, FSCTL_SET_REPARSE_POINT,
+			     &buffer, input_size, NULL, 0, &returned, NULL);
+  CloseHandle (directory);
+  if (!ok)
+    RemoveDirectoryA (link);
+  return ok != 0;
+}
+
+static int
+delete_junction (const char *path)
+{
+  struct
+  {
+    DWORD tag;
+    WORD data_length;
+    WORD reserved;
+  } buffer;
+  DWORD returned;
+  HANDLE directory = CreateFileA (
+    path, GENERIC_WRITE, 0, NULL, OPEN_EXISTING,
+    FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS, NULL);
+
+  if (directory == INVALID_HANDLE_VALUE)
+    return 0;
+  memset (&buffer, 0, sizeof (buffer));
+  buffer.tag = IO_REPARSE_TAG_MOUNT_POINT;
+  BOOL ok = DeviceIoControl (directory, FSCTL_DELETE_REPARSE_POINT,
+			     &buffer, sizeof (buffer), NULL, 0, &returned, NULL);
+  CloseHandle (directory);
+  return ok && RemoveDirectoryA (path);
+}
+
+static int
+cleanup_identity_fixtures (void)
+{
+  int ok = 1;
+
+  if (identity_fixtures.reparse_created)
+    ok = RemoveDirectoryA (identity_fixtures.reparse) && ok;
+  if (identity_fixtures.junction_created)
+    ok = delete_junction (identity_fixtures.junction) && ok;
+  if (identity_fixtures.file_symlink_created)
+    ok = DeleteFileA (identity_fixtures.file_symlink) && ok;
+  if (identity_fixtures.hardlink_created)
+    ok = DeleteFileA (identity_fixtures.hardlink) && ok;
+  if (identity_fixtures.decoy_created)
+    ok = DeleteFileA (identity_fixtures.decoy) && ok;
+  if (identity_fixtures.root_created)
+    ok = RemoveDirectoryA (identity_fixtures.root) && ok;
+  memset (&identity_fixtures, 0, sizeof (identity_fixtures));
+  return ok;
+}
+
+static int
+setup_identity_fixtures (const char *runtime)
+{
+  char fixture_parent[MAX_PATH];
+  char runtime_directory[MAX_PATH];
+  char *separator;
   int written;
 
-  if (!GetTempPathA (sizeof (temp), temp))
+  memset (&identity_fixtures, 0, sizeof (identity_fixtures));
+  if (strlen (runtime) >= sizeof (runtime_directory))
     return 1;
-  written = snprintf (directory, directory_size, "%sdlu-decoy-%lu", temp,
-		      (unsigned long) GetCurrentProcessId ());
-  if (written < 0 || (size_t) written >= directory_size)
+  strcpy (runtime_directory, runtime);
+  separator = strrchr (runtime_directory, '\\');
+  if (!separator)
+    separator = strrchr (runtime_directory, '/');
+  if (!separator || separator == runtime_directory)
+    return 1;
+  *separator = '\0';
+  strcpy (fixture_parent, runtime_directory);
+  separator = strrchr (fixture_parent, '\\');
+  if (!separator)
+    separator = strrchr (fixture_parent, '/');
+  if (!separator || separator == fixture_parent)
+    return 1;
+  *separator = '\0';
+
+  written = snprintf (
+    identity_fixtures.root, sizeof (identity_fixtures.root),
+    "%s\\dlu-alias-%lu-%lu", fixture_parent,
+    (unsigned long) GetCurrentProcessId (), (unsigned long) GetTickCount ());
+  if (written < 0 || (size_t) written >= sizeof (identity_fixtures.root))
     return 2;
-  if (!CreateDirectoryA (directory, NULL)
-      && GetLastError () != ERROR_ALREADY_EXISTS)
+  if (!CreateDirectoryA (identity_fixtures.root, NULL))
     return 3;
-  written = snprintf (file, file_size, "%s\\%s", directory,
-		      DLL_UNLOAD_RUNTIME_NAME);
-  if (written < 0 || (size_t) written >= file_size)
-    return 4;
-  handle = CreateFileA (file, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS,
-			FILE_ATTRIBUTE_NORMAL, NULL);
-  if (handle == INVALID_HANDLE_VALUE)
-    return 5;
-  CloseHandle (handle);
+  identity_fixtures.root_created = 1;
+
+  if (!join_path (identity_fixtures.decoy, sizeof (identity_fixtures.decoy),
+		  identity_fixtures.root, DLL_UNLOAD_RUNTIME_NAME)
+      || !join_path (identity_fixtures.hardlink,
+		     sizeof (identity_fixtures.hardlink),
+		     identity_fixtures.root, "hardlink-msys-2.0.dll")
+      || !join_path (identity_fixtures.file_symlink,
+		     sizeof (identity_fixtures.file_symlink),
+		     identity_fixtures.root, "symlink-msys-2.0.dll")
+      || !join_path (identity_fixtures.junction,
+		     sizeof (identity_fixtures.junction),
+		     identity_fixtures.root, "junction")
+      || !join_path (identity_fixtures.reparse,
+		     sizeof (identity_fixtures.reparse),
+		     identity_fixtures.root, "directory-symlink"))
+    goto path_failure;
+
+  if (!create_empty_file (identity_fixtures.decoy))
+    goto create_failure;
+  identity_fixtures.decoy_created = 1;
+  if (!CreateHardLinkA (identity_fixtures.hardlink, runtime, NULL))
+    goto create_failure;
+  identity_fixtures.hardlink_created = 1;
+  if (!create_native_symlink (identity_fixtures.file_symlink, runtime, 0))
+    goto create_failure;
+  identity_fixtures.file_symlink_created = 1;
+
+  if (!create_junction (identity_fixtures.junction, runtime_directory))
+    goto create_failure;
+  identity_fixtures.junction_created = 1;
+  if (!join_path (identity_fixtures.junction_runtime,
+		  sizeof (identity_fixtures.junction_runtime),
+		  identity_fixtures.junction, DLL_UNLOAD_RUNTIME_NAME))
+    goto path_failure;
+
+  if (!create_native_symlink (identity_fixtures.reparse, runtime_directory,
+			      SYMBOLIC_LINK_FLAG_DIRECTORY))
+    goto create_failure;
+  identity_fixtures.reparse_created = 1;
+  if (!join_path (identity_fixtures.reparse_runtime,
+		  sizeof (identity_fixtures.reparse_runtime),
+		  identity_fixtures.reparse, DLL_UNLOAD_RUNTIME_NAME))
+    goto path_failure;
+
+  if (strlen (runtime) >= sizeof (identity_fixtures.case_path))
+    goto path_failure;
+  strcpy (identity_fixtures.case_path, runtime);
+  for (char *p = identity_fixtures.case_path; *p; ++p)
+    if (isalpha ((unsigned char) *p))
+      {
+	*p = islower ((unsigned char) *p) ? toupper ((unsigned char) *p)
+					 : tolower ((unsigned char) *p);
+	break;
+      }
+
+  if (strncmp (runtime, "\\\\?\\UNC\\", 8) == 0)
+    written = snprintf (identity_fixtures.prefix_path,
+			sizeof (identity_fixtures.prefix_path), "\\\\%s",
+			runtime + 8);
+  else if (strncmp (runtime, "\\\\?\\", 4) == 0)
+    written = snprintf (identity_fixtures.prefix_path,
+			sizeof (identity_fixtures.prefix_path), "%s",
+			runtime + 4);
+  else if (strncmp (runtime, "\\\\", 2) == 0)
+    written = snprintf (identity_fixtures.prefix_path,
+			sizeof (identity_fixtures.prefix_path), "\\\\?\\UNC\\%s",
+			runtime + 2);
+  else
+    written = snprintf (identity_fixtures.prefix_path,
+			sizeof (identity_fixtures.prefix_path), "\\\\?\\%s",
+			runtime);
+  if (written < 0
+      || (size_t) written >= sizeof (identity_fixtures.prefix_path))
+    goto path_failure;
   return 0;
+
+path_failure:
+  return cleanup_identity_fixtures () ? 4 : 6;
+create_failure:
+  return cleanup_identity_fixtures () ? 5 : 6;
+}
+
+static const char *
+binding_result (int status)
+{
+  if (status == 0)
+    return "bound";
+  if (status == 1)
+    return "rejected";
+  return "unavailable";
+}
+
+static int
+run_binding_control (bound_fn is_bound, const char *name, const char *path,
+		     int expected)
+{
+  int observed = is_bound (path);
+
+  if (observed != expected)
+    {
+      fprintf (stderr,
+	       "identity control %s expected %s, observed %s (%d) for %s\n",
+	       name, binding_result (expected), binding_result (observed),
+	       observed, path);
+      return 0;
+    }
+  printf ("DIAG dll_unload control=%s expected=%s observed=%s path=",
+	  name, binding_result (expected), binding_result (observed));
+  print_token (path);
+  fputs (" result=pass\n", stdout);
+  ++controls_passed;
+  return 1;
 }
 
 static int
@@ -462,15 +857,25 @@ load_once (const char *helper_path, unsigned mode)
       unsigned long volume = 0;
       unsigned long high = 0;
       unsigned long low = 0;
-      char decoy_directory[MAX_PATH];
-      char decoy_file[MAX_PATH];
-      int decoy;
+      int expected_open = 0;
+      int loaded_open = 0;
 
-      if (identity (&volume, &high, &low) != 0)
+      if (identity (&volume, &high, &low, &expected_open, &loaded_open) != 0
+	  || expected_open != 1 || loaded_open != 1
+	  || !identity_open (&expected_runtime_identity)
+	  || !identity_open (&loaded_runtime_identity))
 	{
-	  fprintf (stderr, "helper did not report a runtime identity\n");
+	  fprintf (stderr, "runtime identity handles are not open\n");
 	  dlclose (module);
 	  return 10;
+	}
+      if (volume != (unsigned long) loaded_runtime_identity.volume
+	  || high != (unsigned long) loaded_runtime_identity.index_high
+	  || low != (unsigned long) loaded_runtime_identity.index_low)
+	{
+	  fprintf (stderr, "helper and executable runtime identities differ\n");
+	  dlclose (module);
+	  return 11;
 	}
       printf ("DIAG dll_unload runtime volume=%08lx index=%08lx%08lx"
 	      " expected=", volume, high, low);
@@ -479,7 +884,8 @@ load_once (const char *helper_path, unsigned mode)
       print_token (loaded_path ());
       fputs (" final=", stdout);
       print_token (loaded_final ());
-      fputs (" result=pass\n", stdout);
+      fputs (" expected_handle_open=1 loaded_handle_open=1"
+	     " delete_share=0 result=pass\n", stdout);
       printf ("DIAG dll_unload export resolved=%p static=%p distinct=1"
 	      " result=pass\n", dll_exported, dll_static);
 
@@ -487,32 +893,29 @@ load_once (const char *helper_path, unsigned mode)
 	{
 	  fprintf (stderr, "bound runtime path was not recognised\n");
 	  dlclose (module);
-	  return 11;
-	}
-      decoy = make_decoy_runtime (decoy_directory, sizeof (decoy_directory),
-				  decoy_file, sizeof (decoy_file));
-      if (decoy != 0)
-	{
-	  fprintf (stderr, "decoy runtime creation failed: %d\n", decoy);
-	  dlclose (module);
 	  return 12;
 	}
-      decoy = is_bound (decoy_file);
-      DeleteFileA (decoy_file);
-      RemoveDirectoryA (decoy_directory);
-      if (decoy != 1)
-	{
-	  fprintf (stderr,
-		   "decoy %s sharing the runtime base name was not rejected"
-		   " (%d)\n", decoy_file, decoy);
-	  dlclose (module);
-	  return 13;
-	}
-      printf ("DIAG dll_unload control=wrong-path-same-basename rejected=1"
-	      " decoy=");
-      print_token (decoy_file);
-      fputs (" result=pass\n", stdout);
-      ++controls_passed;
+      const struct
+      {
+	const char *name;
+	const char *path;
+	int expected;
+      } controls[] = {
+	{ "wrong-path-same-basename", identity_fixtures.decoy, 1 },
+	{ "path-case", identity_fixtures.case_path, 0 },
+	{ "path-prefix", identity_fixtures.prefix_path, 0 },
+	{ "hardlink-alias", identity_fixtures.hardlink, 1 },
+	{ "file-symlink", identity_fixtures.file_symlink, 0 },
+	{ "directory-junction", identity_fixtures.junction_runtime, 0 },
+	{ "directory-symlink-reparse", identity_fixtures.reparse_runtime, 0 },
+      };
+      for (size_t i = 0; i < ARRAY_SIZE (controls); ++i)
+	if (!run_binding_control (is_bound, controls[i].name,
+				  controls[i].path, controls[i].expected))
+	  {
+	    dlclose (module);
+	    return 13;
+	  }
       runtime_records_emitted = 1;
     }
 
@@ -596,6 +999,13 @@ main (void)
   printf ("DIAG dll_unload runtime_root_crosscheck performed=%d result=pass\n",
 	  root_checked);
 
+  status = setup_identity_fixtures (runtime_win32_path);
+  if (status)
+    {
+      fprintf (stderr, "runtime identity fixture setup failed: %d\n", status);
+      return 4;
+    }
+
   status = resolve_runtime_atexit (runtime_win32_path, &exe_runtime_atexit);
   if (status)
     {
@@ -609,7 +1019,9 @@ main (void)
 	       "runtime atexit export resolution failed: %d"
 	       " (expected \"%s\", loaded \"%s\")\n",
 	       status, runtime_win32_path, module_path);
-      return 4;
+      if (!cleanup_identity_fixtures ())
+	fprintf (stderr, "runtime identity fixture cleanup also failed\n");
+      return 5;
     }
 
   if (!GetTempPathA (sizeof (temp_directory), temp_directory)
@@ -618,7 +1030,11 @@ main (void)
     {
       fprintf (stderr, "failed to create lifecycle logs: %lu\n",
 	       GetLastError ());
-      return 5;
+      close_identity (&loaded_runtime_identity);
+      close_identity (&expected_runtime_identity);
+      if (!cleanup_identity_fixtures ())
+	fprintf (stderr, "runtime identity fixture cleanup also failed\n");
+      return 6;
     }
 
   int result = 0;
@@ -712,8 +1128,28 @@ main (void)
 	}
     }
 
-  DeleteFileA (positive_log);
-  DeleteFileA (negative_log);
+  int cleanup_ok = 1;
+  if (!DeleteFileA (positive_log))
+    {
+      fprintf (stderr, "failed to remove positive lifecycle log: %lu\n",
+	       GetLastError ());
+      cleanup_ok = 0;
+    }
+  if (!DeleteFileA (negative_log))
+    {
+      fprintf (stderr, "failed to remove negative lifecycle log: %lu\n",
+	       GetLastError ());
+      cleanup_ok = 0;
+    }
+  close_identity (&loaded_runtime_identity);
+  close_identity (&expected_runtime_identity);
+  if (!cleanup_identity_fixtures ())
+    {
+      fprintf (stderr, "failed to remove runtime identity fixtures\n");
+      cleanup_ok = 0;
+    }
+  if (result == 0 && !cleanup_ok)
+    result = 80;
 
   if (result == 0)
     printf ("DIAG dll_unload summary cycles=%d controls=%d result=pass\n",

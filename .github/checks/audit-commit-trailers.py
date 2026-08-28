@@ -20,9 +20,13 @@ reject instead of accepting whatever it is shown.
 """
 
 import hashlib
+import os
 import re
+import shutil
+import stat
 import subprocess
 import sys
+import tempfile
 
 BOM = b"\xef\xbb\xbf"
 SIGNOFF_PREFIX = b"Signed-off-by: "
@@ -35,26 +39,94 @@ EXPECTED_REVOKED = 4
 OID_PATTERN = re.compile(r"\A[0-9a-f]{40}\Z")
 HEADER_PATTERN = re.compile(rb"\A(tree|parent|author|committer) (.+)\Z")
 IDENT_PATTERN = re.compile(rb"\A(.+ <[^<>]*>) (\d+) ([+-]\d{4})\Z")
+ZERO_OID = "0" * 40
+
+FORBIDDEN_GIT_ENV = {
+    "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+    "GIT_COMMON_DIR",
+    "GIT_DIR",
+    "GIT_INDEX_FILE",
+    "GIT_OBJECT_DIRECTORY",
+    "GIT_REPLACE_REF_BASE",
+    "GIT_SHALLOW_FILE",
+    "GIT_WORK_TREE",
+}
+CONFIG_GIT_ENV = {
+    "GIT_CONFIG",
+    "GIT_CONFIG_COUNT",
+    "GIT_CONFIG_GLOBAL",
+    "GIT_CONFIG_NOSYSTEM",
+    "GIT_CONFIG_PARAMETERS",
+    "GIT_CONFIG_SYSTEM",
+}
+GIT_ENV = None
+IGNORED_CONFIG_ENV = ()
 
 
 class TrailerError(Exception):
     """Raised for any provenance defect; always fatal."""
 
 
-def run_git(*args):
-    process = subprocess.run(("git",) + args, stdout=subprocess.PIPE)
+def reject_git_path_overrides(environ):
+    present = sorted(name for name in FORBIDDEN_GIT_ENV if environ.get(name))
+    if present:
+        raise TrailerError("forbidden Git path/object environment: %s"
+                           % ", ".join(present))
+
+
+def clean_git_environment(environ):
+    """Return an environment whose Git behavior cannot use ambient config."""
+    clean = {
+        key: value for key, value in environ.items()
+        if not key.startswith("GIT_")
+    }
+    clean.update({
+        "GIT_CONFIG": os.devnull,
+        "GIT_CONFIG_NOSYSTEM": "1",
+        "GIT_CONFIG_SYSTEM": os.devnull,
+        "GIT_CONFIG_GLOBAL": os.devnull,
+        "GIT_NO_REPLACE_OBJECTS": "1",
+        "GIT_TERMINAL_PROMPT": "0",
+    })
+    ignored = tuple(sorted(
+        key for key, value in environ.items()
+        if value and (key in CONFIG_GIT_ENV
+                      or key.startswith("GIT_CONFIG_KEY_")
+                      or key.startswith("GIT_CONFIG_VALUE_"))
+    ))
+    return clean, ignored
+
+
+def initialize_git_environment(environ=None):
+    global GIT_ENV, IGNORED_CONFIG_ENV
+    source = os.environ if environ is None else environ
+    reject_git_path_overrides(source)
+    GIT_ENV, IGNORED_CONFIG_ENV = clean_git_environment(source)
+
+
+def run_git(*args, cwd=None, input_data=None):
+    if GIT_ENV is None:
+        initialize_git_environment()
+    process = subprocess.run(
+        ("git", "--no-replace-objects", "-c", "core.commitGraph=false") + args,
+        cwd=cwd,
+        env=GIT_ENV,
+        input=input_data,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
     return process.returncode, process.stdout
 
 
-def git_bytes(*args):
-    code, out = run_git(*args)
+def git_bytes(*args, cwd=None):
+    code, out = run_git(*args, cwd=cwd)
     if code != 0:
         raise TrailerError("git %s exited %d" % (" ".join(args), code))
     return out
 
 
-def git_text(*args):
-    return git_bytes(*args).decode("utf-8", "replace").strip()
+def git_text(*args, cwd=None):
+    return git_bytes(*args, cwd=cwd).decode("utf-8", "replace").strip()
 
 
 def require_object_format():
@@ -76,6 +148,9 @@ def canonical_oid(label, value):
         raise TrailerError(
             "%s %r is not a canonical lowercase 40 hex sha1 object id"
             % (label, value))
+    if value == ZERO_OID:
+        raise TrailerError("%s is the all-zero sentinel, not an object id"
+                           % label)
     return value
 
 
@@ -102,8 +177,7 @@ def resolve_exact_commit(label, value):
 
 def is_ancestor(commit, other):
     """0 means ancestor, 1 means not; anything else is an audit failure."""
-    code = subprocess.run(("git", "merge-base", "--is-ancestor",
-                           commit, other)).returncode
+    code, _ = run_git("merge-base", "--is-ancestor", commit, other)
     if code == 0:
         return True
     if code == 1:
@@ -112,14 +186,301 @@ def is_ancestor(commit, other):
                        % (commit, other, code))
 
 
+def absolute_git_path(path, cwd):
+    if os.path.isabs(path):
+        return os.path.normpath(path)
+    return os.path.normpath(os.path.join(cwd, path))
+
+
+def dangerous_local_config(key):
+    key = key.lower()
+    return (
+        key in {
+            "core.alternaterefscommand",
+            "core.replacerefs",
+            "core.shallowfile",
+            "core.worktree",
+            "extensions.objectformat",
+            "extensions.partialclone",
+            "extensions.worktreeconfig",
+        }
+        or key.startswith(("include.", "includeif.", "objects."))
+        or (key.startswith("remote.")
+            and key.endswith((".promisor", ".partialclonefilter")))
+        or (key.startswith("url.")
+            and key.endswith((".insteadof", ".pushinsteadof")))
+    )
+
+
+def require_safe_repository(cwd=None):
+    """Reject graph/object inputs that could make provenance non-canonical."""
+    root = os.path.abspath(cwd or os.getcwd())
+    git_dir = git_text("rev-parse", "--absolute-git-dir", cwd=root)
+    common = absolute_git_path(
+        git_text("rev-parse", "--git-common-dir", cwd=root), root)
+    object_dir = os.path.join(common, "objects")
+
+    poison_paths = {
+        os.path.join(git_dir, "info", "grafts"): "worktree graft file",
+        os.path.join(common, "info", "grafts"): "common graft file",
+        os.path.join(object_dir, "info", "alternates"): "object alternates",
+        os.path.join(object_dir, "info", "commit-graph"):
+            "single-file commit graph",
+        os.path.join(object_dir, "info", "commit-graphs"):
+            "chained commit graphs",
+    }
+    for path, label in poison_paths.items():
+        if os.path.exists(path):
+            raise TrailerError("%s is present at %s" % (label, path))
+
+    code, replace_refs = run_git(
+        "for-each-ref", "--format=%(refname)", "refs/replace", cwd=root)
+    if code != 0:
+        raise TrailerError("cannot enumerate replacement refs")
+    if replace_refs.strip():
+        raise TrailerError("replacement refs are present")
+
+    packed_refs = os.path.join(common, "packed-refs")
+    if os.path.isfile(packed_refs):
+        try:
+            with open(packed_refs, "rb") as handle:
+                packed = handle.read()
+        except OSError as error:
+            raise TrailerError("cannot read packed refs: %s" % error)
+        if b" refs/replace/" in packed:
+            raise TrailerError("packed replacement refs are present")
+
+    names = []
+    for config_path in {
+            os.path.join(common, "config"),
+            os.path.join(git_dir, "config.worktree")}:
+        if not os.path.isfile(config_path):
+            continue
+        inspect_env = GIT_ENV.copy()
+        inspect_env.pop("GIT_CONFIG", None)
+        process = subprocess.run(
+            ("git", "--no-replace-objects", "config", "--file", config_path,
+             "--no-includes", "--name-only", "-z", "--list"),
+            cwd=root,
+            env=inspect_env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        if process.returncode != 0:
+            raise TrailerError("cannot inspect repository configuration %s"
+                               % config_path)
+        try:
+            names.extend(
+                value.decode("utf-8", "strict")
+                for value in process.stdout.split(b"\x00") if value
+            )
+        except UnicodeDecodeError as error:
+            raise TrailerError("local configuration is not UTF-8: %s"
+                               % error)
+    unsafe = sorted(name for name in names if dangerous_local_config(name))
+    if unsafe:
+        raise TrailerError("dangerous repository-local configuration: %s"
+                           % ", ".join(unsafe))
+
+
 def require_complete_repository(base, head):
     shallow = git_text("rev-parse", "--is-shallow-repository")
     if shallow != "false":
         raise TrailerError("repository is shallow (%s)" % shallow)
-    code, _ = run_git("rev-list", "--objects", "%s..%s" % (base, head))
+    code, listed = run_git(
+        "rev-list", "--objects", "--missing=error", "%s..%s" % (base, head))
     if code != 0:
         raise TrailerError("object walk over %s..%s is incomplete"
                            % (base, head))
+    counts = {"commit": 0, "tree": 0, "blob": 0}
+    seen = set()
+    for line in listed.splitlines():
+        token = line.split(b" ", 1)[0]
+        try:
+            oid = canonical_oid("walked object", token.decode("ascii"))
+        except (UnicodeDecodeError, TrailerError) as error:
+            raise TrailerError("invalid rev-list object line %r: %s"
+                               % (line, error))
+        if oid in seen:
+            raise TrailerError("rev-list repeated object %s" % oid)
+        seen.add(oid)
+        code, type_bytes = run_git("cat-file", "-t", oid)
+        if code != 0:
+            raise TrailerError("walked object %s is missing" % oid)
+        kind = type_bytes.decode("ascii", "replace").strip()
+        if kind not in counts:
+            raise TrailerError("walked object %s has unexpected type %s"
+                               % (oid, kind))
+        raw = git_bytes("cat-file", kind, oid)
+        computed = hashlib.sha1(
+            kind.encode("ascii") + b" " + str(len(raw)).encode("ascii")
+            + b"\x00" + raw).hexdigest()
+        if computed != oid:
+            raise TrailerError("recomputed %s object id %s does not match %s"
+                               % (kind, computed, oid))
+        counts[kind] += 1
+    if not seen:
+        raise TrailerError("object walk over %s..%s is empty" % (base, head))
+    return counts
+
+
+def expect_trailer_error(label, function):
+    try:
+        function()
+    except TrailerError:
+        return
+    raise TrailerError("environment fixture %r was accepted" % label)
+
+
+def remove_read_only(function, path, unused):
+    del unused
+    os.chmod(path, stat.S_IWRITE)
+    function(path)
+
+
+def environment_self_test():
+    """Exercise environment, graft, alternate, replacement, and config poison."""
+    fixtures = 0
+    for name in sorted(FORBIDDEN_GIT_ENV):
+        expect_trailer_error(
+            "environment-" + name.lower(),
+            lambda name=name: reject_git_path_overrides({name: "poison"}),
+        )
+        fixtures += 1
+
+    fake = {
+        "PATH": os.environ.get("PATH", ""),
+        "GIT_CONFIG_COUNT": "1",
+        "GIT_CONFIG_KEY_0": "core.replaceRefs",
+        "GIT_CONFIG_VALUE_0": "true",
+        "GIT_CONFIG_PARAMETERS": "'core.replaceRefs=true'",
+        "GIT_EXEC_PATH": "poison",
+    }
+    cleaned, ignored = clean_git_environment(fake)
+    if (cleaned.get("GIT_NO_REPLACE_OBJECTS") != "1"
+        or cleaned.get("GIT_CONFIG_NOSYSTEM") != "1"
+        or cleaned.get("GIT_CONFIG") != os.devnull
+        or cleaned.get("GIT_CONFIG_GLOBAL") != os.devnull
+        or "GIT_EXEC_PATH" in cleaned
+        or set(ignored) != {
+            "GIT_CONFIG_COUNT", "GIT_CONFIG_KEY_0",
+            "GIT_CONFIG_PARAMETERS", "GIT_CONFIG_VALUE_0"
+        }):
+        raise TrailerError("config environment was not neutralized")
+    fixtures += 1
+
+    directory = tempfile.mkdtemp(prefix="diagnostic-provenance-")
+    try:
+        code, _ = run_git("init", "--quiet", "--object-format=sha1",
+                          cwd=directory)
+        if code != 0:
+            raise TrailerError("cannot create provenance poison repository")
+        require_safe_repository(directory)
+
+        git_dir = git_text("rev-parse", "--absolute-git-dir", cwd=directory)
+        common = absolute_git_path(
+            git_text("rev-parse", "--git-common-dir", cwd=directory),
+            directory)
+
+        graft = os.path.join(common, "info", "grafts")
+        os.makedirs(os.path.dirname(graft), exist_ok=True)
+        with open(graft, "wb") as handle:
+            handle.write(b"a" * 40 + b"\n")
+        expect_trailer_error(
+            "graft-file", lambda: require_safe_repository(directory))
+        os.remove(graft)
+        fixtures += 1
+
+        alternates = os.path.join(common, "objects", "info", "alternates")
+        os.makedirs(os.path.dirname(alternates), exist_ok=True)
+        with open(alternates, "wb") as handle:
+            handle.write(b"C:\\poison\n")
+        expect_trailer_error(
+            "object-alternates", lambda: require_safe_repository(directory))
+        os.remove(alternates)
+        fixtures += 1
+
+        commit_graph = os.path.join(common, "objects", "info",
+                                    "commit-graph")
+        with open(commit_graph, "wb") as handle:
+            handle.write(b"poison")
+        expect_trailer_error(
+            "commit-graph", lambda: require_safe_repository(directory))
+        os.remove(commit_graph)
+        fixtures += 1
+
+        commit_graphs = os.path.join(common, "objects", "info",
+                                     "commit-graphs")
+        os.makedirs(commit_graphs)
+        expect_trailer_error(
+            "commit-graph-chain",
+            lambda: require_safe_repository(directory))
+        os.rmdir(commit_graphs)
+        fixtures += 1
+
+        code, blob = run_git("hash-object", "-w", "--stdin", cwd=directory,
+                             input_data=b"fixture\n")
+        if code != 0:
+            raise TrailerError("cannot create replacement fixture blob")
+        blob = blob.decode("ascii").strip()
+        tree_input = ("100644 blob %s\tfile\n" % blob).encode("ascii")
+        process = subprocess.run(
+            ("git", "--no-replace-objects", "mktree"),
+            cwd=directory,
+            env=GIT_ENV,
+            input=tree_input,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        if process.returncode != 0:
+            raise TrailerError("cannot create replacement fixture tree")
+        tree = process.stdout.decode("ascii").strip()
+        commits = []
+        for subject in (b"one\n", b"two\n"):
+            raw = (
+                b"tree " + tree.encode("ascii")
+                + b"\nauthor Fixture <fixture@example.invalid> 0 +0000"
+                + b"\ncommitter Fixture <fixture@example.invalid> 0 +0000"
+                + b"\n\n" + subject
+            )
+            code, commit = run_git(
+                "hash-object", "-t", "commit", "-w", "--stdin",
+                cwd=directory, input_data=raw)
+            if code != 0:
+                raise TrailerError("cannot create replacement fixture commit")
+            commits.append(commit.decode("ascii").strip())
+        code, _ = run_git("replace", commits[0], commits[1], cwd=directory)
+        if code != 0:
+            raise TrailerError("cannot create replacement ref fixture")
+        expect_trailer_error(
+            "replacement-ref", lambda: require_safe_repository(directory))
+        code, _ = run_git("replace", "-d", commits[0], cwd=directory)
+        if code != 0:
+            raise TrailerError("cannot remove replacement ref fixture")
+        fixtures += 1
+
+        config_path = os.path.join(git_dir, "config")
+        with open(config_path, "rb") as handle:
+            clean_config = handle.read()
+        with open(config_path, "ab") as handle:
+            handle.write(b"\n[core]\n\treplaceRefs = true\n")
+        expect_trailer_error(
+            "local-config", lambda: require_safe_repository(directory))
+        with open(config_path, "wb") as handle:
+            handle.write(clean_config)
+        fixtures += 1
+
+        include_path = os.path.join(directory, "poison.config")
+        with open(config_path, "ab") as handle:
+            handle.write(
+                b"\n[include]\n\tpath = "
+                + include_path.encode("utf-8") + b"\n")
+        expect_trailer_error(
+            "local-include", lambda: require_safe_repository(directory))
+        fixtures += 1
+    finally:
+        shutil.rmtree(directory, onerror=remove_read_only)
+    return fixtures
 
 
 def parse_commit_object(raw, oid, dco, session, expect_parents):
@@ -232,6 +593,7 @@ def oid_self_test():
     canonical_oid("fixture", good)
 
     rejected = [
+        ("all-zero-sentinel", ZERO_OID),
         ("symbolic-head", "HEAD"),
         ("symbolic-branch", "refs/heads/crutkas-finish-runtime-diagnostics"),
         ("abbreviated", good[:12]),
@@ -261,8 +623,8 @@ def oid_self_test():
 def commit_self_test():
     dco = b"Test User <test@example.invalid>"
     session = b"00000000-0000-0000-0000-000000000000"
-    tree = b"0" * 40
-    parent = b"1" * 40
+    tree = b"a" * 40
+    parent = b"b" * 40
     stamp = b" 0 +0000"
     author = b"author " + dco + stamp
     committer = b"committer " + dco + stamp
@@ -331,7 +693,7 @@ def commit_self_test():
         ("duplicate-author", build([b"tree " + tree, b"parent " + parent,
                                     author, author, committer]), None),
         ("multiple-parents", build([b"tree " + tree, b"parent " + parent,
-                                    b"parent " + b"2" * 40, author,
+                                    b"parent " + b"c" * 40, author,
                                     committer]), None),
         ("unknown-header", build([b"tree " + tree, b"parent " + parent,
                                   author, committer,
@@ -376,6 +738,9 @@ def main(argv):
             "usage: BASE LEGACY_HEAD LEGACY_SESSION PRIOR_HEAD PRIOR_SESSION"
             " HEAD SESSION DCO REVOKED...")
 
+    initialize_git_environment()
+    environment_fixtures = environment_self_test()
+    require_safe_repository()
     object_format = require_object_format()
     oid_fixtures = oid_self_test()
     commit_fixtures = commit_self_test()
@@ -405,7 +770,7 @@ def main(argv):
         raise TrailerError("checked out head %s is not the audited head %s"
                            % (checked_out, head))
 
-    require_complete_repository(base, head)
+    object_counts = require_complete_repository(base, head)
 
     if not is_ancestor(base, head):
         raise TrailerError("base %s is not an ancestor of head %s"
@@ -478,6 +843,11 @@ def main(argv):
     print("object_format=%s" % object_format)
     print("oid_fixtures=%d" % oid_fixtures)
     print("commit_fixtures=%d" % commit_fixtures)
+    print("environment_fixtures=%d" % environment_fixtures)
+    print("ignored_config_environment=%d" % len(IGNORED_CONFIG_ENV))
+    print("objects_rehashed=%d" % sum(object_counts.values()))
+    for kind in ("commit", "tree", "blob"):
+        print("%s_objects_rehashed=%d" % (kind, object_counts[kind]))
     print("revoked_tested=%d" % len(revoked))
     print("audited_commits=%d" % len(commits))
     print("base=%s" % base)

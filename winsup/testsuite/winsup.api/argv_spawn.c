@@ -1,11 +1,10 @@
 /* Verify long arguments at process startup and across spawn/exec boundaries.
 
-   Every child invocation carries the expected tail length explicitly.  The
-   child parses that length strictly, requires an exact argument count, and
-   requires strlen (tail) to equal the declared length before it inspects a
-   single tail byte.  A truncated tail sent with the original declared length
-   is therefore rejected instead of silently passing as a prefix, and each
-   invocation model is exercised with exactly that negative control.
+   Every child invocation carries the expected filler and tail lengths
+   explicitly.  The child parses both strictly, requires an exact argument
+   count, and validates both the observed lengths and bytes.  Truncated or
+   extended all-'f' fillers and truncated tails are therefore rejected instead
+   of being trusted from the parent loop.
 
    The raw wide command line corroboration is a pure predicate so it can be
    driven directly with synthetic fixtures covering each of its rejection
@@ -35,7 +34,7 @@
 /* Child exit codes.  CHILD_TAIL_LENGTH is what the negative controls
    require, so an accidental pass cannot be mistaken for a rejection.  */
 #define CHILD_ARGC 101
-#define CHILD_FILLER 102
+#define CHILD_FILLER_LENGTH 102
 #define CHILD_TAIL_LENGTH 103
 #define CHILD_TAIL_BYTES 104
 #define CHILD_LENGTH_PARSE 105
@@ -45,6 +44,7 @@
 #define CHILD_RAW_AMBIGUOUS 109
 #define CHILD_RAW_LEFT 110
 #define CHILD_RAW_RIGHT 111
+#define CHILD_FILLER_BYTES 112
 
 static char self_path[4096];
 static char filler[MAX_ARG_LEN + 1];
@@ -139,42 +139,76 @@ check_raw_match (const wchar_t *raw, const wchar_t *needle, size_t expected)
 static int
 child_main (int argc, char **argv)
 {
-  size_t expected = 0;
-  size_t actual;
+  size_t expected_filler = 0;
+  size_t expected_tail = 0;
+  size_t actual_filler;
+  size_t actual_tail;
   int converted;
   int status;
 
-  if (argc != 6 || strcmp (argv[1], "--child") != 0)
+  if (argc != 7 || strcmp (argv[1], "--child") != 0)
     {
-      fprintf (stderr, "child received argc=%d, expected 6\n", argc);
+      fprintf (stderr, "child received argc=%d, expected 7\n", argc);
       return CHILD_ARGC;
     }
 
-  if (!parse_length (argv[3], &expected)
-      || expected == 0 || expected > MAX_ARG_LEN)
+  if (!parse_length (argv[3], &expected_tail)
+      || expected_tail == 0 || expected_tail > MAX_ARG_LEN
+      || !parse_length (argv[6], &expected_filler)
+      || expected_filler > MAX_ARG_LEN)
     {
-      fprintf (stderr, "%s child rejected declared length \"%s\"\n",
-	       argv[2], argv[3]);
+      fprintf (stderr,
+	       "%s child rejected declared lengths filler=\"%s\" tail=\"%s\"\n",
+	       argv[2], argv[6], argv[3]);
       return CHILD_LENGTH_PARSE;
     }
+
+  actual_filler = strlen (argv[4]);
+  actual_tail = strlen (argv[5]);
 
   for (const char *p = argv[4]; *p; ++p)
     if (*p != 'f')
       {
 	fprintf (stderr, "%s child filler corruption at %td\n",
 		 argv[2], p - argv[4]);
-	return CHILD_FILLER;
+	return CHILD_FILLER_BYTES;
       }
 
-  actual = strlen (argv[5]);
-  if (actual != expected)
+  if (actual_filler != expected_filler)
+    {
+      const char *control = NULL;
+
+      if (actual_tail != expected_tail)
+	return CHILD_TAIL_LENGTH;
+      for (size_t i = 0; i < actual_tail; ++i)
+	if (argv[5][i] != tail_byte (i))
+	  return CHILD_TAIL_BYTES;
+      if (expected_filler == 16 && expected_tail == 24)
+	{
+	  if (actual_filler == 15)
+	    control = "shortened";
+	  else if (actual_filler == 17)
+	    control = "extended";
+	}
+      if (control)
+	printf ("DIAG argv_spawn filler-control model=%s case=%s"
+		" filler_declared=%zu filler_observed=%zu tail_declared=%zu"
+		" tail_observed=%zu child=%d result=pass\n",
+		argv[2], control, expected_filler, actual_filler,
+		expected_tail, actual_tail, CHILD_FILLER_LENGTH);
+      fprintf (stderr, "%s child filler length %zu, declared %zu\n",
+	       argv[2], actual_filler, expected_filler);
+      return CHILD_FILLER_LENGTH;
+    }
+
+  if (actual_tail != expected_tail)
     {
       fprintf (stderr, "%s child tail length %zu, declared %zu\n",
-	       argv[2], actual, expected);
+	       argv[2], actual_tail, expected_tail);
       return CHILD_TAIL_LENGTH;
     }
 
-  for (size_t i = 0; i < actual; ++i)
+  for (size_t i = 0; i < actual_tail; ++i)
     if (argv[5][i] != tail_byte (i))
       {
 	fprintf (stderr, "%s child tail corruption at %zu\n", argv[2], i);
@@ -184,14 +218,14 @@ child_main (int argc, char **argv)
   converted = MultiByteToWideChar (CP_UTF8, MB_ERR_INVALID_CHARS,
 				   argv[5], -1, wide_tail,
 				   (int) ARRAY_SIZE (wide_tail));
-  if (converted <= 0 || (size_t) (converted - 1) != expected)
+  if (converted <= 0 || (size_t) (converted - 1) != expected_tail)
     {
       fprintf (stderr, "%s child wide conversion produced %d units\n",
 	       argv[2], converted);
       return CHILD_WIDE_CONVERT;
     }
 
-  status = check_raw_match (GetCommandLineW (), wide_tail, expected);
+  status = check_raw_match (GetCommandLineW (), wide_tail, expected_tail);
   if (status)
     {
       fprintf (stderr, "%s child raw command line rejected with %d\n",
@@ -199,6 +233,10 @@ child_main (int argc, char **argv)
       return status;
     }
 
+  printf ("DIAG argv_spawn positive model=%s filler_declared=%zu"
+	  " filler_observed=%zu tail_declared=%zu tail_observed=%zu"
+	  " child=0 result=pass\n",
+	  argv[2], expected_filler, actual_filler, expected_tail, actual_tail);
   return 0;
 }
 
@@ -215,13 +253,17 @@ format_length (char *out, size_t size, size_t value)
    started by Cygwin has its exit code byte-swapped back to the plain value
    in pinfo::exit, so GetExitCodeProcess already reports 103.  */
 static int
-run_spawn (const char *value, size_t expected, int *child_status)
+run_spawn (const char *value, size_t expected_filler, size_t expected_tail,
+	   int *child_status)
 {
-  char declared[32];
-  format_length (declared, sizeof (declared), expected);
+  char declared_filler[32];
+  char declared_tail[32];
+  format_length (declared_filler, sizeof (declared_filler), expected_filler);
+  format_length (declared_tail, sizeof (declared_tail), expected_tail);
 
   const char *args[] = {
-    self_path, "--child", "spawnv", declared, filler, value, NULL
+    self_path, "--child", "spawnv", declared_tail, filler, value,
+    declared_filler, NULL
   };
   intptr_t status = spawnv (_P_WAIT, self_path, args);
   if (status < 0)
@@ -235,13 +277,17 @@ run_spawn (const char *value, size_t expected, int *child_status)
 }
 
 static int
-run_exec (const char *value, size_t expected, int *child_status)
+run_exec (const char *value, size_t expected_filler, size_t expected_tail,
+	  int *child_status)
 {
-  char declared[32];
-  format_length (declared, sizeof (declared), expected);
+  char declared_filler[32];
+  char declared_tail[32];
+  format_length (declared_filler, sizeof (declared_filler), expected_filler);
+  format_length (declared_tail, sizeof (declared_tail), expected_tail);
 
   const char *args[] = {
-    self_path, "--child", "execv", declared, filler, value, NULL
+    self_path, "--child", "execv", declared_tail, filler, value,
+    declared_filler, NULL
   };
   pid_t pid = fork ();
   if (pid == 0)
@@ -286,7 +332,8 @@ close_if_open (HANDLE handle)
 }
 
 static int
-run_create_process (const char *value, size_t expected, int *child_status)
+run_create_process (const char *value, size_t expected_filler,
+		    size_t expected_tail, int *child_status)
 {
   HANDLE child_in = NULL;
   HANDLE child_out = NULL;
@@ -305,9 +352,9 @@ run_create_process (const char *value, size_t expected, int *child_status)
     return 132;
 
   int length = swprintf (command_line, ARRAY_SIZE (command_line),
-			 L"\"%ls\" --child win32 %lu \"%ls\" \"%ls\"",
-			 wide_exe, (unsigned long) expected, wide_filler,
-			 wide_tail);
+			 L"\"%ls\" --child CreateProcessW %lu \"%ls\" \"%ls\" %lu",
+			 wide_exe, (unsigned long) expected_tail, wide_filler,
+			 wide_tail, (unsigned long) expected_filler);
   if (length < 0 || (size_t) length >= ARRAY_SIZE (command_line))
     return 133;
 
@@ -375,7 +422,7 @@ run_create_process (const char *value, size_t expected, int *child_status)
 struct invocation
 {
   const char *name;
-  int (*run) (const char *, size_t, int *);
+  int (*run) (const char *, size_t, size_t, int *);
 };
 
 static const struct invocation invocations[] = {
@@ -456,15 +503,20 @@ run_raw_fixtures (void)
 {
   static const wchar_t needle[] = L"ABCDE";
   static const struct raw_fixture fixtures[] = {
-    { "accepted", L"\"exe\" --child win32 5 \"fff\" \"ABCDE\"", 0 },
+    { "accepted",
+      L"\"exe\" --child CreateProcessW 5 \"fff\" \"ABCDE\" 3", 0 },
     { "missing-command-line", NULL, CHILD_RAW_MISSING },
-    { "tail-absent", L"\"exe\" --child win32 5 \"fff\" \"ZZZZZ\"",
+    { "tail-absent",
+      L"\"exe\" --child CreateProcessW 5 \"fff\" \"ZZZZZ\" 3",
       CHILD_RAW_NOT_FOUND },
-    { "tail-ambiguous", L"\"exe\" ABCDE win32 5 \"fff\" \"ABCDE\"",
+    { "tail-ambiguous",
+      L"\"exe\" ABCDE CreateProcessW 5 \"fff\" \"ABCDE\" 3",
       CHILD_RAW_AMBIGUOUS },
-    { "tail-left-glued", L"\"exe\" --child win32 5 \"fff\" \"WABCDE\"",
+    { "tail-left-glued",
+      L"\"exe\" --child CreateProcessW 5 \"fff\" \"WABCDE\" 3",
       CHILD_RAW_LEFT },
-    { "tail-right-glued", L"\"exe\" --child win32 5 \"fff\" \"ABCDEF\"",
+    { "tail-right-glued",
+      L"\"exe\" --child CreateProcessW 5 \"fff\" \"ABCDEF\" 3",
       CHILD_RAW_RIGHT },
   };
 
@@ -494,6 +546,7 @@ main (int argc, char **argv)
   };
   long positives = 0;
   long negatives = 0;
+  long filler_controls = 0;
   int fixtures;
 
   if (argc > 1 && strcmp (argv[1], "--child") == 0)
@@ -530,8 +583,8 @@ main (int argc, char **argv)
 	for (size_t k = 0; k < ARRAY_SIZE (invocations); ++k)
 	  {
 	    int child_status = -1;
-	    int harness = invocations[k].run (tail, tail_lengths[j],
-					      &child_status);
+	    int harness = invocations[k].run (tail, filler_lengths[i],
+					      tail_lengths[j], &child_status);
 	    if (harness != 0)
 	      {
 		fprintf (stderr,
@@ -549,10 +602,6 @@ main (int argc, char **argv)
 		return 3;
 	      }
 	    ++positives;
-	    printf ("DIAG argv_spawn positive model=%s filler=%zu tail=%zu"
-		    " declared=%zu child=0 result=pass\n",
-		    invocations[k].name, filler_lengths[i], tail_lengths[j],
-		    tail_lengths[j]);
 	  }
       }
 
@@ -569,8 +618,8 @@ main (int argc, char **argv)
       for (size_t k = 0; k < ARRAY_SIZE (invocations); ++k)
 	{
 	  int child_status = -1;
-	  int harness = invocations[k].run (truncated_tail, tail_lengths[j],
-					    &child_status);
+	  int harness = invocations[k].run (truncated_tail, 16,
+					    tail_lengths[j], &child_status);
 	  if (harness != 0)
 	    {
 	      fprintf (stderr,
@@ -588,17 +637,57 @@ main (int argc, char **argv)
 	      return 5;
 	    }
 	  ++negatives;
-	  printf ("DIAG argv_spawn negative model=%s tail=%zu declared=%zu"
-		  " actual=%zu child=%d result=pass\n",
-		  invocations[k].name, tail_lengths[j], tail_lengths[j],
-		  tail_lengths[j] - 1, child_status);
+	  printf ("DIAG argv_spawn negative model=%s filler_declared=16"
+		  " filler_observed=16 tail_declared=%zu tail_observed=%zu"
+		  " child=%d result=pass\n",
+		  invocations[k].name, tail_lengths[j], tail_lengths[j] - 1,
+		  child_status);
 	}
     }
 
-  printf ("DIAG argv_spawn summary positive=%ld negative=%ld fixtures=%d"
-	  " models=%d fillers=%d tails=%d result=pass\n",
-	  positives, negatives, fixtures, (int) ARRAY_SIZE (invocations),
-	  (int) ARRAY_SIZE (filler_lengths), (int) ARRAY_SIZE (tail_lengths));
+  /* Filler controls use valid all-'f' data and a valid tail, changing only the
+     observed filler length around the declared 16-byte boundary. */
+  static const struct
+  {
+    const char *name;
+    size_t actual;
+  } filler_cases[] = {
+    { "shortened", 15 },
+    { "extended", 17 },
+  };
+  make_tail (24);
+  for (size_t i = 0; i < ARRAY_SIZE (filler_cases); ++i)
+    {
+      make_filler (filler_cases[i].actual);
+      for (size_t k = 0; k < ARRAY_SIZE (invocations); ++k)
+	{
+	  int child_status = -1;
+	  int harness = invocations[k].run (tail, 16, 24, &child_status);
+	  if (harness != 0)
+	    {
+	      fprintf (stderr,
+		       "%s filler-control harness failure: case=%s status=%d\n",
+		       invocations[k].name, filler_cases[i].name, harness);
+	      return 8;
+	    }
+	  if (child_status != CHILD_FILLER_LENGTH)
+	    {
+	      fprintf (stderr,
+		       "%s filler control %s expected child=%d, observed %d\n",
+		       invocations[k].name, filler_cases[i].name,
+		       CHILD_FILLER_LENGTH, child_status);
+	      return 9;
+	    }
+	  ++filler_controls;
+	}
+    }
+
+  printf ("DIAG argv_spawn summary positive=%ld negative=%ld"
+	  " filler_controls=%ld fixtures=%d models=%d fillers=%d tails=%d"
+	  " result=pass\n",
+	  positives, negatives, filler_controls, fixtures,
+	  (int) ARRAY_SIZE (invocations), (int) ARRAY_SIZE (filler_lengths),
+	  (int) ARRAY_SIZE (tail_lengths));
   fflush (stdout);
   return 0;
 }

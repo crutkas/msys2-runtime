@@ -1,21 +1,22 @@
 #!/usr/bin/env python3
-"""Verify the machine-readable records a passing diagnostic run emits.
+"""Verify the closed machine-readable contract of a passing diagnostic run.
 
-The diagnostics print a DIAG record for every case they clear, not only for
-failures, so a green run carries its own evidence.  This checker refuses to
-accept those records at face value: it requires the per-case records to be
-unique, to cover the complete declared cross product, and to agree with the
-summary the binary printed for itself.  Printing a constant is therefore not
-enough to satisfy it.
-
-Usage: verify-diagnostic-records.py LOG [LOG ...]
+Every DIAG line is part of the contract.  Unknown tests, kinds, fields, duplicate
+keys, malformed values, missing records, and extra records are fatal.  The
+expected matrices live here rather than being inferred from binary summaries.
 """
 
+import itertools
+import re
 import sys
+
 
 EXPECTED_FULL = "RTYXCAD"
 EXPECTED_OMIT = "RTCAD"
-EXPECTED_CONTROLS = {"omit", "misassociated", "wrong-path-same-basename"}
+EXPECTED_MODELS = {"spawnv", "execv", "CreateProcessW"}
+EXPECTED_FILLERS = {"0", "1", "15", "16", "17", "31"}
+EXPECTED_TAILS = {"1", "23", "24", "511", "640", "1023", "2047",
+                  "4095", "4096"}
 EXPECTED_RAW_FIXTURES = {
     "accepted": 0,
     "missing-command-line": 107,
@@ -24,40 +25,82 @@ EXPECTED_RAW_FIXTURES = {
     "tail-left-glued": 110,
     "tail-right-glued": 111,
 }
-# The matrix is an external contract, not something the run gets to declare
-# for itself.  A binary that silently narrowed its own coverage would still
-# emit a self-consistent summary, so the expected values live here and must
-# match winsup/testsuite/winsup.api/argv_spawn.c exactly.
-EXPECTED_MODELS = {"spawnv", "execv", "CreateProcessW"}
-EXPECTED_FILLERS = {"0", "1", "15", "16", "17", "31"}
-EXPECTED_TAILS = {"1", "23", "24", "511", "640", "1023", "2047", "4095",
-                  "4096"}
+EXPECTED_FILLER_CONTROLS = {
+    "shortened": 15,
+    "extended": 17,
+}
+EXPECTED_BINDING_CONTROLS = {
+    "wrong-path-same-basename": "rejected",
+    "path-case": "bound",
+    "path-prefix": "bound",
+    "hardlink-alias": "rejected",
+    "file-symlink": "bound",
+    "directory-junction": "bound",
+    "directory-symlink-reparse": "bound",
+}
+EXPECTED_CONTROLS = set(EXPECTED_BINDING_CONTROLS) | {
+    "omit", "misassociated"
+}
+
+ARGV_SCHEMAS = {
+    "wincmdln": {"nowincmdln", "msys", "cygwin", "result"},
+    "raw-fixture": {"case", "expected", "observed", "result"},
+    "positive": {
+        "model", "filler_declared", "filler_observed",
+        "tail_declared", "tail_observed", "child", "result",
+    },
+    "negative": {
+        "model", "filler_declared", "filler_observed",
+        "tail_declared", "tail_observed", "child", "result",
+    },
+    "filler-control": {
+        "model", "case", "filler_declared", "filler_observed",
+        "tail_declared", "tail_observed", "child", "result",
+    },
+    "summary": {
+        "positive", "negative", "filler_controls", "fixtures",
+        "models", "fillers", "tails", "result",
+    },
+}
+DLL_SCHEMAS = {
+    "executable": {"path", "result"},
+    "derived": {"helper", "runtime", "result"},
+    "runtime_root_crosscheck": {"performed", "result"},
+    "runtime": {
+        "volume", "index", "expected", "loaded", "final",
+        "expected_handle_open", "loaded_handle_open", "delete_share", "result",
+    },
+    "export": {"resolved", "static", "distinct", "result"},
+    "cycle": {"cycle", "observed", "expected_unit", "repeats", "result"},
+    "summary": {"cycles", "controls", "result"},
+}
+IDENTITY_CONTROL_SCHEMA = {
+    "control", "expected", "observed", "path", "result"
+}
+OMIT_CONTROL_SCHEMA = {
+    "control", "observed", "expected", "positive_rejected", "result"
+}
+MISASSOCIATED_CONTROL_SCHEMA = {"control", "replayed", "result"}
+
+EXPECTED_ARGV = (
+    1 + len(EXPECTED_RAW_FIXTURES)
+    + len(EXPECTED_MODELS) * len(EXPECTED_FILLERS) * len(EXPECTED_TAILS)
+    + len(EXPECTED_MODELS) * len(EXPECTED_TAILS)
+    + len(EXPECTED_MODELS) * len(EXPECTED_FILLER_CONTROLS)
+    + 1
+)
+EXPECTED_DLL = 5 + 2 + len(EXPECTED_CONTROLS) + 1
+EXPECTED_TOTAL = EXPECTED_ARGV + EXPECTED_DLL
+
+KEY_PATTERN = re.compile(r"\A[A-Za-z_][A-Za-z0-9_-]*\Z")
+UINT_PATTERN = re.compile(r"\A(?:0|[1-9][0-9]*)\Z")
+HEX8_PATTERN = re.compile(r"\A[0-9a-f]{8}\Z")
+HEX16_PATTERN = re.compile(r"\A[0-9a-f]{16}\Z")
+POINTER_PATTERN = re.compile(r"\A0x[0-9a-fA-F]+\Z")
 
 
 class RecordError(Exception):
-    """Raised when the emitted evidence is incomplete or inconsistent."""
-
-
-def read_records(paths):
-    records = []
-    for path in paths:
-        try:
-            with open(path, "r", encoding="utf-8", errors="replace") as handle:
-                lines = handle.readlines()
-        except OSError as error:
-            raise RecordError("cannot read %s: %s" % (path, error))
-        for line in lines:
-            fields = line.strip().split()
-            if len(fields) < 3 or fields[0] != "DIAG":
-                continue
-            data = {}
-            for field in fields[2:]:
-                key, sep, value = field.partition("=")
-                if sep:
-                    data[key] = value
-            kind = fields[2].partition("=")[0]
-            records.append((fields[1], kind, data))
-    return records
+    """Raised when emitted evidence is not the exact closed contract."""
 
 
 def require(condition, message):
@@ -65,214 +108,393 @@ def require(condition, message):
         raise RecordError(message)
 
 
-def unique_keys(records, builder, label):
+def parse_field(token, data, source):
+    key, separator, value = token.partition("=")
+    require(separator and KEY_PATTERN.match(key) and value != "",
+            "%s has malformed field %r" % (source, token))
+    require(key not in data, "%s repeats field %r" % (source, key))
+    data[key] = value
+    return key
+
+
+def parse_record(line, source):
+    fields = line.strip().split()
+    if not fields or fields[0] != "DIAG":
+        return None
+    require(len(fields) >= 3, "%s has a truncated DIAG record" % source)
+    test = fields[1]
+    require(test in {"argv_spawn", "dll_unload"},
+            "%s has unknown test %r" % (source, test))
+
+    data = {}
+    kind_token = fields[2]
+    if "=" in kind_token:
+        kind = parse_field(kind_token, data, source)
+    else:
+        require(KEY_PATTERN.match(kind_token),
+                "%s has malformed record kind %r" % (source, kind_token))
+        kind = kind_token
+    for token in fields[3:]:
+        parse_field(token, data, source)
+    return (test, kind, data, line.strip(), source)
+
+
+def read_records(paths):
+    records = []
+    for path in paths:
+        try:
+            with open(path, "r", encoding="utf-8", errors="strict") as handle:
+                lines = handle.readlines()
+        except (OSError, UnicodeError) as error:
+            raise RecordError("cannot read %s: %s" % (path, error))
+        for number, line in enumerate(lines, 1):
+            record = parse_record(line, "%s:%d" % (path, number))
+            if record is not None:
+                records.append(record)
+    return records
+
+
+def parse_lines(lines, label):
+    records = []
+    for number, line in enumerate(lines, 1):
+        record = parse_record(line, "%s:%d" % (label, number))
+        if record is not None:
+            records.append(record)
+    return records
+
+
+def canonical_uint(value, label):
+    require(UINT_PATTERN.match(value), "%s is not canonical unsigned decimal"
+            % label)
+    return int(value)
+
+
+def require_literal(data, key, expected, label):
+    require(data[key] == expected, "%s has %s=%r, expected %r"
+            % (label, key, data[key], expected))
+
+
+def require_path(value, label):
+    require(value not in ("", "-"), "%s is missing" % label)
+
+
+def require_schema(record):
+    test, kind, data, unused_raw, source = record
+    del unused_raw
+    if test == "argv_spawn":
+        require(kind in ARGV_SCHEMAS,
+                "%s has unknown argv_spawn kind %r" % (source, kind))
+        expected = ARGV_SCHEMAS[kind]
+    else:
+        if kind == "control":
+            name = data.get("control")
+            require(name in EXPECTED_CONTROLS,
+                    "%s has unknown dll_unload control %r" % (source, name))
+            if name in EXPECTED_BINDING_CONTROLS:
+                expected = IDENTITY_CONTROL_SCHEMA
+            elif name == "omit":
+                expected = OMIT_CONTROL_SCHEMA
+            else:
+                expected = MISASSOCIATED_CONTROL_SCHEMA
+        else:
+            require(kind in DLL_SCHEMAS,
+                    "%s has unknown dll_unload kind %r" % (source, kind))
+            expected = DLL_SCHEMAS[kind]
+    actual = set(data)
+    require(actual == expected,
+            "%s %s/%s fields are %r, expected %r"
+            % (source, test, kind, sorted(actual), sorted(expected)))
+
+
+def records_for(records, test, kind):
+    return [record for record in records
+            if record[0] == test and record[1] == kind]
+
+
+def single(records, test, kind):
+    found = records_for(records, test, kind)
+    require(len(found) == 1, "expected exactly one %s/%s record, saw %d"
+            % (test, kind, len(found)))
+    return found[0][2]
+
+
+def unique_keys(data_records, builder, label):
     seen = set()
-    for data in records:
+    for data in data_records:
         key = builder(data)
-        if key in seen:
-            raise RecordError("duplicate %s record %r" % (label, key))
+        require(key not in seen, "duplicate %s record %r" % (label, key))
         seen.add(key)
     return seen
 
 
 def verify_argv_spawn(records):
-    by_kind = {}
-    for test, kind, data in records:
-        if test == "argv_spawn":
-            by_kind.setdefault(kind, []).append(data)
+    wincmdln = single(records, "argv_spawn", "wincmdln")
+    require_literal(wincmdln, "nowincmdln", "0", "wincmdln")
+    require_literal(wincmdln, "result", "pass", "wincmdln")
 
-    require(by_kind, "no argv_spawn records were emitted")
-
-    wincmdln = by_kind.get("wincmdln", [])
-    require(len(wincmdln) == 1, "expected exactly one wincmdln record")
-    require(wincmdln[0].get("nowincmdln") == "0",
-            "wincmdln was disabled during the run")
-    require(wincmdln[0].get("result") == "pass", "wincmdln record is not pass")
-
-    summaries = by_kind.get("summary", [])
-    require(len(summaries) == 1, "expected exactly one argv_spawn summary")
-    summary = summaries[0]
-    for key in ("positive", "negative", "fixtures", "models", "fillers",
-                "tails"):
-        require(key in summary, "argv_spawn summary lacks %s" % key)
-    models = int(summary["models"])
-    fillers = int(summary["fillers"])
-    tails = int(summary["tails"])
-    require(models == len(EXPECTED_MODELS),
-            "summary declares %d models, the contract requires %d"
-            % (models, len(EXPECTED_MODELS)))
-    require(fillers == len(EXPECTED_FILLERS),
-            "summary declares %d filler lengths, the contract requires %d"
-            % (fillers, len(EXPECTED_FILLERS)))
-    require(tails == len(EXPECTED_TAILS),
-            "summary declares %d tail lengths, the contract requires %d"
-            % (tails, len(EXPECTED_TAILS)))
-
-    fixtures = by_kind.get("raw-fixture", [])
-    observed_fixtures = {}
+    fixtures = [record[2] for record in
+                records_for(records, "argv_spawn", "raw-fixture")]
+    fixture_names = unique_keys(fixtures, lambda data: data["case"],
+                                "raw fixture")
+    require(fixture_names == set(EXPECTED_RAW_FIXTURES),
+            "raw fixture cases are %r" % sorted(fixture_names))
     for data in fixtures:
-        name = data.get("case")
-        require(name in EXPECTED_RAW_FIXTURES,
-                "unexpected raw fixture %r" % name)
-        require(name not in observed_fixtures,
-                "duplicate raw fixture %r" % name)
-        require(data.get("result") == "pass",
-                "raw fixture %r is not pass" % name)
-        require(int(data.get("expected", "-1")) == EXPECTED_RAW_FIXTURES[name],
-                "raw fixture %r declares the wrong expected code" % name)
-        require(data.get("expected") == data.get("observed"),
-                "raw fixture %r observed a different code" % name)
-        observed_fixtures[name] = data
-    require(set(observed_fixtures) == set(EXPECTED_RAW_FIXTURES),
-            "missing raw fixtures: %r"
-            % sorted(set(EXPECTED_RAW_FIXTURES) - set(observed_fixtures)))
-    require(int(summary["fixtures"]) == len(EXPECTED_RAW_FIXTURES),
-            "summary fixture count disagrees with the emitted fixtures")
+        name = data["case"]
+        expected = EXPECTED_RAW_FIXTURES[name]
+        require(canonical_uint(data["expected"], "%s expected" % name)
+                == expected, "%s declares the wrong expected code" % name)
+        require(canonical_uint(data["observed"], "%s observed" % name)
+                == expected, "%s observed the wrong code" % name)
+        require_literal(data, "result", "pass", "raw fixture " + name)
 
-    positive = by_kind.get("positive", [])
-    for data in positive:
-        require(data.get("result") == "pass", "a positive case is not pass")
-        require(data.get("child") == "0", "a positive case has a child code")
-        require(data.get("tail") == data.get("declared"),
-                "a positive case declared a different length")
-    keys = unique_keys(
-        positive,
-        lambda d: (d.get("model"), d.get("filler"), d.get("tail")),
-        "positive")
-    require(len(keys) == models * fillers * tails,
-            "positive records cover %d of %d declared combinations"
-            % (len(keys), models * fillers * tails))
-    require(len(keys) == int(summary["positive"]),
-            "summary positive count %s disagrees with %d unique records"
-            % (summary["positive"], len(keys)))
-    require(set(m for m, _, _ in keys) == EXPECTED_MODELS,
-            "positive records cover models %r"
-            % sorted(set(m for m, _, _ in keys)))
-    require(set(f for _, f, _ in keys) == EXPECTED_FILLERS,
-            "positive records cover filler lengths %r"
-            % sorted(set(f for _, f, _ in keys)))
-    require(set(t for _, _, t in keys) == EXPECTED_TAILS,
-            "positive records cover tail lengths %r"
-            % sorted(set(t for _, _, t in keys)))
+    positives = [record[2] for record in
+                 records_for(records, "argv_spawn", "positive")]
+    positive_keys = unique_keys(
+        positives,
+        lambda data: (
+            data["model"], data["filler_declared"], data["tail_declared"]
+        ),
+        "positive",
+    )
+    expected_positive = set(itertools.product(
+        EXPECTED_MODELS, EXPECTED_FILLERS, EXPECTED_TAILS))
+    require(positive_keys == expected_positive,
+            "positive records do not cover the exact fixed matrix")
+    for data in positives:
+        label = "positive %r" % ((
+            data["model"], data["filler_declared"], data["tail_declared"]),)
+        require(data["model"] in EXPECTED_MODELS,
+                "%s has unknown model" % label)
+        canonical_uint(data["filler_declared"], label + " filler_declared")
+        canonical_uint(data["filler_observed"], label + " filler_observed")
+        canonical_uint(data["tail_declared"], label + " tail_declared")
+        canonical_uint(data["tail_observed"], label + " tail_observed")
+        require_literal(data, "filler_observed", data["filler_declared"],
+                        label)
+        require_literal(data, "tail_observed", data["tail_declared"], label)
+        require_literal(data, "child", "0", label)
+        require_literal(data, "result", "pass", label)
 
-    negative = by_kind.get("negative", [])
-    for data in negative:
-        require(data.get("result") == "pass", "a negative control is not pass")
-        require(data.get("child") == "103",
-                "a negative control did not observe child=103")
-        require(int(data.get("actual", "-1")) == int(data.get("tail")) - 1,
-                "a negative control did not send a one-byte-short tail")
-        require(data.get("declared") == data.get("tail"),
-                "a negative control declared the truncated length")
+    negatives = [record[2] for record in
+                 records_for(records, "argv_spawn", "negative")]
     negative_keys = unique_keys(
-        negative, lambda d: (d.get("model"), d.get("tail")), "negative")
-    require(len(negative_keys) == models * tails,
-            "negative records cover %d of %d declared combinations"
-            % (len(negative_keys), models * tails))
-    require(len(negative_keys) == int(summary["negative"]),
-            "summary negative count %s disagrees with %d unique records"
-            % (summary["negative"], len(negative_keys)))
-    require(set(m for m, _ in negative_keys) == EXPECTED_MODELS,
-            "negative controls cover models %r"
-            % sorted(set(m for m, _ in negative_keys)))
-    require(set(t for _, t in negative_keys) == EXPECTED_TAILS,
-            "negative controls cover tail lengths %r"
-            % sorted(set(t for _, t in negative_keys)))
+        negatives,
+        lambda data: (data["model"], data["tail_declared"]),
+        "negative",
+    )
+    require(negative_keys == set(itertools.product(
+        EXPECTED_MODELS, EXPECTED_TAILS)),
+        "negative records do not cover the exact fixed matrix")
+    for data in negatives:
+        label = "negative %r" % ((
+            data["model"], data["tail_declared"]),)
+        declared = canonical_uint(data["tail_declared"],
+                                  label + " tail_declared")
+        observed = canonical_uint(data["tail_observed"],
+                                  label + " tail_observed")
+        require_literal(data, "filler_declared", "16", label)
+        require_literal(data, "filler_observed", "16", label)
+        require(observed + 1 == declared,
+                "%s is not exactly one byte short" % label)
+        require_literal(data, "child", "103", label)
+        require_literal(data, "result", "pass", label)
 
-    return {"positive": len(keys), "negative": len(negative_keys),
-            "raw_fixtures": len(observed_fixtures)}
+    filler_controls = [record[2] for record in
+                       records_for(records, "argv_spawn", "filler-control")]
+    filler_keys = unique_keys(
+        filler_controls,
+        lambda data: (data["model"], data["case"]),
+        "filler control",
+    )
+    require(filler_keys == set(itertools.product(
+        EXPECTED_MODELS, EXPECTED_FILLER_CONTROLS)),
+        "filler controls do not cover every model and boundary")
+    for data in filler_controls:
+        label = "filler control %r" % ((
+            data["model"], data["case"]),)
+        require_literal(data, "filler_declared", "16", label)
+        require(canonical_uint(data["filler_observed"],
+                               label + " filler_observed")
+                == EXPECTED_FILLER_CONTROLS[data["case"]],
+                "%s observed the wrong filler length" % label)
+        require_literal(data, "tail_declared", "24", label)
+        require_literal(data, "tail_observed", "24", label)
+        require_literal(data, "child", "102", label)
+        require_literal(data, "result", "pass", label)
+
+    summary = single(records, "argv_spawn", "summary")
+    expected_summary = {
+        "positive": len(expected_positive),
+        "negative": len(negative_keys),
+        "filler_controls": len(filler_keys),
+        "fixtures": len(EXPECTED_RAW_FIXTURES),
+        "models": len(EXPECTED_MODELS),
+        "fillers": len(EXPECTED_FILLERS),
+        "tails": len(EXPECTED_TAILS),
+    }
+    for key, expected in expected_summary.items():
+        require(canonical_uint(summary[key], "argv summary " + key)
+                == expected, "argv summary %s is not %d" % (key, expected))
+    require_literal(summary, "result", "pass", "argv summary")
+    return {
+        "positive": len(positive_keys),
+        "negative": len(negative_keys),
+        "filler_controls": len(filler_keys),
+        "raw_fixtures": len(fixture_names),
+    }
 
 
 def verify_dll_unload(records):
-    by_kind = {}
-    for test, kind, data in records:
-        if test == "dll_unload":
-            by_kind.setdefault(kind, []).append(data)
+    executable = single(records, "dll_unload", "executable")
+    require_path(executable["path"], "executable path")
+    require_literal(executable, "result", "pass", "executable")
 
-    require(by_kind, "no dll_unload records were emitted")
+    derived = single(records, "dll_unload", "derived")
+    require_path(derived["helper"], "derived helper path")
+    require_path(derived["runtime"], "derived runtime path")
+    require_literal(derived, "result", "pass", "derived")
 
-    runtime = by_kind.get("runtime", [])
-    require(len(runtime) == 1, "expected exactly one runtime binding record")
-    binding = runtime[0]
-    require(binding.get("result") == "pass", "runtime binding is not pass")
-    for key in ("expected", "loaded", "final", "volume", "index"):
-        require(binding.get(key) not in (None, "", "-"),
-                "runtime binding lacks %s" % key)
+    crosscheck = single(records, "dll_unload", "runtime_root_crosscheck")
+    require_literal(crosscheck, "performed", "1", "runtime_root crosscheck")
+    require_literal(crosscheck, "result", "pass", "runtime_root crosscheck")
 
-    executable = by_kind.get("executable", [])
-    require(len(executable) == 1, "expected exactly one executable record")
-    require(executable[0].get("path") not in (None, "", "-"),
-            "executable record lacks a path")
+    runtime = single(records, "dll_unload", "runtime")
+    require(HEX8_PATTERN.match(runtime["volume"]),
+            "runtime volume is not eight lowercase hex digits")
+    require(HEX16_PATTERN.match(runtime["index"]),
+            "runtime index is not sixteen lowercase hex digits")
+    for key in ("expected", "loaded", "final"):
+        require_path(runtime[key], "runtime " + key)
+    for key in ("expected_handle_open", "loaded_handle_open"):
+        require_literal(runtime, key, "1", "runtime")
+    require_literal(runtime, "delete_share", "0", "runtime")
+    require_literal(runtime, "result", "pass", "runtime")
 
-    derived = by_kind.get("derived", [])
-    require(len(derived) == 1, "expected exactly one derived-path record")
-    for key in ("helper", "runtime"):
-        require(derived[0].get(key) not in (None, "", "-"),
-                "derived record lacks %s" % key)
+    exported = single(records, "dll_unload", "export")
+    require(POINTER_PATTERN.match(exported["resolved"]),
+            "resolved export is not a pointer")
+    require(POINTER_PATTERN.match(exported["static"]),
+            "static shim is not a pointer")
+    require(int(exported["resolved"], 16) != 0,
+            "resolved export is a null pointer")
+    require(int(exported["static"], 16) != 0,
+            "static shim is a null pointer")
+    require(exported["resolved"].lower() != exported["static"].lower(),
+            "resolved export equals the static shim")
+    require_literal(exported, "distinct", "1", "export")
+    require_literal(exported, "result", "pass", "export")
 
-    export = by_kind.get("export", [])
-    require(len(export) == 1, "expected exactly one export record")
-    require(export[0].get("distinct") == "1",
-            "the resolved export was not distinct from the static shim")
-    require(export[0].get("resolved") != export[0].get("static"),
-            "the resolved export equals the static shim")
-
-    crosscheck = by_kind.get("runtime_root_crosscheck", [])
-    require(len(crosscheck) == 1, "expected exactly one crosscheck record")
-    require(crosscheck[0].get("result") == "pass", "crosscheck is not pass")
-
-    cycles = by_kind.get("cycle", [])
-    require(len(cycles) == 2, "expected exactly 2 unload cycles, saw %d"
-            % len(cycles))
-    seen_cycles = set()
+    cycles = [record[2] for record in
+              records_for(records, "dll_unload", "cycle")]
+    cycle_numbers = unique_keys(cycles, lambda data: data["cycle"], "cycle")
+    require(cycle_numbers == {"1", "2"},
+            "cycle numbering is %r" % sorted(cycle_numbers))
     for data in cycles:
-        number = data.get("cycle")
-        require(number not in seen_cycles, "duplicate cycle record %r" % number)
-        seen_cycles.add(number)
-        require(data.get("result") == "pass", "cycle %r is not pass" % number)
-        require(data.get("expected_unit") == EXPECTED_FULL,
-                "cycle %r declares the wrong expected unit" % number)
-        repeats = int(data.get("repeats", "0"))
-        require(repeats == int(number),
-                "cycle %r declares %d repeats" % (number, repeats))
-        require(data.get("observed") == EXPECTED_FULL * repeats,
-                "cycle %r observed %r" % (number, data.get("observed")))
-    require(seen_cycles == {"1", "2"}, "cycle numbering is %r"
-            % sorted(seen_cycles))
+        number = canonical_uint(data["cycle"], "cycle number")
+        require_literal(data, "expected_unit", EXPECTED_FULL,
+                        "cycle %d" % number)
+        require(canonical_uint(data["repeats"], "cycle repeats") == number,
+                "cycle %d repeats do not match its number" % number)
+        require_literal(data, "observed", EXPECTED_FULL * number,
+                        "cycle %d" % number)
+        require_literal(data, "result", "pass", "cycle %d" % number)
 
-    controls = by_kind.get("control", [])
-    seen_controls = set()
-    for data in controls:
-        name = data.get("control")
-        require(name in EXPECTED_CONTROLS, "unexpected control %r" % name)
-        require(name not in seen_controls, "duplicate control %r" % name)
-        seen_controls.add(name)
-        require(data.get("result") == "pass", "control %r is not pass" % name)
-    require(seen_controls == EXPECTED_CONTROLS,
-            "missing controls: %r" % sorted(EXPECTED_CONTROLS - seen_controls))
+    controls = [record[2] for record in
+                records_for(records, "dll_unload", "control")]
+    control_names = unique_keys(controls, lambda data: data["control"],
+                                "control")
+    require(control_names == EXPECTED_CONTROLS,
+            "control names are %r" % sorted(control_names))
+    by_name = {data["control"]: data for data in controls}
+    for name, expected in EXPECTED_BINDING_CONTROLS.items():
+        data = by_name[name]
+        require_literal(data, "expected", expected, name)
+        require_literal(data, "observed", expected, name)
+        require_path(data["path"], name + " path")
+        require_literal(data, "result", "pass", name)
 
-    omit = [d for d in controls if d.get("control") == "omit"][0]
-    require(omit.get("observed") == EXPECTED_OMIT,
-            "omit control observed %r" % omit.get("observed"))
-    require(omit.get("positive_rejected") == "1",
-            "the omit control was not rejected by the positive verifier")
-    misassociated = [d for d in controls
-                     if d.get("control") == "misassociated"][0]
-    require(misassociated.get("replayed") == "0",
-            "the mis-associated registration was replayed at dlclose")
-    decoy = [d for d in controls
-             if d.get("control") == "wrong-path-same-basename"][0]
-    require(decoy.get("rejected") == "1",
-            "the same-base-name decoy was not rejected")
+    omit = by_name["omit"]
+    require_literal(omit, "observed", EXPECTED_OMIT, "omit")
+    require_literal(omit, "expected", EXPECTED_OMIT, "omit")
+    require_literal(omit, "positive_rejected", "1", "omit")
+    require_literal(omit, "result", "pass", "omit")
+    misassociated = by_name["misassociated"]
+    require_literal(misassociated, "replayed", "0", "misassociated")
+    require_literal(misassociated, "result", "pass", "misassociated")
 
-    summaries = by_kind.get("summary", [])
-    require(len(summaries) == 1, "expected exactly one dll_unload summary")
-    require(int(summaries[0].get("cycles", "0")) == len(cycles),
-            "dll_unload summary cycle count disagrees with the records")
-    require(int(summaries[0].get("controls", "0")) == len(seen_controls),
-            "dll_unload summary control count disagrees with the records")
+    summary = single(records, "dll_unload", "summary")
+    require(canonical_uint(summary["cycles"], "dll summary cycles") == 2,
+            "dll summary cycle count is not 2")
+    require(canonical_uint(summary["controls"], "dll summary controls")
+            == len(EXPECTED_CONTROLS),
+            "dll summary control count is not %d" % len(EXPECTED_CONTROLS))
+    require_literal(summary, "result", "pass", "dll summary")
+    return {"cycles": len(cycles), "controls": len(control_names)}
 
-    return {"cycles": len(cycles), "controls": len(seen_controls)}
+
+def verify_records(records):
+    require(len(records) == EXPECTED_TOTAL,
+            "expected exactly %d DIAG records, saw %d"
+            % (EXPECTED_TOTAL, len(records)))
+    for record in records:
+        require_schema(record)
+    argv_counts = verify_argv_spawn(records)
+    unload_counts = verify_dll_unload(records)
+    require(sum(1 for record in records if record[0] == "argv_spawn")
+            == EXPECTED_ARGV, "argv record total is not %d" % EXPECTED_ARGV)
+    require(sum(1 for record in records if record[0] == "dll_unload")
+            == EXPECTED_DLL, "dll record total is not %d" % EXPECTED_DLL)
+    return argv_counts, unload_counts
+
+
+def replace_once(lines, predicate, old, new):
+    changed = list(lines)
+    indexes = [index for index, line in enumerate(changed)
+               if predicate(line)]
+    require(len(indexes) == 1,
+            "mutation source matched %d records, expected one" % len(indexes))
+    index = indexes[0]
+    require(old in changed[index], "mutation source lacks %r" % old)
+    changed[index] = changed[index].replace(old, new, 1)
+    return changed
+
+
+def mutation_self_test(records):
+    lines = [record[3] for record in records]
+    positive = lambda line: (
+        line.startswith("DIAG argv_spawn positive model=spawnv ")
+        and "filler_declared=0 " in line
+        and "tail_declared=1 " in line
+    )
+    derived = lambda line: line.startswith("DIAG dll_unload derived ")
+    dll_summary = lambda line: line.startswith("DIAG dll_unload summary ")
+    crosscheck = lambda line: line.startswith(
+        "DIAG dll_unload runtime_root_crosscheck ")
+    mutations = [
+        ("unknown-record-kind",
+         lines + ["DIAG argv_spawn unexpected payload=1 result=pass"]),
+        ("unknown-field",
+         replace_once(lines, positive, " result=pass",
+                      " unknown=1 result=pass")),
+        ("duplicate-field",
+         replace_once(lines, positive, " result=pass",
+                      " result=fail result=pass")),
+        ("derived-failure",
+         replace_once(lines, derived, "result=pass", "result=fail")),
+        ("dll-summary-failure",
+         replace_once(lines, dll_summary, "result=pass", "result=fail")),
+        ("crosscheck-not-performed",
+         replace_once(lines, crosscheck, "performed=1", "performed=0")),
+        ("missing-record", lines[1:]),
+        ("extra-duplicate-record", lines + [lines[0]]),
+    ]
+    for name, mutated in mutations:
+        try:
+            verify_records(parse_lines(mutated, "mutation-" + name))
+        except RecordError:
+            continue
+        raise RecordError("mutation %r was accepted" % name)
+    return len(mutations)
 
 
 def main(argv):
@@ -280,16 +502,18 @@ def main(argv):
         raise RecordError("usage: verify-diagnostic-records.py LOG [LOG ...]")
     records = read_records(argv[1:])
     require(records, "no DIAG records were found in %r" % (argv[1:],))
-
-    argv_counts = verify_argv_spawn(records)
-    unload_counts = verify_dll_unload(records)
+    argv_counts, unload_counts = verify_records(records)
+    mutations = mutation_self_test(records)
 
     print("records_total=%d" % len(records))
     print("argv_positive=%d" % argv_counts["positive"])
     print("argv_negative=%d" % argv_counts["negative"])
+    print("argv_filler_controls=%d" % argv_counts["filler_controls"])
     print("argv_raw_fixtures=%d" % argv_counts["raw_fixtures"])
     print("unload_cycles=%d" % unload_counts["cycles"])
     print("unload_controls=%d" % unload_counts["controls"])
+    print("record_mutation_fixtures=%d" % mutations)
+    print("record_contract=closed")
     print("records_verified=ok")
     return 0
 

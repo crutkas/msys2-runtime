@@ -26,10 +26,11 @@
    lookup fails for Y, cygwin_atexit degrades to the process-global atexit
    chain and Y is not replayed at dlclose time.
 
-   The runtime is identified by volume and file index against the just-built
-   winsup/testsuite/testinst/bin/msys-2.0.dll supplied by the caller, never by
-   module base name alone, so a same-named image reached through PATH, a
-   preload, a junction or a copy cannot satisfy the binding.  */
+   The runtime is identified by canonical final path, volume and file index
+   against the just-built winsup/testsuite/testinst/bin/msys-2.0.dll supplied
+   by the caller, never by module base name alone.  Handles remain open without
+   delete sharing through callback registration and unload, preventing the
+   compared files from being renamed or replaced during the tested cycle.  */
 
 #include <windows.h>
 #include <stdlib.h>
@@ -66,6 +67,7 @@ resolve_final_path (void)
 
 struct file_identity
 {
+  HANDLE handle;
   DWORD volume;
   DWORD index_high;
   DWORD index_low;
@@ -74,9 +76,12 @@ struct file_identity
 
 static char log_path[MAX_PATH];
 static char loaded_runtime_path[MAX_PATH];
+static struct file_identity expected_runtime_identity;
 static struct file_identity loaded_runtime_identity;
 static atexit_export_fn resolved_exported_atexit;
 static void *resolved_static_atexit;
+
+static void close_identity (struct file_identity *);
 
 static int
 append_marker (char marker)
@@ -116,6 +121,8 @@ static void __attribute__ ((destructor))
 helper_destructor (void)
 {
   append_marker ('D');
+  close_identity (&loaded_runtime_identity);
+  close_identity (&expected_runtime_identity);
 }
 
 /* Canonicalise through an open handle rather than through the textual path,
@@ -130,10 +137,12 @@ query_identity (const char *win32_path, struct file_identity *out)
   BOOL ok;
   HANDLE file;
 
+  memset (out, 0, sizeof (*out));
+  out->handle = INVALID_HANDLE_VALUE;
   if (!win32_path || !*win32_path || !final_path)
     return 0;
   file = CreateFileA (win32_path, 0,
-		      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+		      FILE_SHARE_READ | FILE_SHARE_WRITE,
 		      NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
   if (file == INVALID_HANDLE_VALUE)
     return 0;
@@ -141,13 +150,30 @@ query_identity (const char *win32_path, struct file_identity *out)
   memset (out->final_path, 0, sizeof (out->final_path));
   ok = GetFileInformationByHandle (file, &info);
   final = final_path (file, out->final_path, sizeof (out->final_path), 0);
-  CloseHandle (file);
   if (!ok || final == 0 || final >= sizeof (out->final_path))
-    return 0;
+    {
+      CloseHandle (file);
+      return 0;
+    }
+  out->handle = file;
   out->volume = info.dwVolumeSerialNumber;
   out->index_high = info.nFileIndexHigh;
   out->index_low = info.nFileIndexLow;
   return 1;
+}
+
+static void
+close_identity (struct file_identity *identity)
+{
+  if (identity->handle && identity->handle != INVALID_HANDLE_VALUE)
+    CloseHandle (identity->handle);
+  identity->handle = INVALID_HANDLE_VALUE;
+}
+
+static int
+identity_open (const struct file_identity *identity)
+{
+  return identity->handle && identity->handle != INVALID_HANDLE_VALUE;
 }
 
 static int
@@ -166,7 +192,6 @@ static int
 resolve_runtime_atexit (const char *expected_win32_path,
 			atexit_export_fn *out)
 {
-  struct file_identity expected;
   MEMORY_BASIC_INFORMATION info;
   HMODULE runtime;
   FARPROC entry;
@@ -174,32 +199,61 @@ resolve_runtime_atexit (const char *expected_win32_path,
 
   if (!expected_win32_path || !*expected_win32_path)
     return 1;
-  if (!query_identity (expected_win32_path, &expected))
+  if (!query_identity (expected_win32_path, &expected_runtime_identity))
     return 2;
 
   runtime = GetModuleHandleA (DLL_UNLOAD_RUNTIME_NAME);
   if (!runtime)
-    return 3;
+    {
+      close_identity (&expected_runtime_identity);
+      return 3;
+    }
   length = GetModuleFileNameA (runtime, loaded_runtime_path,
 			       sizeof (loaded_runtime_path));
   if (length == 0 || length >= sizeof (loaded_runtime_path))
-    return 4;
+    {
+      close_identity (&expected_runtime_identity);
+      return 4;
+    }
   if (!query_identity (loaded_runtime_path, &loaded_runtime_identity))
-    return 5;
-  if (!same_file (&expected, &loaded_runtime_identity))
-    return 6;
+    {
+      close_identity (&expected_runtime_identity);
+      return 5;
+    }
+  if (!same_file (&expected_runtime_identity, &loaded_runtime_identity))
+    {
+      close_identity (&loaded_runtime_identity);
+      close_identity (&expected_runtime_identity);
+      return 6;
+    }
 
   entry = GetProcAddress (runtime, "atexit");
   if (!entry)
-    return 7;
+    {
+      close_identity (&loaded_runtime_identity);
+      close_identity (&expected_runtime_identity);
+      return 7;
+    }
   memset (&info, 0, sizeof (info));
   if (VirtualQuery ((const void *) entry, &info, sizeof (info))
       != sizeof (info))
-    return 8;
+    {
+      close_identity (&loaded_runtime_identity);
+      close_identity (&expected_runtime_identity);
+      return 8;
+    }
   if (info.AllocationBase != (void *) runtime)
-    return 9;
+    {
+      close_identity (&loaded_runtime_identity);
+      close_identity (&expected_runtime_identity);
+      return 9;
+    }
   if ((void *) entry == (void *) &atexit)
-    return 10;
+    {
+      close_identity (&loaded_runtime_identity);
+      close_identity (&expected_runtime_identity);
+      return 10;
+    }
 
   *out = (atexit_export_fn) (void *) entry;
   return 0;
@@ -315,13 +369,19 @@ dll_unload_loaded_runtime_final_path (void)
 
 __attribute__ ((dllexport)) int
 dll_unload_runtime_identity (unsigned long *volume, unsigned long *high,
-			     unsigned long *low)
+			     unsigned long *low, int *expected_open,
+			     int *loaded_open)
 {
-  if (!volume || !high || !low)
+  if (!volume || !high || !low || !expected_open || !loaded_open)
     return 1;
+  if (!identity_open (&expected_runtime_identity)
+      || !identity_open (&loaded_runtime_identity))
+    return 2;
   *volume = (unsigned long) loaded_runtime_identity.volume;
   *high = (unsigned long) loaded_runtime_identity.index_high;
   *low = (unsigned long) loaded_runtime_identity.index_low;
+  *expected_open = 1;
+  *loaded_open = 1;
   return 0;
 }
 
@@ -332,8 +392,11 @@ __attribute__ ((dllexport)) int
 dll_unload_path_is_bound_runtime (const char *win32_path)
 {
   struct file_identity candidate;
+  int result;
 
   if (!query_identity (win32_path, &candidate))
     return 2;
-  return same_file (&candidate, &loaded_runtime_identity) ? 0 : 1;
+  result = same_file (&candidate, &loaded_runtime_identity) ? 0 : 1;
+  close_identity (&candidate);
+  return result;
 }
