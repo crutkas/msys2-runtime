@@ -363,7 +363,6 @@ stabilize_sig_stack:
 	.seh_endproc
 EOF
 	}
-	# TODO: These are only stubs, they need to be implemented properly for AArch64.
 	if ($is_aarch64) {
 	  $res = <<EOF . longjmp () . $res;
 	.include "tlsoffsets"
@@ -378,13 +377,13 @@ _sigfe_maybe:					# stack is aligned on entry!
 	cmp     sp, x11				// Compare current stack pointer with TLS location
 	b.hs    0f                             	// if sp >= tls, skip TLS logic
 	ldr     w12, [x11]                    	// Load the value at _cygtls.initialized (32-bit)
-	movz    w13, #0xc763			// Prepare magic value(0xc763173f) lower 16 bits
-	movk    w13, #0x173f, lsl #16		// Add upper 16 bits, full value now in w13
+	movz    w13, #0x173f			// Prepare CYGTLS_INITIALIZED lower 16 bits
+	movk    w13, #0xc763, lsl #16		// Add upper 16 bits: 0xc763173f
 	cmp     w12, w13			// Compare loaded value with magic
-	b.ne    0f                              // If not equal, not initialized, skip TLS logic
-	ret
+	b.eq    _sigfe				// Initialized, run the signal-aware entry path
 0:
-	ret
+	ldr     x9, [sp], #16			// Restore SP and load the real function address
+	br      x9				// TLS unavailable, call the function directly
 	.seh_endproc
 
     .seh_proc _sigfe
@@ -706,28 +705,33 @@ longjmp:
 EOF
     }
     if ($is_aarch64) {
-	# TODO: These are only stubs, they need to be implemented properly for AArch64.
 	return <<EOF;
 	.globl	sigsetjmp
 	.seh_proc sigsetjmp
 sigsetjmp:
 	// prologue
 	stp		fp, lr, [sp, #-0x10]!	// save FP and LR registers
+	.seh_save_fplr_x 0x10
 	mov		fp, sp			// set FP to current SP
+	.seh_set_fp
 	.seh_endprologue
-	str	w1, [x0, #0x100]		// buf->savemask = savemask
+	str	w1, [x0, #0xc8]			// buf->savemask = savemask
 	cbz     w1, 1f				// If savemask == 0, skip fetching sigmask
-	mov     x3, x0                        	// save buf in x3
 	sub     sp, sp, #32			// Allocate 32 bytes on stack call
+	str     x0, [sp, #16]			// Preserve buf across pthread_sigmask
+	add     x2, x0, #0xd0			// &buf->sigmask
 	mov     x0, #0                         	// SIG_SETMASK
 	mov     x1, xzr                        	// newmask = NULL
-	add     x2, x3, #0x108                 	// &buf->sigmask
 	bl      pthread_sigmask
+	ldr     x0, [sp, #16]			// Restore buf for setjmp
 	add     sp, sp, #32
 1:
 	bl	setjmp
 	// epilogue
+	.seh_startepilogue
 	ldp	fp, lr, [sp], #0x10		// restore saved FP and LR registers
+	.seh_save_fplr_x 0x10
+	.seh_endepilogue
 	ret
 	.seh_endproc
 
@@ -747,7 +751,8 @@ setjmp:
 	stp	x23, x24, [x0, #0x28]		// save x23, x24
 	stp	x25, x26, [x0, #0x38]		// save x25, x26
 	stp	x27, x28, [x0, #0x48]		// save x27, x28
-	stp	x29, x30, [x0, #0x58]		// save x29 (FP) and x30 (LR)
+	ldp	x1, x2, [sp]			// load the caller's FP and LR
+	stp	x1, x2, [x0, #0x58]		// save the caller's FP and LR
 
 	add	x1, sp, #0x10			// get the old stack pointer
 	str	x1, [x0, #0x68]			// save SP
@@ -762,10 +767,6 @@ setjmp:
 	stp	d10, d11, [x0, #0x90]		// save d10, d11
 	stp	d12, d13, [x0, #0xA0]		// save d12, d13
 	stp	d14, d15, [x0, #0xB0]		// save d14, d15
-
-	// save TLS stack pointer
-	ldr	x1, [sp, #0x10]			// get the TLS stack pointer
-	str	x1, [x0, #0xB8]			// save TLS stack pointer
 
 	str	x0, [sp, #-0x10]!		// save jmp_buf before call
 	bl	stabilize_sig_stack		// call stabilize_sig_stack (returns TLS in x10)
@@ -799,16 +800,18 @@ setjmp:
 siglongjmp:
 	// prologue
 	stp	fp, lr, [sp, #-0x10]!		// save FP and LR registers
+	.seh_save_fplr_x 0x10
 	mov	fp, sp				// set FP to current SP
+	.seh_set_fp
 	.seh_endprologue
 	mov x19, x1				// save val
 	mov x20, x0				// save buf
-	ldr     w8, [x20, #0x100]       	// w8 = buf->savemask
+	ldr     w8, [x20, #0xc8]        	// w8 = buf->savemask
 	cbz     w8, 1f                  	// if savemask == 0, skip
 	sub	sp, sp, #32			// allocate 32 bytes on stack
 	mov     x0, #0                  	// SIG_SETMASK
-	mov     x1, xzr                 	// newmask = NULL
-	add     x2, x20, #0x108         	// &buf->sigmask
+	add     x1, x20, #0xd0          	// &buf->sigmask
+	mov     x2, xzr                 	// oldmask = NULL
 	bl      pthread_sigmask
 
 	add     sp, sp, #32			// call frame
@@ -818,7 +821,10 @@ siglongjmp:
 	bl longjmp
 
 	// epilogue
+	.seh_startepilogue
 	ldp	fp, lr, [sp], #0x10		// restore saved FP and LR registers
+	.seh_save_fplr_x 0x10
+	.seh_endepilogue
 	ret
 	.seh_endproc
 
@@ -826,9 +832,10 @@ siglongjmp:
 	.seh_proc longjmp
 longjmp:
 	// prologue
+	stp	x0, x1, [sp, #-0x10]!		// save function args (jmp_buf and return value)
+	.seh_stackalloc 0x10
 	.seh_endprologue
 1:
-	stp	x0, x1, [sp, #-0x10]!		// save function args (jmp_buf and return value)
 	bl	stabilize_sig_stack		// call stabilize_sig_stack (returns TLS in x10)
 	ldp	x2, x3, [sp], #0x10		// restore jmp_buf and return value to x2 and x3
 	ldr	x9, [x2]			// get old signal stack from jump buffer
@@ -873,10 +880,6 @@ longjmp:
 	ldp	d10, d11, [x2, #0x90]		// restore d10, d11
 	ldp	d12, d13, [x2, #0xA0]		// restore d12, d13
 	ldp	d14, d15, [x2, #0xB0]		// restore d14, d15
-
-	// restore TLS stack pointer
-	ldr	x1, [x2, #0xB8]			// get the saved TLS stack pointer
-	str	x1, [sp]			// restore TLS stack pointer
 
 	// ensure return value is non-zero (C standard requirement)
 	cbnz	x0, 0f				// if return value non-zero, return
