@@ -78,12 +78,6 @@ cat >"$work/architecture-controls.c" <<'EOF'
 #include <machine/endian.h>
 #include "register.h"
 
-void
-probe_stack_initialization(void *address)
-{
-  __asm__ ("mov fp, %0\n\tmov sp, fp" : : "r" (address) : "memory");
-}
-
 void *
 probe_stack_pointer(void)
 {
@@ -186,4 +180,4 @@ printf '%s\n' \
   "Native ARM64 foundation validation passed:" \
   "  16 AArch64 machine assembly objects are AA64 COFF" \
   "  retained ctype and floating-environment sources are AA64 COFF" \
-  "  setjmp/longjmp, rawmemchr, precision, endian, register, and stack controls executed"
+  "  setjmp/longjmp, rawmemchr, precision, endian, register, and stack-pointer controls executed"
