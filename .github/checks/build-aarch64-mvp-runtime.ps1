@@ -73,7 +73,6 @@ $bashBuild = Join-Path $Work 'bash-build'
 $minGit = Join-Path $Work 'mingit'
 $shim = Join-Path $Work 'native-shims'
 $tempRoot = Join-Path $Work 'tmp'
-$generatorHostRoot = [IO.Path]::GetTempPath()
 New-Item -ItemType Directory -Path $inputRoot, $sourceRoot, $buildRoot, $bashSource,
     $bashBuild, $minGit, $shim, $tempRoot -Force | Out-Null
 $env:TEMP = $tempRoot
@@ -84,8 +83,7 @@ tar -xf $BusyBoxArchive -C $inputRoot
 $busy = (Get-ChildItem -LiteralPath $inputRoot -Filter busybox.exe -File -Recurse |
     Select-Object -First 1).FullName
 Assert-Arm64 $busy 'BusyBox shell'
-$generatorExtractRoot = Join-Path $generatorHostRoot `
-    "msys2-runtime-generators-$sourceCommit"
+$generatorExtractRoot = Join-Path ([IO.Path]::GetPathRoot($Work)) 'g'
 if (Test-Path -LiteralPath $generatorExtractRoot) {
     Remove-Item -LiteralPath $generatorExtractRoot -Recurse -Force
 }
@@ -112,8 +110,31 @@ Get-ChildItem -LiteralPath $generatorPrefix -File -Recurse | ForEach-Object {
         $nativePerlPosix
     if ($_.Name -in @('aclocal', 'aclocal-1.15')) {
         $needle = 'my $fullfile = File::Spec->canonpath ("$m4dir/$file");'
-        $replacement = "$needle`n`t  `$fullfile =~ tr{\\}{/};"
+        $replacement = "$needle`n`t  `$fullfile = File::Spec->abs2rel (`$fullfile);`n`t  `$fullfile =~ tr{\\}{/};"
         $relocated = $relocated.Replace($needle, $replacement)
+        $relocated = $relocated.Replace(
+            '  $traces = "echo ''$early_m4_code'' | $traces - ";',
+            '  $traces = "echo \"$early_m4_code\" | $traces - ";')
+        $relocated = $relocated.Replace(
+            '(map { "''$_''" }',
+            '(map { qq{"$_"} }')
+        $relocated = $relocated.Replace(
+            '(map { "--trace=''$_:\$f::\$n::\${::}%''" }',
+            '(map { qq{"--trace=$_:\$f::\$n::\${::}%"} }')
+        $relocated = $relocated.Replace(
+            '(map { "--trace=''$_:\$f::\$n''" }',
+            '(map { qq{"--trace=$_:\$f::\$n"} }')
+        $traceNeedle = '      my ($file, $macro, $arg1) = split (/::/);'
+        $traceReplacement = "$traceNeedle`n      `$file =~ tr{\\}{/};"
+        $relocated = $relocated.Replace($traceNeedle, $traceReplacement)
+    }
+    if ($_.Name -in @('autom4te', 'autom4te-2.69')) {
+        $relocated = $relocated.Replace('>/dev/null', '>NUL')
+    }
+    if ($_.Name -in @('automake', 'automake-1.15')) {
+        $relocated = $relocated.Replace(
+            ''':\$f:\$l::\$d::\$n::\${::}%''',
+            ''':$f:$l::$d::$n::${::}%''')
     }
     if ($relocated -ne $text) {
         [IO.File]::WriteAllText($_.FullName, $relocated, [Text.UTF8Encoding]::new($false))
@@ -133,6 +154,7 @@ foreach ($name in @('awk', 'basename', 'cat', 'cmp', 'cp', 'cut', 'dirname', 'ec
 $clang = Join-Path $ClangPrefix 'clang.exe'
 $clangxx = Join-Path $ClangPrefix 'clang++.exe'
 $make = Join-Path $ClangPrefix 'mingw32-make.exe'
+$makeCommand = 'mingw32-make.exe'
 foreach ($tool in @(
     @($clang, 'Clang'), @($clangxx, 'Clang++'), @($make, 'GNU Make'),
     @((Join-Path $ClangPrefix 'llvm-ar.exe'), 'LLVM ar'),
@@ -155,35 +177,54 @@ if ($LASTEXITCODE -ne 0) { throw 'native source extraction failed' }
 
 $crtPrefix = Split-Path $ClangPrefix
 $resourceDir = (& $clang -print-resource-dir).Trim()
-$env:PATH = "$shim;$generatorToolchain;$generatorBin;$ClangPrefix;" +
+$nativePerlDir = Split-Path $nativePerl
+$env:PATH = "$shim;$generatorToolchain;$generatorBin;$nativePerlDir;$ClangPrefix;" +
     "$env:SystemRoot\System32;$env:SystemRoot"
 $env:NATIVE_PERL = $nativePerl
+$env:PERL = To-Posix $nativePerl
 $env:AUTOTOOLS_BINDIR = $generatorBin
 $env:ACLOCAL_PATH = To-Posix (Join-Path $generatorPrefix 'share\aclocal')
 $env:autom4te_perllibdir = To-Posix (Join-Path $generatorPrefix 'share\autoconf')
 $env:AC_MACRODIR = $env:autom4te_perllibdir
 $env:ACLOCAL = Join-Path $generatorToolchain 'aclocal.exe'
 $env:AUTOCONF = Join-Path $generatorToolchain 'autoconf.exe'
+$env:AUTOHEADER = Join-Path $generatorToolchain 'autoheader.exe'
 $env:AUTOM4TE = Join-Path $generatorToolchain 'autom4te.exe'
 $env:AUTOMAKE = Join-Path $generatorToolchain 'automake.exe'
-$env:RM = Join-Path $shim 'rm.exe'
+$env:RM = To-Posix (Join-Path $shim 'rm.exe')
+$env:AWK = To-Posix (Join-Path $shim 'awk.exe')
+$env:DATE = To-Posix (Join-Path $shim 'date.exe')
+$env:GREP = To-Posix (Join-Path $shim 'grep.exe')
+$env:PATCH = To-Posix (Join-Path $shim 'patch.exe')
+$env:SED = To-Posix (Join-Path $shim 'sed.exe')
+$env:TEE = To-Posix (Join-Path $shim 'tee.exe')
 $env:M4 = 'm4.exe'
-$env:BISON = Join-Path $generatorBin 'bison.exe'
-$env:FLEX = Join-Path $generatorBin 'flex.exe'
-$env:CONFIG_SHELL = "$busy sh"
-$env:SHELL = "$busy sh"
+$env:BISON = 'bison.exe'
+$env:FLEX = 'flex.exe'
+$env:CONFIG_SHELL = Join-Path $shim 'sh.exe'
+$env:SHELL = $env:CONFIG_SHELL
 $env:MAKE = $make
-$env:AR = Join-Path $ClangPrefix 'llvm-ar.exe'
-$env:AS = Join-Path $ClangPrefix 'as.exe'
-$env:DLLTOOL = Join-Path $ClangPrefix 'llvm-dlltool.exe'
-$env:LD = Join-Path $ClangPrefix 'ld.lld.exe'
-$env:NM = Join-Path $ClangPrefix 'llvm-nm.exe'
-$env:OBJCOPY = Join-Path $ClangPrefix 'llvm-objcopy.exe'
-$env:OBJDUMP = Join-Path $ClangPrefix 'llvm-objdump.exe'
-$env:RANLIB = Join-Path $ClangPrefix 'llvm-ranlib.exe'
-$env:READELF = Join-Path $ClangPrefix 'llvm-readelf.exe'
-$env:STRIP = Join-Path $ClangPrefix 'llvm-strip.exe'
-$env:WINDRES = Join-Path $ClangPrefix 'llvm-windres.exe'
+$env:AR = 'llvm-ar.exe'
+$env:AS = 'clang.exe'
+$env:DLLTOOL = 'llvm-dlltool.exe'
+$env:LD = 'ld.lld.exe'
+$env:NM = 'llvm-nm.exe'
+$env:OBJCOPY = 'llvm-objcopy.exe'
+$env:OBJDUMP = 'llvm-objdump.exe'
+$env:RANLIB = 'llvm-ranlib.exe'
+$env:READELF = 'llvm-readelf.exe'
+$env:STRIP = 'llvm-strip.exe'
+$env:WINDRES = 'llvm-windres.exe'
+$env:AR_FOR_TARGET = $env:AR
+$env:AS_FOR_TARGET = $clang
+$env:LD_FOR_TARGET = $lld
+$env:NM_FOR_TARGET = $env:NM
+$env:OBJCOPY_FOR_TARGET = $env:OBJCOPY
+$env:OBJDUMP_FOR_TARGET = $env:OBJDUMP
+$env:RANLIB_FOR_TARGET = $env:RANLIB
+$env:READELF_FOR_TARGET = $env:READELF
+$env:STRIP_FOR_TARGET = $env:STRIP
+$env:WINDRES_FOR_TARGET = $env:WINDRES
 $busyHash = (Get-FileHash -LiteralPath $busy -Algorithm SHA256).Hash
 foreach ($utility in @('patch', 'date', 'tee', 'awk', 'sed', 'find', 'cmp')) {
     $resolved = (Get-Command "$utility.exe" -CommandType Application |
@@ -200,6 +241,7 @@ if (($env:PATH -split ';') -match '[\\/]msys64[\\/]usr[\\/]bin$') {
 foreach ($override in @(
     @('ACLOCAL', $env:ACLOCAL, '--version'),
     @('AUTOCONF', $env:AUTOCONF, '--version'),
+    @('AUTOHEADER', $env:AUTOHEADER, '--version'),
     @('AUTOM4TE', $env:AUTOM4TE, '--version'),
     @('AUTOMAKE', $env:AUTOMAKE, '--version'),
     @('RM', $env:RM, '--help')
@@ -232,12 +274,16 @@ $buildCc = "$bin/clang.exe -target aarch64-w64-windows-gnu -fuse-ld=lld " +
     "-isystem $crt/include -L$crt/lib -B$crt/lib"
 $buildCxx = "$bin/clang++.exe -target aarch64-w64-windows-gnu -fuse-ld=lld " +
     "-isystem $crt/include -L$crt/lib -B$crt/lib"
-$targetCc = "$bin/clang.exe -target aarch64-w64-windows-gnu -fuse-ld=lld --sysroot=$empty"
-$targetCxx = "$bin/clang++.exe -target aarch64-w64-windows-gnu -fuse-ld=lld --sysroot=$empty"
+$targetDefines = '-D__CYGWIN__ -D__MSYS__ -D__WINT_TYPE__=unsigned'
+$targetCc = "$bin/clang.exe -target aarch64-w64-windows-gnu -fuse-ld=lld " +
+    "--sysroot=$empty $targetDefines"
+$targetCxx = "$bin/clang++.exe -target aarch64-w64-windows-gnu -fuse-ld=lld " +
+    "--sysroot=$empty $targetDefines"
 $env:CC = $buildCc
 $env:CXX = $buildCxx
 $env:CC_FOR_TARGET = $targetCc
 $env:CXX_FOR_TARGET = $targetCxx
+$env:MAKE = $makeCommand
 
 Push-Location $sourceRoot
 try {
@@ -254,7 +300,7 @@ try {
         '--disable-dependency-tracking' '--disable-dumper' '--with-cross-bootstrap' `
         "--with-msys2-runtime-commit=$sourceCommit"
     if ($LASTEXITCODE -ne 0) { throw 'top-level configure failed' }
-    & $make -j $Jobs all-target-newlib
+    & $makeCommand -j $Jobs all-target-newlib
     if ($LASTEXITCODE -ne 0) { throw 'newlib build failed' }
 }
 finally { Pop-Location }
@@ -266,7 +312,7 @@ New-Item -ItemType Directory -Path $cygwinBuild -Force | Out-Null
 $runtimeCc = "$bin/clang.exe -target aarch64-w64-windows-gnu -fuse-ld=lld --sysroot=$empty " +
     "-L$cygwinBuildPosix/cygwin -I$src/winsup/cygwin/include " +
     "-B$newlibBuild -I$newlibBuild/targ-include -I$src/newlib/libc/include " +
-    "-idirafter $src/winsup/w32api/include -L$crt/lib -B$crt/lib"
+    "-idirafter $src/winsup/w32api/include -idirafter $crt/include -L$crt/lib -B$crt/lib"
 $runtimeCxx = $runtimeCc.Replace('clang.exe', 'clang++.exe')
 $env:CC = $runtimeCc
 $env:CXX = $runtimeCxx
@@ -280,7 +326,7 @@ try {
         '--disable-dependency-tracking' '--disable-dumper' '--with-cross-bootstrap' `
         "--with-msys2-runtime-commit=$sourceCommit"
     if ($LASTEXITCODE -ne 0) { throw 'winsup configure failed' }
-    & $make -C cygwin -j $Jobs
+    & $makeCommand -C cygwin -j $Jobs
     if ($LASTEXITCODE -ne 0) { throw 'runtime DLL build failed' }
 }
 finally { Pop-Location }
@@ -311,7 +357,7 @@ try {
         '--build=aarch64-pc-cygwin' '--host=aarch64-pc-cygwin' '--prefix=/usr' `
         '--without-bash-malloc' '--disable-nls' '--disable-rpath' '--enable-job-control'
     if ($LASTEXITCODE -ne 0) { throw 'Bash configure failed' }
-    try { & $make -j $Jobs bash.exe }
+    try { & $makeCommand -j $Jobs bash.exe }
     catch {
         $generator = Join-Path $bashBuild 'builtins\mkbuiltins.exe'
         if (-not (Test-Path -LiteralPath $generator)) { throw }
@@ -320,7 +366,7 @@ try {
                 & $generator -D (Join-Path $bashSource 'bash-5.3\builtins') $_.FullName
                 if ($LASTEXITCODE -ne 0) { throw "mkbuiltins failed for $($_.Name)" }
             }
-        & $make -j $Jobs bash.exe
+        & $makeCommand -j $Jobs bash.exe
     }
     if ($LASTEXITCODE -ne 0) { throw 'Bash build failed' }
 }
