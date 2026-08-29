@@ -1,4 +1,4 @@
-LIBRARY "layer3-import.dll"
+LIBRARY "layer3_import.dll"
 EXPORTS
 layer3_import_add
 layer3_import_data DATA

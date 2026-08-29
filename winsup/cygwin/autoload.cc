@@ -6,11 +6,21 @@ This software is a copyrighted work licensed under the terms of the
 Cygwin license.  Please consult the file "CYGWIN_LICENSE" for
 details. */
 
+#ifdef AARCH64_LAYER3_AUTOLOAD_CONTROL
+# include <stdint.h>
+typedef void *HANDLE;
+typedef int32_t LONG;
+typedef uintptr_t UINT_PTR;
+typedef uint16_t WCHAR;
+# define NO_COPY
+extern "C" HANDLE LoadLibraryW (const WCHAR *);
+#else
 #include "winsup.h"
 #include "miscfuncs.h"
 #include <fenv.h>
 #define USE_SYS_TYPES_FD_SET
 #include <winsock2.h>
+#endif
 
 bool NO_COPY wsock_started;
 
@@ -340,6 +350,7 @@ union retchain
 
   http://www.microsoft.com/technet/security/advisory/2269637.mspx
   https://msdn.microsoft.com/library/ff919712 */
+#ifndef AARCH64_LAYER3_AUTOLOAD_CONTROL
 static __inline bool
 dll_load (HANDLE& handle, PWCHAR name)
 {
@@ -357,6 +368,7 @@ dll_load (HANDLE& handle, PWCHAR name)
   handle = h;
   return true;
 }
+#endif
 
 #define RETRY_COUNT 10
 
@@ -444,6 +456,20 @@ _" #func ":                                              \n\
 #error unimplemented for this target
 #endif
 
+#ifdef AARCH64_LAYER3_AUTOLOAD_CONTROL
+extern "C" __attribute__ ((used, noinline)) two_addr_t
+std_dll_init (struct func_info *func)
+{
+  struct dll_info *dll = func->dll;
+  retchain ret;
+
+  if (!dll->handle)
+    dll->handle = LoadLibraryW (dll->name);
+  ret.low = (uintptr_t) dll->init;
+  ret.high = (uintptr_t) func;
+  return ret.ll;
+}
+#else
 __attribute__ ((used, noinline)) static two_addr_t
 std_dll_init (struct func_info *func)
 {
@@ -497,6 +523,7 @@ std_dll_init (struct func_info *func)
   InterlockedDecrement (&dll->here);
   return ret.ll;
 }
+#endif
 
 /* Initialization function for winsock stuff. */
 
@@ -507,6 +534,20 @@ INIT_WRAPPER (wsock_init)
 #error unimplemented for this target
 #endif
 
+#ifdef AARCH64_LAYER3_AUTOLOAD_CONTROL
+extern "C" LONG layer3_autoload_chain_calls;
+LONG layer3_autoload_chain_calls;
+
+extern "C" __attribute__ ((used, noinline)) two_addr_t
+wsock_init (struct func_info *func)
+{
+  retchain ret;
+  ++layer3_autoload_chain_calls;
+  ret.low = (uintptr_t) dll_func_load;
+  ret.high = (uintptr_t) func;
+  return ret.ll;
+}
+#else
 __attribute__ ((used, noinline)) static two_addr_t
 wsock_init (struct func_info *func)
 {
@@ -552,7 +593,46 @@ wsock_init (struct func_info *func)
   ret.high = (uintptr_t) func;
   return ret.ll;
 }
+#endif
 
+#ifdef AARCH64_LAYER3_AUTOLOAD_CONTROL
+extern "C" void _std_dll_init ();
+extern "C" void _wsock_init ();
+
+struct layer3_control_dll_info
+{
+  UINT_PTR load_state;
+  HANDLE handle;
+  LONG here;
+  LONG padding;
+  UINT_PTR init;
+  WCHAR name[20];
+};
+
+extern "C" layer3_control_dll_info layer3_import_info
+  __asm__ (".layer3_import_info");
+layer3_control_dll_info layer3_import_info = {
+  (UINT_PTR) _std_dll_init, 0, -1, 0, (UINT_PTR) _wsock_init,
+  { 'l', 'a', 'y', 'e', 'r', '3', '_', 'i', 'm', 'p', 'o', 'r', 't',
+    '.', 'd', 'l', 'l', 0 }
+};
+
+extern "C" layer3_control_dll_info layer3_absent_info
+  __asm__ (".layer3_absent_info");
+layer3_control_dll_info layer3_absent_info = {
+  (UINT_PTR) _std_dll_init, 0, -1, 0, (UINT_PTR) dll_func_load,
+  { 'l', 'a', 'y', 'e', 'r', '3', '_', 'a', 'b', 's', 'e', 'n', 't',
+    '.', 'd', 'l', 'l', 0 }
+};
+
+#undef LoadDLLprime
+#define LoadDLLprime(dllname, init_also, no_resolve_on_fork)
+LoadDLLprime (layer3_import, _wsock_init, 0)
+LoadDLLfunc (layer3_import_add, layer3_import)
+LoadDLLfuncEx2 (layer3_missing_optional, layer3_import, 1, 73)
+LoadDLLfunc (layer3_missing_fatal, layer3_import)
+LoadDLLfuncEx2 (layer3_absent_optional, layer3_absent, 1, 74)
+#else
 LoadDLLprime (ws2_32, _wsock_init, 0)
 
 LoadDLLfunc (CheckTokenMembership, advapi32)
@@ -791,4 +871,5 @@ LoadDLLfunc (PdhAddEnglishCounterW, pdh)
 LoadDLLfunc (PdhCollectQueryData, pdh)
 LoadDLLfunc (PdhGetFormattedCounterValue, pdh)
 LoadDLLfunc (PdhOpenQueryW, pdh)
+#endif
 }

@@ -6,6 +6,14 @@ This software is a copyrighted work licensed under the terms of the
 Cygwin license.  Please consult the file "CYGWIN_LICENSE" for
 details. */
 
+#ifdef AARCH64_LAYER3_IMPORT_ADDRESS_CONTROL
+# include <stddef.h>
+# include <stdint.h>
+# define __try if (true)
+# define __except(code) else if (false)
+# define __endtry
+# define NO_ERROR 0
+#else
 #include "winsup.h"
 #include "cygerrno.h"
 #include "security.h"
@@ -17,7 +25,9 @@ details. */
 #include "cygmalloc.h"
 #include <malloc.h>
 extern "C" struct mallinfo dlmallinfo ();
+#endif
 
+#ifndef AARCH64_LAYER3_IMPORT_ADDRESS_CONTROL
 /* we provide these stubs to call into a user's
    provided malloc if there is one - otherwise
    functions we provide - like strdup will cause
@@ -43,6 +53,7 @@ __caller_return_address (void *builtin_ret_addr)
 #define caller_return_address() \
 		__caller_return_address (__builtin_return_address (0))
 void * __caller_return_address (void *);
+#endif
 
 /* Return an address from the import jmp table of main program.  */
 static inline void *
@@ -95,6 +106,13 @@ import_address (void *imp)
   return NULL;
 }
 
+#ifdef AARCH64_LAYER3_IMPORT_ADDRESS_CONTROL
+extern "C" void *
+layer3_production_import_address (void *imp)
+{
+  return import_address (imp);
+}
+#else
 /* These routines are used by the application if it
    doesn't provide its own malloc. */
 
@@ -363,3 +381,4 @@ __set_ENOMEM ()
 {
   set_errno (ENOMEM);
 }
+#endif

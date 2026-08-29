@@ -94,21 +94,37 @@ compile "$repo_root/.github/checks/aarch64-layer3-import-dll.c" \
   --dynamicbase --disable-high-entropy-va --enable-reloc-section \
   -T "$work/cygwin.sc" \
   --out-implib "$import_lib" \
-  -o "$work/programs/layer3-import.dll" \
+  -o "$work/programs/layer3_import.dll" \
   "$repo_root/.github/checks/aarch64-layer3-import.def" \
   "$work/objects/import-dll.o"
+
+mkwork="$work/mkimport path.[x]"
+"$perl" "$repo_root/winsup/cygwin/scripts/mkimport" \
+  --cpu=aarch64 --ar="$ar" --as="$as" --nm="$llvm_nm" \
+  --objcopy="$llvm_objcopy" \
+  "$mkwork/layer3 rewritten.a" "$import_lib"
 
 compile "$repo_root/.github/checks/aarch64-layer3-import-main.c" \
   "$work/objects/import-main.o"
 link_executable "$work/programs/import-main.exe" \
   "$work/objects/import-main.o" "$import_lib"
 
-"$as" -o "$work/objects/autoload.o" \
-  "$repo_root/.github/checks/aarch64-layer3-autoload.S"
-compile "$repo_root/.github/checks/aarch64-layer3-autoload.c" \
-  "$work/objects/autoload-main.o"
-link_executable "$work/programs/autoload.exe" \
-  "$work/objects/autoload-main.o" "$work/objects/autoload.o"
+compile "$repo_root/.github/checks/aarch64-layer3-import-address.c" \
+  "$work/objects/import-address.o"
+compile_cxx \
+  "$repo_root/.github/checks/aarch64-layer3-production-import-address.cc" \
+  "$work/objects/production-import-address.o"
+link_executable "$work/programs/import-address.exe" \
+  "$work/objects/import-address.o" \
+  "$work/objects/production-import-address.o" "$mkwork/layer3 rewritten.a"
+
+compile "$repo_root/.github/checks/aarch64-layer3-production-autoload-main.c" \
+  "$work/objects/production-autoload-main.o"
+compile_cxx "$repo_root/.github/checks/aarch64-layer3-production-autoload.cc" \
+  "$work/objects/production-autoload.o"
+link_executable "$work/programs/production-autoload.exe" \
+  "$work/objects/production-autoload-main.o" \
+  "$work/objects/production-autoload.o"
 
 compile "$repo_root/.github/checks/aarch64-layer3-pseudo-reloc.c" \
   "$work/objects/pseudo-reloc.o"
@@ -176,14 +192,23 @@ test "$pseudo_start" != "$pseudo_end"
   > "$work/pseudo-link.rdata"
 grep -q '40000000' "$work/pseudo-link.rdata"
 "$objdump" -p "$work/programs/import-main.exe" \
-  | grep -q 'DLL Name: layer3-import.dll'
+  | grep -q 'DLL Name: layer3_import.dll'
 "$objdump" -p "$work/programs/import-main.exe" \
   | grep -q 'layer3_import_add'
 
 (
   cd "$work/programs"
   ./import-main.exe
-  ./autoload.exe
+  ./import-address.exe
+  ./production-autoload.exe
+  LAYER3_AUTOLOAD_CASE=n ./production-autoload.exe
+  LAYER3_AUTOLOAD_CASE=l ./production-autoload.exe
+  if LAYER3_AUTOLOAD_CASE=f ./production-autoload.exe; then
+    echo "fatal production autoload path unexpectedly returned" >&2
+    exit 1
+  else
+    test "$?" -eq 91
+  fi
   ./pseudo-reloc.exe
   ./pseudo-link.exe
 )
@@ -201,11 +226,6 @@ for rejected in --disable-dynamicbase --disable-reloc-section; do
   grep -q 'not supported for AArch64 PE targets' "$output.log"
 done
 
-mkwork="$work/mkimport path.[x]"
-"$perl" "$repo_root/winsup/cygwin/scripts/mkimport" \
-  --cpu=aarch64 --ar="$ar" --as="$as" --nm="$llvm_nm" \
-  --objcopy="$llvm_objcopy" \
-  "$mkwork/layer3 rewritten.a" "$import_lib"
 "$ar" t "$mkwork/layer3 rewritten.a" | grep -q .
 "$objdump" -dr "$mkwork/layer3 rewritten.a" > "$work/mkimport.dis"
 grep -Eq '[[:space:]]adrp[[:space:]]+x16,' "$work/mkimport.dis"
