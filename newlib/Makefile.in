@@ -974,9 +974,9 @@ check_PROGRAMS =
 @HAVE_FPMATH_H_TRUE@am__append_141 = 
 @HAVE_FPMATH_H_TRUE@am__append_142 = 
 @HAVE_LIBM_MACHINE_AARCH64_TRUE@am__append_143 = $(libm_machine_aarch64_src)
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@@HAVE_LONG_DOUBLE_TRUE@am__append_144 = $(libm_ld128_lsrc)
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@am__append_145 = 
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@am__append_146 = 
+@HAVE_FPMATH_H_TRUE@@HAVE_LIBM_MACHINE_AARCH64_TRUE@@HAVE_LONG_DOUBLE_TRUE@am__append_144 = $(libm_ld128_lsrc)
+@HAVE_FPMATH_H_TRUE@@HAVE_LIBM_MACHINE_AARCH64_TRUE@am__append_145 = 
+@HAVE_FPMATH_H_TRUE@@HAVE_LIBM_MACHINE_AARCH64_TRUE@am__append_146 = 
 @HAVE_LIBM_MACHINE_AMDGCN_TRUE@am__append_147 = $(libm_machine_amdgcn_src)
 @HAVE_LIBM_MACHINE_ARM_TRUE@am__append_148 = $(libm_machine_arm_src)
 @HAVE_LIBM_MACHINE_I386_TRUE@am__append_149 = $(libm_machine_i386_src)
@@ -3257,6 +3257,32 @@ am__objects_159 = libm/fenv/libm_a-feclearexcept.$(OBJEXT) \
 @HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/machine/aarch64/libm_a-fetestexcept.$(OBJEXT) \
 @HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/machine/aarch64/libm_a-feupdateenv.$(OBJEXT)
 @HAVE_LIBM_MACHINE_AARCH64_TRUE@am__objects_161 = $(am__objects_160)
+@HAVE_FPMATH_H_FALSE@@HAVE_LIBM_MACHINE_RISCV_TRUE@am__objects_162 = libm/ld128/libm_a-e_powl.$(OBJEXT) \
+@HAVE_FPMATH_H_FALSE@@HAVE_LIBM_MACHINE_RISCV_TRUE@	libm/ld128/libm_a-s_erfl.$(OBJEXT) \
+@HAVE_FPMATH_H_FALSE@@HAVE_LIBM_MACHINE_RISCV_TRUE@	libm/ld128/libm_a-s_exp2l.$(OBJEXT) \
+@HAVE_FPMATH_H_FALSE@@HAVE_LIBM_MACHINE_RISCV_TRUE@	libm/ld128/libm_a-s_expl.$(OBJEXT) \
+@HAVE_FPMATH_H_FALSE@@HAVE_LIBM_MACHINE_RISCV_TRUE@	libm/ld128/libm_a-s_logl.$(OBJEXT) \
+@HAVE_FPMATH_H_FALSE@@HAVE_LIBM_MACHINE_RISCV_TRUE@	libm/ld128/libm_a-b_tgammal.$(OBJEXT) \
+@HAVE_FPMATH_H_FALSE@@HAVE_LIBM_MACHINE_RISCV_TRUE@	libm/ld128/libm_a-invtrig.$(OBJEXT) \
+@HAVE_FPMATH_H_FALSE@@HAVE_LIBM_MACHINE_RISCV_TRUE@	libm/ld128/libm_a-e_lgammal_r.$(OBJEXT) \
+@HAVE_FPMATH_H_FALSE@@HAVE_LIBM_MACHINE_RISCV_TRUE@	libm/ld128/libm_a-k_cosl.$(OBJEXT) \
+@HAVE_FPMATH_H_FALSE@@HAVE_LIBM_MACHINE_RISCV_TRUE@	libm/ld128/libm_a-k_sinl.$(OBJEXT) \
+@HAVE_FPMATH_H_FALSE@@HAVE_LIBM_MACHINE_RISCV_TRUE@	libm/ld128/libm_a-k_tanl.$(OBJEXT) \
+@HAVE_FPMATH_H_FALSE@@HAVE_LIBM_MACHINE_RISCV_TRUE@	libm/ld128/libm_a-s_sinpil.$(OBJEXT) \
+@HAVE_FPMATH_H_FALSE@@HAVE_LIBM_MACHINE_RISCV_TRUE@	libm/ld128/libm_a-s_cospil.$(OBJEXT)
+@HAVE_FPMATH_H_TRUE@@HAVE_LIBM_MACHINE_AARCH64_TRUE@am__objects_162 = libm/ld128/libm_a-e_powl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/libm_a-s_erfl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/libm_a-s_exp2l.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/libm_a-s_expl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/libm_a-s_logl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/libm_a-b_tgammal.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/libm_a-invtrig.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/libm_a-e_lgammal_r.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/libm_a-k_cosl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/libm_a-k_sinl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/libm_a-k_tanl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/libm_a-s_sinpil.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/libm_a-s_cospil.$(OBJEXT)
 @HAVE_LIBM_MACHINE_AARCH64_FALSE@@HAVE_LIBM_MACHINE_RISCV_TRUE@am__objects_162 = libm/ld128/libm_a-e_powl.$(OBJEXT) \
 @HAVE_LIBM_MACHINE_AARCH64_FALSE@@HAVE_LIBM_MACHINE_RISCV_TRUE@	libm/ld128/libm_a-s_erfl.$(OBJEXT) \
 @HAVE_LIBM_MACHINE_AARCH64_FALSE@@HAVE_LIBM_MACHINE_RISCV_TRUE@	libm/ld128/libm_a-s_exp2l.$(OBJEXT) \
@@ -3270,20 +3296,7 @@ am__objects_159 = libm/fenv/libm_a-feclearexcept.$(OBJEXT) \
 @HAVE_LIBM_MACHINE_AARCH64_FALSE@@HAVE_LIBM_MACHINE_RISCV_TRUE@	libm/ld128/libm_a-k_tanl.$(OBJEXT) \
 @HAVE_LIBM_MACHINE_AARCH64_FALSE@@HAVE_LIBM_MACHINE_RISCV_TRUE@	libm/ld128/libm_a-s_sinpil.$(OBJEXT) \
 @HAVE_LIBM_MACHINE_AARCH64_FALSE@@HAVE_LIBM_MACHINE_RISCV_TRUE@	libm/ld128/libm_a-s_cospil.$(OBJEXT)
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@am__objects_162 = libm/ld128/libm_a-e_powl.$(OBJEXT) \
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/libm_a-s_erfl.$(OBJEXT) \
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/libm_a-s_exp2l.$(OBJEXT) \
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/libm_a-s_expl.$(OBJEXT) \
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/libm_a-s_logl.$(OBJEXT) \
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/libm_a-b_tgammal.$(OBJEXT) \
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/libm_a-invtrig.$(OBJEXT) \
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/libm_a-e_lgammal_r.$(OBJEXT) \
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/libm_a-k_cosl.$(OBJEXT) \
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/libm_a-k_sinl.$(OBJEXT) \
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/libm_a-k_tanl.$(OBJEXT) \
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/libm_a-s_sinpil.$(OBJEXT) \
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/libm_a-s_cospil.$(OBJEXT)
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@@HAVE_LONG_DOUBLE_TRUE@am__objects_163 = $(am__objects_162)
+@HAVE_FPMATH_H_TRUE@@HAVE_LIBM_MACHINE_AARCH64_TRUE@@HAVE_LONG_DOUBLE_TRUE@am__objects_163 = $(am__objects_162)
 @HAVE_LIBM_MACHINE_AMDGCN_TRUE@am__objects_164 = libm/machine/amdgcn/libm_a-v64_mathcnst.$(OBJEXT) \
 @HAVE_LIBM_MACHINE_AMDGCN_TRUE@	libm/machine/amdgcn/libm_a-v64_reent.$(OBJEXT) \
 @HAVE_LIBM_MACHINE_AMDGCN_TRUE@	libm/machine/amdgcn/libm_a-v64df_acos.$(OBJEXT) \
@@ -5093,11 +5106,11 @@ libm_test_test_LDADD = $(CRT0) libm.a libc.a
 @HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/machine/aarch64/fetestexcept.c \
 @HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/machine/aarch64/feupdateenv.c
 
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@libm_ld128_lsrc = \
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/e_powl.c libm/ld128/s_erfl.c libm/ld128/s_exp2l.c libm/ld128/s_expl.c \
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/s_logl.c libm/ld128/b_tgammal.c libm/ld128/invtrig.c \
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/e_lgammal_r.c libm/ld128/k_cosl.c libm/ld128/k_sinl.c \
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/k_tanl.c libm/ld128/s_sinpil.c libm/ld128/s_cospil.c
+@HAVE_FPMATH_H_TRUE@@HAVE_LIBM_MACHINE_AARCH64_TRUE@libm_ld128_lsrc = \
+@HAVE_FPMATH_H_TRUE@@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/e_powl.c libm/ld128/s_erfl.c libm/ld128/s_exp2l.c libm/ld128/s_expl.c \
+@HAVE_FPMATH_H_TRUE@@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/s_logl.c libm/ld128/b_tgammal.c libm/ld128/invtrig.c \
+@HAVE_FPMATH_H_TRUE@@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/e_lgammal_r.c libm/ld128/k_cosl.c libm/ld128/k_sinl.c \
+@HAVE_FPMATH_H_TRUE@@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/k_tanl.c libm/ld128/s_sinpil.c libm/ld128/s_cospil.c
 
 @HAVE_LIBM_MACHINE_RISCV_TRUE@libm_ld128_lsrc = \
 @HAVE_LIBM_MACHINE_RISCV_TRUE@	libm/ld128/e_powl.c libm/ld128/s_erfl.c libm/ld128/s_exp2l.c libm/ld128/s_expl.c \
@@ -5105,7 +5118,7 @@ libm_test_test_LDADD = $(CRT0) libm.a libc.a
 @HAVE_LIBM_MACHINE_RISCV_TRUE@	libm/ld128/e_lgammal_r.c libm/ld128/k_cosl.c libm/ld128/k_sinl.c \
 @HAVE_LIBM_MACHINE_RISCV_TRUE@	libm/ld128/k_tanl.c libm/ld128/s_sinpil.c libm/ld128/s_cospil.c
 
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@libm_a_CFLAGS_libm_ld128 = -fbuiltin -fno-math-errno
+@HAVE_FPMATH_H_TRUE@@HAVE_LIBM_MACHINE_AARCH64_TRUE@libm_a_CFLAGS_libm_ld128 = -fbuiltin -fno-math-errno
 @HAVE_LIBM_MACHINE_RISCV_TRUE@libm_a_CFLAGS_libm_ld128 = -fbuiltin -fno-math-errno
 @HAVE_LIBM_MACHINE_AMDGCN_TRUE@libm_machine_amdgcn_src = \
 @HAVE_LIBM_MACHINE_AMDGCN_TRUE@	libm/machine/amdgcn/v64_mathcnst.c \
