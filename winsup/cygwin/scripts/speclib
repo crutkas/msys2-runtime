@@ -3,6 +3,7 @@ use Getopt::Long;
 use File::Temp qw'tempdir';
 use File::Basename;
 use File::Spec;
+use File::Copy qw'copy';
 use strict;
 
 sub dllname($;$);
@@ -19,6 +20,18 @@ $_ = File::Spec->rel2abs($_) for @ARGV;
 
 my $libdll = shift;
 my $lib =  pop;
+
+# LLD's ARM64 import archives use duplicate DLL member names.  They are
+# directly linkable, but cannot be safely subset by member name.
+if ($cpu eq 'aarch64') {
+    unlink $lib;
+    copy($libdll, $lib)
+      or die "$0: couldn't copy $libdll to $lib - $!\n";
+    exit 0;
+}
+
+my $normalized_libdll = lc $libdll;
+$normalized_libdll =~ tr{\\}{/};
 # FIXME? Do other (non-32 bit) arches on Windows still use symbol prefixes?
 my $sym_prefix = '';
 (my $iname = basename $lib) =~ s/\.a$//o;
@@ -40,13 +53,17 @@ while (<$nm_fd>) {
 	$dllname = $1;
 	$dllname =~ s/_2_0/-2.0/;
     } else {
-	my ($file, $member, $symbol) = m%^([^:]*):([^:]*(?=:))?.* T (.*)%o;
+	my ($symbol) = m% T (.*)%o;
 	next if !defined($symbol) || $symbol =~ $exclude_regex;
-	if ($file ne $libdll) {
-	     $match_syms{$symbol} = 1;
-	 } elsif ($match_syms{$symbol} ? !$inverse : $inverse) {
-	     $extract{$member} = 1;
-	 }
+	my $line = lc $_;
+	$line =~ tr{\\}{/};
+	if (index($line, "$normalized_libdll:") != 0) {
+	    $match_syms{$symbol} = 1;
+	} else {
+	    my ($member) = substr($_, length($libdll) + 1) =~ /^([^:]+):/;
+	    $extract{$member} = 1
+	      if defined($member) && ($match_syms{$symbol} ? !$inverse : $inverse);
+	}
     }
 }
 close $nm_fd;

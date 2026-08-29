@@ -25,6 +25,54 @@ details.  */
 #define MANGLED_ZNWX_NOTHROW_T		"__wrap__ZnwmRKSt9nothrow_t"
 #define MANGLED_ZNAX_NOTHROW_T		"__wrap__ZnamRKSt9nothrow_t"
 
+#ifdef __clang__
+#define DEFINE_WRAPPER(ret, name, args, symbol, body) \
+  extern "C" ret name args __asm__ (symbol); \
+  extern "C" ret name args body
+
+DEFINE_WRAPPER (void *, wrap_new, (std::size_t sz), MANGLED_ZNWX,
+{
+  return (*user_data->cxx_malloc->oper_new) (sz);
+})
+DEFINE_WRAPPER (void *, wrap_new_array, (std::size_t sz), MANGLED_ZNAX,
+{
+  return (*user_data->cxx_malloc->oper_new__) (sz);
+})
+DEFINE_WRAPPER (void, wrap_delete, (void *p), _SYMSTR (__wrap__ZdlPv),
+{
+  (*user_data->cxx_malloc->oper_delete) (p);
+})
+DEFINE_WRAPPER (void, wrap_delete_array, (void *p), _SYMSTR (__wrap__ZdaPv),
+{
+  (*user_data->cxx_malloc->oper_delete__) (p);
+})
+DEFINE_WRAPPER (void *, wrap_new_nothrow,
+		(std::size_t sz, const std::nothrow_t &nt),
+		MANGLED_ZNWX_NOTHROW_T,
+{
+  return (*user_data->cxx_malloc->oper_new_nt) (sz, nt);
+})
+DEFINE_WRAPPER (void *, wrap_new_array_nothrow,
+		(std::size_t sz, const std::nothrow_t &nt),
+		MANGLED_ZNAX_NOTHROW_T,
+{
+  return (*user_data->cxx_malloc->oper_new___nt) (sz, nt);
+})
+DEFINE_WRAPPER (void, wrap_delete_nothrow,
+		(void *p, const std::nothrow_t &nt),
+		_SYMSTR (__wrap__ZdlPvRKSt9nothrow_t),
+{
+  (*user_data->cxx_malloc->oper_delete_nt) (p, nt);
+})
+DEFINE_WRAPPER (void, wrap_delete_array_nothrow,
+		(void *p, const std::nothrow_t &nt),
+		_SYMSTR (__wrap__ZdaPvRKSt9nothrow_t),
+{
+  (*user_data->cxx_malloc->oper_delete___nt) (p, nt);
+})
+
+#undef DEFINE_WRAPPER
+#else
 extern void *operator new(std::size_t sz) noexcept (false)
 			__asm__ (MANGLED_ZNWX);
 extern void *operator new[](std::size_t sz) noexcept (false)
@@ -89,4 +137,4 @@ operator delete[](void *p, const std::nothrow_t &nt) noexcept (true)
 {
   (*user_data->cxx_malloc->oper_delete___nt) (p, nt);
 }
-
+#endif

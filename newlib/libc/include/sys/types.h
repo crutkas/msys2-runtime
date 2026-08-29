@@ -140,8 +140,13 @@ typedef	__ino_t		ino_t;		/* inode number */
 
 #if defined(__i386__) && (defined(GO32) || defined(__MSDOS__))
 typedef	char *		addr_t;
+#if defined(__aarch64__) && defined(_WIN64)
+typedef unsigned long long vm_offset_t;
+typedef unsigned long long vm_size_t;
+#else
 typedef unsigned long vm_offset_t;
 typedef unsigned long vm_size_t;
+#endif
 #endif /* __i386__ && (GO32 || __MSDOS__) */
 
 /*

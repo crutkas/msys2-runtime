@@ -370,9 +370,9 @@ _cmalloc (unsigned size)
   /* Calculate "bit bucket". */
   if (size > bucket_val[0])
     {
-      const unsigned clz = __builtin_clzl (size - 1);
+      const unsigned clz = __builtin_clzll ((unsigned long long) size - 1);
       b = (59 - clz) << 1;
-      b -= !((size - 1) & (1 << (62 - clz)));
+      b -= !((size - 1) & (1ULL << (62 - clz)));
     }
   if (b >= NBUCKETS)
     return NULL;

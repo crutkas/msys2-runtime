@@ -2,6 +2,7 @@
 use strict;
 use File::Temp qw'tempdir';
 use File::Spec;
+use File::Copy qw'copy';
 use Getopt::Long;
 my $dir = tempdir(CLEANUP => 1);
 
@@ -17,6 +18,19 @@ $_ = File::Spec->rel2abs($_) for @ARGV;
 
 my $libdll = shift;
 my $inpdll = shift;
+
+# LLD already emits the ARM64 import stubs expected by the Windows ABI.  Keep
+# its archive intact and append the Cygwin startup objects.
+if ($cpu eq 'aarch64') {
+    unlink $libdll;
+    copy($inpdll, $libdll)
+      or die "$0: couldn't copy $inpdll to $libdll - $!\n";
+    my $opts = 'rs';
+    $opts .= 'D' if ($ENV{'SOURCE_DATE_EPOCH'} != '');
+    system $ar, $opts, $libdll, @ARGV;
+    exit 1 if $?;
+    exit 0;
+}
 
 open my $nm_fd, '-|', $nm, '-Apg', '--defined-only', $inpdll;
 my %text = ();

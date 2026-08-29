@@ -18,6 +18,7 @@
    This definition is also required to use the right u_long type in subsequent
    function calls. */
 #undef u_long
+typedef unsigned int __ms_u_long;
 #define u_long __ms_u_long
 #include "ntsecapi.h"
 #include <w32api/ws2tcpip.h>

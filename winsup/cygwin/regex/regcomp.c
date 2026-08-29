@@ -2068,6 +2068,7 @@ altoffset(sop *scan, int offset)
 		case OCHAR:
 		case OANY:
 			try++;
+			fallthrough;
 		case OBOW:
 		case OEOW:
 		case OWBND:

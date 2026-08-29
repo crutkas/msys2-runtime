@@ -79,8 +79,14 @@ pthread_mutex::no_owner()
 }
 
 #undef __getreent
+#ifdef __clang__
+extern "C" struct _reent *cygwin_getreent () __asm__ ("__getreent");
+extern "C" struct _reent *
+cygwin_getreent ()
+#else
 extern "C" struct _reent *
 __getreent ()
+#endif
 {
   return &_my_tls.local_clib;
 }
@@ -647,6 +653,9 @@ pthread::cancel ()
 	  if ((context.Rsp & 8) == 0)
 	    context.Rsp -= 8;
 	  context.Rip = (ULONG_PTR) pthread::static_cancel_self;
+#elif defined(__aarch64__)
+	  context.Sp &= ~(ULONG_PTR) 0xf;
+	  context.Pc = (ULONG_PTR) pthread::static_cancel_self;
 #else
 #error unimplemented for this target
 #endif
@@ -1966,7 +1975,11 @@ pthread_spinlock::lock ()
       else if (spins < FAST_SPINS_LIMIT)
         {
           ++spins;
+#ifdef __aarch64__
+          __asm__ volatile ("yield":::);
+#else
           __asm__ volatile ("pause":::);
+#endif
         }
       else
 	{
@@ -2076,18 +2089,19 @@ pthread::once (pthread_once_t *once_control, void (*init_routine) (void))
 
   /* The type of &once_control->state is int *, which is compatible with
      LONG * (that is the type of the pointer argument of InterlockedXxx()). */
-  if ((InterlockedIncrement (&once_control->state) & DONE) == 0)
+  volatile LONG *state = reinterpret_cast<volatile LONG *> (&once_control->state);
+  if ((InterlockedIncrement (state) & DONE) == 0)
     {
       pthread_mutex_lock (&once_control->mutex);
       if (!(once_control->state & DONE))
 	{
 	  init_routine ();
-	  InterlockedOr (&once_control->state, DONE);
+	  InterlockedOr (state, DONE);
 	}
       pthread_mutex_unlock (&once_control->mutex);
     }
-  InterlockedDecrement (&once_control->state);
-  if (InterlockedCompareExchange (&once_control->state,
+  InterlockedDecrement (state);
+  if (InterlockedCompareExchange (state,
 				  DONE | DESTROYED, DONE) == DONE)
     pthread_mutex_destroy (&once_control->mutex);
   return 0;

@@ -530,8 +530,12 @@ MAX_RELEASE_CHECK_RATE   default: 4095 unless not HAVE_MMAP
 #define DLMALLOC_EXPORT extern
 #endif
 
+#if defined(__CYGWIN__) && defined(WIN32)
+#undef WIN32
+#endif
+
 #ifndef WIN32
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__CYGWIN__)
 #define WIN32 1
 #endif  /* _WIN32 */
 #ifdef _WIN32_WCE
@@ -589,8 +593,12 @@ MAX_RELEASE_CHECK_RATE   default: 4095 unless not HAVE_MMAP
 #define MAX_SIZE_T           (~(size_t)0)
 
 #ifndef USE_LOCKS /* ensure true if spin or recursive locks set */
-#define USE_LOCKS  ((defined(USE_SPIN_LOCKS) && USE_SPIN_LOCKS != 0) || \
-                    (defined(USE_RECURSIVE_LOCKS) && USE_RECURSIVE_LOCKS != 0))
+#if (defined(USE_SPIN_LOCKS) && USE_SPIN_LOCKS != 0) || \
+    (defined(USE_RECURSIVE_LOCKS) && USE_RECURSIVE_LOCKS != 0)
+#define USE_LOCKS 1
+#else
+#define USE_LOCKS 0
+#endif
 #endif /* USE_LOCKS */
 
 #if USE_LOCKS /* Spin locks for gcc >= 4.1, older gcc on x86, MSC >= 1310 */
@@ -4017,6 +4025,7 @@ static void add_segment(mstate m, char* tbase, size_t tsize, flag_t mmapped) {
       break;
   }
   assert(nfences >= 2);
+  (void) nfences;
 
   /* Insert the rest of old top into a bin as an ordinary free chunk */
   if (csp != old_top) {

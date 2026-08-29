@@ -375,6 +375,93 @@ jobs:
           LLVM_OBJDUMP: /clangarm64/bin/llvm-objdump.exe
           LLVM_READOBJ: /clangarm64/bin/llvm-readobj.exe
 
+  aarch64-git-bash-mvp:
+    name: native ARM64 Git Bash MVP runtime
+    runs-on: windows-11-arm
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout runtime source
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Verify native ARM64 runner
+        shell: pwsh
+        run: |
+          & .github/checks/assert-runner-architecture.ps1 `
+            -ExpectedNativeMachine ARM64 `
+            -ExpectedProcessArchitecture Arm64 `
+            -EvidencePath "$env:RUNNER_TEMP\arm64-mvp-runner.txt"
+
+      - id: msys2
+        name: Set up approved native ARM64 build tools
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: CLANGARM64
+          update: true
+          install: >-
+            mingw-w64-clang-aarch64-toolchain
+            mingw-w64-clang-aarch64-autotools
+
+      - name: Download exact public MVP inputs
+        shell: pwsh
+        run: |
+          $inputs = "$env:RUNNER_TEMP\mvp-inputs"
+          New-Item -ItemType Directory -Path $inputs -Force | Out-Null
+          Invoke-WebRequest `
+            -Uri 'https://github.com/crutkas/binutils-woarm64/releases/download/native-binutils-eb40c26f66fc/busybox-c26a88d7.tar.gz' `
+            -OutFile "$inputs\busybox-c26a88d7.tar.gz"
+          Invoke-WebRequest `
+            -Uri 'https://github.com/git-for-windows/git/releases/download/v2.55.0.windows.3/MinGit-2.55.0.3-arm64.zip' `
+            -OutFile "$inputs\MinGit-2.55.0.3-arm64.zip"
+
+      - name: Build native runtime and Bash from exact source
+        shell: pwsh
+        run: |
+          & .github/checks/build-aarch64-mvp-runtime.ps1 `
+            -Source "$env:GITHUB_WORKSPACE" `
+            -Work "$env:RUNNER_TEMP\git-bash-mvp" `
+            -ClangPrefix '${{ steps.msys2.outputs.msys2-location }}\clangarm64\bin' `
+            -BusyBoxArchive "$env:RUNNER_TEMP\mvp-inputs\busybox-c26a88d7.tar.gz" `
+            -MinGitArchive "$env:RUNNER_TEMP\mvp-inputs\MinGit-2.55.0.3-arm64.zip"
+
+      - name: Assemble deterministic MVP artifact
+        shell: pwsh
+        run: |
+          $work = "$env:RUNNER_TEMP\git-bash-mvp"
+          & .github/checks/package-aarch64-mvp-runtime.ps1 `
+            -RuntimeDll "$work\build\aarch64-pc-cygwin\winsup\cygwin\new-msys-2.0.dll" `
+            -BashExe "$work\bash-build\bash.exe" `
+            -BusyBoxExe "$work\inputs\busybox-c26a88d7\bin\busybox.exe" `
+            -MinGitRoot "$work\mingit" `
+            -Destination "$env:RUNNER_TEMP\git-bash-mvp-publish"
+
+      - name: Exercise runtime, Bash, Git, and emulated x64 child
+        shell: pwsh
+        run: |
+          $work = "$env:RUNNER_TEMP\git-bash-mvp"
+          & .github/checks/test-aarch64-mvp-runtime.ps1 `
+            -RuntimeRoot "$env:RUNNER_TEMP\git-bash-mvp-publish\native-git-bash-mvp-arm64" `
+            -RuntimeSource "$env:GITHUB_WORKSPACE" `
+            -RuntimeBuild "$work\build" `
+            -ClangPrefix '${{ steps.msys2.outputs.msys2-location }}\clangarm64\bin' `
+            -CrtPrefix '${{ steps.msys2.outputs.msys2-location }}\clangarm64' `
+            -BusyBox "$work\inputs\busybox-c26a88d7\bin\busybox.exe" `
+            -MinGitRoot "$work\mingit" `
+            -EvidencePath "$env:RUNNER_TEMP\git-bash-mvp-publish\validation.json"
+
+      - name: Upload deterministic Git Bash MVP runtime
+        uses: actions/upload-artifact@v6
+        with:
+          name: native-git-bash-mvp-arm64
+          path: |
+            ${{ runner.temp }}\git-bash-mvp-publish\native-git-bash-mvp-arm64.zip
+            ${{ runner.temp }}\git-bash-mvp-publish\artifact.json
+            ${{ runner.temp }}\git-bash-mvp-publish\validation.json
+          if-no-files-found: error
+          compression-level: 0
+
   x86_64-expm1l:
     name: x86_64 production expm1l regression
     runs-on: windows-latest

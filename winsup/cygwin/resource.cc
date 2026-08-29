@@ -165,7 +165,11 @@ get_rlimit_stack (void)
   return (size_t) rl.rlim_cur;
 }
 
-static LONG job_serial_number __attribute__((section (".cygwin_dll_common"), shared));
+static LONG job_serial_number __attribute__((section (".cygwin_dll_common")
+#ifndef __clang__
+					     , shared
+#endif
+					     ));
 
 static PWCHAR
 job_shared_name (PWCHAR buf, LONG num)

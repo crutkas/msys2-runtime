@@ -13,8 +13,16 @@ details. */
 #error This header should not be included by C source files.
 #endif
 
-/* Files including this header must override -nostdinc++ */
+/* Files including this header must override -nostdinc++. */
+#ifdef __clang__
+namespace std
+{
+  using size_t = __SIZE_TYPE__;
+  struct nothrow_t {};
+}
+#else
 #include <new>
+#endif
 
 /* This is an optional struct pointed to by per_process if it exists.  */
 struct per_process_cxx_malloc

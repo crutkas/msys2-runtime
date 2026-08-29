@@ -10,4 +10,6 @@ cd "$(dirname "$0")"
 "$ACLOCAL" --force
 "$AUTOCONF" -f
 "$AUTOMAKE" -ac
+find . -name Makefile.in -exec \
+    sed -i 's|\\\$(DEPDIR)|/$(DEPDIR)|g' '{}' \;
 "$RM" -rf autom4te.cache

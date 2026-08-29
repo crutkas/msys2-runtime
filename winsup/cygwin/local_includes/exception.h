@@ -17,6 +17,12 @@ details. */
 #define SEH_CODE ".seh_code"
 #endif
 
+#ifdef __clang__
+#define SEH_SCOPE_TABLE ".long 0"
+#else
+#define SEH_SCOPE_TABLE ".long 1\n .rva 1b, 2f, 2f, 2f"
+#endif
+
 #define EXCEPTION_HANDLER_DATA \
   asm volatile ("\n\
   1:									\n\
@@ -24,8 +30,7 @@ details. */
       EXCEPTION_HANDLE_REF ",						  \
       @except								\n\
     .seh_handlerdata							\n\
-    .long 1								\n\
-    .rva 1b, 2f, 2f, 2f							\n"\
+    " SEH_SCOPE_TABLE "							\n"\
     SEH_CODE "								\n")
 
 class exception

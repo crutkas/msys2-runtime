@@ -122,6 +122,55 @@ bool NO_COPY wsock_started;
 # error unimplemented for this target
 #endif
 
+#ifdef __clang__
+/* LLVM's COFF assembler does not implement the GNU .string16 directive. */
+# define DLL_NAME_DATA_1(name) DLL_NAME_DATA_##name
+# define DLL_NAME_DATA(name) DLL_NAME_DATA_1(name)
+# define DLL_NAME_DATA_advapi32 \
+  "  .hword 97,100,118,97,112,105,51,50,46,100,108,108,0 \n"
+# define DLL_NAME_DATA_authz \
+  "  .hword 97,117,116,104,122,46,100,108,108,0 \n"
+# define DLL_NAME_DATA_dnsapi \
+  "  .hword 100,110,115,97,112,105,46,100,108,108,0 \n"
+# define DLL_NAME_DATA_gdi32 \
+  "  .hword 103,100,105,51,50,46,100,108,108,0 \n"
+# define DLL_NAME_DATA_iphlpapi \
+  "  .hword 105,112,104,108,112,97,112,105,46,100,108,108,0 \n"
+# define DLL_NAME_DATA_kernel32 \
+  "  .hword 107,101,114,110,101,108,51,50,46,100,108,108,0 \n"
+# define DLL_NAME_DATA_KernelBase \
+  "  .hword 75,101,114,110,101,108,66,97,115,101,46,100,108,108,0 \n"
+# define DLL_NAME_DATA_mpr \
+  "  .hword 109,112,114,46,100,108,108,0 \n"
+# define DLL_NAME_DATA_netapi32 \
+  "  .hword 110,101,116,97,112,105,51,50,46,100,108,108,0 \n"
+# define DLL_NAME_DATA_ntdll \
+  "  .hword 110,116,100,108,108,46,100,108,108,0 \n"
+# define DLL_NAME_DATA_ole32 \
+  "  .hword 111,108,101,51,50,46,100,108,108,0 \n"
+# define DLL_NAME_DATA_pdh \
+  "  .hword 112,100,104,46,100,108,108,0 \n"
+# define DLL_NAME_DATA_psapi \
+  "  .hword 112,115,97,112,105,46,100,108,108,0 \n"
+# define DLL_NAME_DATA_secur32 \
+  "  .hword 115,101,99,117,114,51,50,46,100,108,108,0 \n"
+# define DLL_NAME_DATA_shell32 \
+  "  .hword 115,104,101,108,108,51,50,46,100,108,108,0 \n"
+# define DLL_NAME_DATA_user32 \
+  "  .hword 117,115,101,114,51,50,46,100,108,108,0 \n"
+# define DLL_NAME_DATA_userenv \
+  "  .hword 117,115,101,114,101,110,118,46,100,108,108,0 \n"
+# define DLL_NAME_DATA_winmm \
+  "  .hword 119,105,110,109,109,46,100,108,108,0 \n"
+# define DLL_NAME_DATA_wldap32 \
+  "  .hword 119,108,100,97,112,51,50,46,100,108,108,0 \n"
+# define DLL_NAME_DATA_ws2_32 \
+  "  .hword 119,115,50,95,51,50,46,100,108,108,0 \n"
+#else
+# define DLL_NAME_DATA(name) \
+  "  .string16  \"" #name ".dll\"                        \n"
+#endif
+
 /* LoadDLLprime is used to prime the DLL info information, providing an
    additional initialization routine to call prior to calling the first
    function.
@@ -139,7 +188,7 @@ bool NO_COPY wsock_started;
   .long      -1                                          \n\
   .balign    8                                           \n\
   " WORD64 "   " #init_also "                            \n\
-  .string16  \"" #dllname ".dll\"                        \n\
+  " DLL_NAME_DATA(dllname) "                             \
   .text                                                  \n\
   .set       " #dllname "_primed, 1                      \n\
 .endif                                                   \n\

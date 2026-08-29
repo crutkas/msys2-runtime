@@ -231,6 +231,7 @@ retry:
 		  goto retry;
 		case MMAP_RAISE_SIGBUS:
 		  raise(SIGBUS);
+		  fallthrough;
 		case MMAP_NONE:
 		  break;
 		}

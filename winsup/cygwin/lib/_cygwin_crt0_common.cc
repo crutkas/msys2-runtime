@@ -27,6 +27,31 @@ details. */
    references to these operators toward the redirectors in the Cygwin DLL; this
    way we can record what definitions were visible at final link time but still
    send all calls to the redirectors.  */
+#ifdef __clang__
+#define DECLARE_REAL(ret, name, args, symbol) \
+  extern "C" WEAK ret name args __asm__ (symbol)
+DECLARE_REAL (void *, real_new, (std::size_t), REAL_ZNWX);
+DECLARE_REAL (void *, real_new_array, (std::size_t), REAL_ZNAX);
+DECLARE_REAL (void, real_delete, (void *), REAL_ZDLPV);
+DECLARE_REAL (void, real_delete_array, (void *), REAL_ZDAPV);
+DECLARE_REAL (void *, real_new_nothrow,
+	      (std::size_t, const std::nothrow_t &), REAL_ZNWX_NOTHROW_T);
+DECLARE_REAL (void *, real_new_array_nothrow,
+	      (std::size_t, const std::nothrow_t &), REAL_ZNAX_NOTHROW_T);
+DECLARE_REAL (void, real_delete_nothrow,
+	      (void *, const std::nothrow_t &), REAL_ZDLPV_NOTHROW_T);
+DECLARE_REAL (void, real_delete_array_nothrow,
+	      (void *, const std::nothrow_t &), REAL_ZDAPV_NOTHROW_T);
+#undef DECLARE_REAL
+#define REAL_NEW real_new
+#define REAL_NEW_ARRAY real_new_array
+#define REAL_DELETE real_delete
+#define REAL_DELETE_ARRAY real_delete_array
+#define REAL_NEW_NOTHROW real_new_nothrow
+#define REAL_NEW_ARRAY_NOTHROW real_new_array_nothrow
+#define REAL_DELETE_NOTHROW real_delete_nothrow
+#define REAL_DELETE_ARRAY_NOTHROW real_delete_array_nothrow
+#else
 extern WEAK void *operator new(std::size_t sz) noexcept (false)
 			__asm__ (REAL_ZNWX);
 extern WEAK void *operator new[](std::size_t sz) noexcept (false)
@@ -43,9 +68,20 @@ extern WEAK void operator delete(void *p, const std::nothrow_t &nt) noexcept (tr
 			__asm__ (REAL_ZDLPV_NOTHROW_T);
 extern WEAK void operator delete[](void *p, const std::nothrow_t &nt) noexcept (true)
 			__asm__ (REAL_ZDAPV_NOTHROW_T);
+#define REAL_NEW operator new
+#define REAL_NEW_ARRAY operator new[]
+#define REAL_DELETE operator delete
+#define REAL_DELETE_ARRAY operator delete[]
+#define REAL_NEW_NOTHROW operator new
+#define REAL_NEW_ARRAY_NOTHROW operator new[]
+#define REAL_DELETE_NOTHROW operator delete
+#define REAL_DELETE_ARRAY_NOTHROW operator delete[]
+#endif
 
 /* Avoid an info message from linker when linking applications.  */
+#ifndef __clang__
 extern __declspec(dllimport) struct _reent *_impure_ptr;
+#endif
 
 /* Initialised in _cygwin_dll_entry. */
 extern int __dynamically_loaded;
@@ -63,10 +99,10 @@ extern char __image_base__;
 
 struct per_process_cxx_malloc __cygwin_cxx_malloc =
 {
-  &(operator new), &(operator new[]),
-  &(operator delete), &(operator delete[]),
-  &(operator new), &(operator new[]),
-  &(operator delete), &(operator delete[])
+  &REAL_NEW, &REAL_NEW_ARRAY,
+  &REAL_DELETE, &REAL_DELETE_ARRAY,
+  &REAL_NEW_NOTHROW, &REAL_NEW_ARRAY_NOTHROW,
+  &REAL_DELETE_NOTHROW, &REAL_DELETE_ARRAY_NOTHROW
 };
 
 /* Set up pointers to various pieces so the dll can then use them,

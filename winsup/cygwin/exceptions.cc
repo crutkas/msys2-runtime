@@ -1692,7 +1692,7 @@ sigpacket::process ()
   if (handler == SIG_IGN)
     {
       if (si.si_code == SI_TIMER)
-	((timer_tracker *) si.si_tid)->disarm_overrun_event ();
+	((timer_tracker *) (uintptr_t) si.si_tid)->disarm_overrun_event ();
       sigproc_printf ("signal %d ignored", si.si_signo);
       goto done;
     }
@@ -1709,7 +1709,7 @@ sigpacket::process ()
 	  || si.si_signo == SIGURG)
 	{
 	  if (si.si_code == SI_TIMER)
-	    ((timer_tracker *) si.si_tid)->disarm_overrun_event ();
+	    ((timer_tracker *) (uintptr_t) si.si_tid)->disarm_overrun_event ();
 	  sigproc_printf ("signal %d default is currently ignore", si.si_signo);
 	  goto done;
 	}
@@ -1857,8 +1857,7 @@ _cygtls::call_signal_handler ()
 
       if (infodata.si_code == SI_TIMER)
 	{
-	  timer_tracker *tt = (timer_tracker *)
-			      infodata.si_tid;
+	  timer_tracker *tt = (timer_tracker *) (uintptr_t) infodata.si_tid;
 	  infodata.si_overrun = tt->disarm_overrun_event ();
 	}
 
@@ -2007,6 +2006,23 @@ _cygtls::call_signal_handler ()
 		       [FUNC]	"o" (thisfunc),
 		       [WRAPPER] "o" (altstack_wrapper)
 		   : "memory");
+#elif defined(__aarch64__)
+	  __asm__ __volatile__ ("\n\
+		   mov   x19, sp		// Save the normal stack pointer	\n\
+		   mov   sp, %[NEW_SP]	// Switch to the alternate stack	\n\
+		   mov   w0, %w[SIG]	// thissig to 1st arg register		\n\
+		   mov   x1, %[SI]	// &thissi to 2nd arg register		\n\
+		   mov   x2, %[CTX]	// thiscontext to 3rd arg register	\n\
+		   mov   x3, %[FUNC]	// thisfunc to 4th arg register		\n\
+		   blr   %[WRAPPER]	// Call wrapper				\n\
+		   mov   sp, x19		// Restore the normal stack		\n"
+		   : : [NEW_SP] "r" (new_sp),
+		       [SIG] "r" (thissig),
+		       [SI] "r" (&thissi),
+		       [CTX] "r" (thiscontext),
+		       [FUNC] "r" (thisfunc),
+		       [WRAPPER] "r" (altstack_wrapper)
+		   : "x0", "x1", "x2", "x3", "x19", "x30", "memory");
 #else
 #error unimplemented for this target
 #endif
@@ -2148,6 +2164,24 @@ __cont_link_context:			\n\
 	.seh_endproc			\n\
 	");
 
+#elif defined(__aarch64__)
+/* _MC_uclinkReg == x19 */
+__asm__ ("				\n\
+	.global	__cont_link_context	\n\
+	.seh_proc __cont_link_context	\n\
+__cont_link_context:			\n\
+	.seh_endprologue		\n\
+	ldr	x0, [x19]		\n\
+	and	x20, x19, #-16		\n\
+	mov	sp, x20			\n\
+	cbz	x0, 1f			\n\
+	bl	setcontext		\n\
+	mov	w0, #0xff		\n\
+1:					\n\
+	bl	cygwin_exit		\n\
+	nop				\n\
+	.seh_endproc			\n\
+	");
 #else
 #error unimplemented for this target
 #endif
@@ -2169,6 +2203,7 @@ makecontext (ucontext_t *ucp, void (*func) (void), int argc, ...)
 
   /* Initialize sp to the top of the stack. */
   sp = (uintptr_t *) ((uintptr_t) ucp->uc_stack.ss_sp + ucp->uc_stack.ss_size);
+#ifdef __x86_64__
   /* Subtract slots required for arguments and the pointer to uc_link. */
   sp -= (argc + 1);
   /* Align. */
@@ -2177,6 +2212,11 @@ makecontext (ucontext_t *ucp, void (*func) (void), int argc, ...)
   --sp;
   /* Set return address to the trampolin function __cont_link_context. */
   sp[0] = (uintptr_t) __cont_link_context;
+#elif defined(__aarch64__)
+  int stack_argc = argc > 8 ? argc - 8 : 0;
+  sp -= stack_argc + 1;
+  sp = (uintptr_t *) ((uintptr_t) sp & ~0xf);
+#endif
   /* Fetch arguments and store them on the stack.
 
      x86_64:
@@ -2213,12 +2253,22 @@ makecontext (ucontext_t *ucp, void (*func) (void), int argc, ...)
 	sp[i + 1] = va_arg (ap, uintptr_t);
 	break;
       }
+#elif defined(__aarch64__)
+    if (i < 8)
+      ucp->uc_mcontext.x[i] = va_arg (ap, uintptr_t);
+    else
+      sp[i - 8] = va_arg (ap, uintptr_t);
 #else
 #error unimplemented for this target
 #endif
   va_end (ap);
   /* Store pointer to uc_link at the top of the stack. */
+#ifdef __x86_64__
   sp[argc + 1] = (uintptr_t) ucp->uc_link;
+#elif defined(__aarch64__)
+  sp[stack_argc] = (uintptr_t) ucp->uc_link;
+  ucp->uc_mcontext.lr = (uintptr_t) __cont_link_context;
+#endif
   /* Last but not least set the register in the context at ucp so that a
      subsequent setcontext or swapcontext picks up the right values:
      - Set instruction pointer to the target function.
@@ -2227,5 +2277,9 @@ makecontext (ucontext_t *ucp, void (*func) (void), int argc, ...)
        to uc_link. */
   ucp->uc_mcontext._MC_instPtr = (uint64_t) func;
   ucp->uc_mcontext._MC_stackPtr = (uint64_t) sp;
+#ifdef __x86_64__
   ucp->uc_mcontext._MC_uclinkReg = (uint64_t) (sp + argc + 1);
+#elif defined(__aarch64__)
+  ucp->uc_mcontext._MC_uclinkReg = (uint64_t) (sp + stack_argc);
+#endif
 }

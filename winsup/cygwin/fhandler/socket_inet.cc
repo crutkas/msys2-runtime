@@ -18,6 +18,7 @@
    This definition is also required to use the right u_long type in subsequent
    function calls. */
 #undef u_long
+typedef unsigned int __ms_u_long;
 #define u_long __ms_u_long
 #include <w32api/ws2tcpip.h>
 /* 2025-06-09: win32api headers v13 now define a cmsghdr type which clashes with
@@ -70,9 +71,19 @@
       ReleaseMutex (wsock_mtx); \
     }
 
-static wsa_event wsa_events[NUM_SOCKS] __attribute__((section (".cygwin_dll_common"), shared));
+static wsa_event wsa_events[NUM_SOCKS]
+  __attribute__((section (".cygwin_dll_common")
+#ifndef __clang__
+		 , shared
+#endif
+		 ));
 
-static LONG socket_serial_number __attribute__((section (".cygwin_dll_common"), shared));
+static LONG socket_serial_number
+  __attribute__((section (".cygwin_dll_common")
+#ifndef __clang__
+		 , shared
+#endif
+		 ));
 
 static HANDLE wsa_slot_mtx;
 
@@ -2349,7 +2360,9 @@ fhandler_socket_wsock::ioctl (unsigned int cmd, void *p)
        and BSD systems defined as int pointer, so the applications will
        use a type of the expected size.  Hopefully. */
     case FIOASYNC:
-    case _IOW('f', 125, u_long):
+#if !defined(__aarch64__) || !defined(_WIN64)
+       case _IOW('f', 125, u_long):
+#endif
       res = WSAAsyncSelect (get_socket (), winmsg, WM_ASYNCIO,
 	      *(int *) p ? ASYNC_MASK : 0);
       syscall_printf ("Async I/O on socket %s",
@@ -2360,7 +2373,9 @@ fhandler_socket_wsock::ioctl (unsigned int cmd, void *p)
 	WSAEventSelect (get_socket (), wsock_evt, EVENT_MASK);
       break;
     case FIONREAD:
+#if !defined(__aarch64__) || !defined(_WIN64)
     case _IOR('f', 127, u_long):
+#endif
       /* Make sure to use the Winsock definition of FIONREAD. */
       res = ::ioctlsocket (get_socket (), _IOR('f', 127, u_long), (u_long *) p);
       if (res == SOCKET_ERROR)

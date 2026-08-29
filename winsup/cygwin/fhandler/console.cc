@@ -487,6 +487,7 @@ fhandler_console::cons_master_thread (handle_set_t *p, tty *ttyp)
 	  break;
 	case WAIT_TIMEOUT:
 	  con.num_processed = 0;
+	  fallthrough;
 	case WAIT_SIGNALED:
 	case WAIT_CANCELED:
 	  break;
@@ -1660,7 +1661,7 @@ fhandler_console::process_input_message (size_t len)
 	      stat = input_winch;
 	      goto out;
 	    }
-	  /* fall through */
+	  fallthrough;
 	default:
 	  continue;
 	}

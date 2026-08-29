@@ -357,6 +357,13 @@ public:
 #define SEH_CODE ".seh_code"
 #endif
 
+#ifdef __clang__
+#define SEH_TRY_RVA ".long %l[__l_try]@IMGREL,%l[__l_endtry]@IMGREL," \
+		    "%l[__l_except]@IMGREL,%l[__l_except]@IMGREL"
+#else
+#define SEH_TRY_RVA ".rva %l[__l_try],%l[__l_endtry],%l[__l_except],%l[__l_except]"
+#endif
+
 #define TRY_HANDLER_DATA \
   __asm__ goto ("\n\
     .seh_handler "							  \
@@ -364,7 +371,7 @@ public:
       @except								\n\
     .seh_handlerdata							\n\
     .long 1								\n\
-    .rva %l[__l_try],%l[__l_endtry],%l[__l_except],%l[__l_except]	\n"\
+    " SEH_TRY_RVA "							\n"\
     SEH_CODE "								\n"\
     : : : : __l_try, __l_endtry, __l_except)
 

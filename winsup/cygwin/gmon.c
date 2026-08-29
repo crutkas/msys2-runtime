@@ -57,6 +57,7 @@ static char rcsid[] = "$OpenBSD: gmon.c,v 1.8 1997/07/23 21:11:27 kstailey Exp $
 #endif
 
 #include <string.h>
+#include <unistd.h>
 #define bzero(ptr,size) memset (ptr, 0, size);
 
 struct gmonparam _gmonparam = { GMON_PROF_OFF, NULL, 0, NULL, 0, NULL, 0, 0L,
@@ -278,5 +279,4 @@ moncontrol(int mode)
 		p->state = GMON_PROF_OFF;
 	}
 }
-
 

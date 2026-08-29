@@ -9,6 +9,7 @@ details. */
 #ifndef CPUID_H
 #define CPUID_H
 
+#ifdef __x86_64__
 static inline void __attribute ((always_inline))
 cpuid (uint32_t *a, uint32_t *b, uint32_t *c, uint32_t *d, uint32_t ain,
        uint32_t cin = 0)
@@ -18,9 +19,8 @@ cpuid (uint32_t *a, uint32_t *b, uint32_t *c, uint32_t *d, uint32_t ain,
 		: "a" (ain), "c" (cin));
 }
 
-#ifdef __x86_64__
 static inline bool __attribute ((always_inline))
-can_set_flag (uint32_t long flag)
+can_set_flag (uint32_t flag)
 {
   uint32_t long r1, r2;
 
@@ -40,7 +40,18 @@ can_set_flag (uint32_t long flag)
   return ((r1 ^ r2) & flag) != 0;
 }
 #else
-#error unimplemented for this target
+static inline void __attribute ((always_inline))
+cpuid (uint32_t *a, uint32_t *b, uint32_t *c, uint32_t *d, uint32_t,
+       uint32_t = 0)
+{
+  *a = *b = *c = *d = 0;
+}
+
+static inline bool __attribute ((always_inline))
+can_set_flag (uint32_t)
+{
+  return false;
+}
 #endif
 
 #endif // !CPUID_H
