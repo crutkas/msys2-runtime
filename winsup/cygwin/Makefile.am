@@ -63,6 +63,7 @@ endif
 if TARGET_X86_64
 TARGET_FILES= \
 	x86_64/bcopy.S \
+	aarch64/fastcwd.cc \
 	x86_64/memchr.S \
 	x86_64/memcpy.S \
 	x86_64/memmove.S \
@@ -72,6 +73,11 @@ TARGET_FILES= \
 	x86_64/wmemcpy.S \
 	x86_64/wmemmove.S \
 	x86_64/wmempcpy.S
+endif
+
+if TARGET_AARCH64
+TARGET_FILES= \
+	aarch64/fastcwd.cc
 endif
 
 LIB_FILES= \

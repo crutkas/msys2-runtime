@@ -217,3 +217,111 @@ jobs:
           if ($LASTEXITCODE -ne 0) {
             throw "Focused native ARM64 controls failed with exit code $LASTEXITCODE"
           }
+
+  aarch64-layer4-runtime:
+    name: native ARM64 signal, SEH, pthread/TLS, and fastcwd validation
+    runs-on: windows-11-arm
+
+    steps:
+      - name: Checkout runtime source
+        uses: actions/checkout@v7
+
+      - name: Checkout pinned BusyBox source
+        uses: actions/checkout@v7
+        with:
+          repository: crutkas/busybox-w32
+          ref: c26a88d7e1ec96a1b96fce442e35378f3ddecba4
+          fetch-depth: 0
+          path: .layer4-input-source/busybox-w32
+
+      - name: Checkout reviewed Binutils source
+        uses: actions/checkout@v7
+        with:
+          repository: crutkas/binutils-woarm64
+          ref: eb40c26f66fc723d7e87c294c2a4ca840d5d7f7d
+          fetch-depth: 0
+          fetch-tags: true
+          path: .layer4-input-source/binutils-woarm64
+
+      - name: Verify native ARM64 runner
+        shell: pwsh
+        run: |
+          & .github/checks/assert-runner-architecture.ps1 `
+            -ExpectedNativeMachine ARM64 `
+            -ExpectedProcessArchitecture Arm64 `
+            -EvidencePath "$env:RUNNER_TEMP\arm64-layer4-runner.txt"
+
+      - id: msys2
+        name: Set up native Clang ARM64 tools
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: CLANGARM64
+          update: true
+          install: >-
+            msys2-devel
+            autotools
+            make
+            mingw-w64-clang-aarch64-clang
+            mingw-w64-clang-aarch64-llvm
+            mingw-w64-clang-aarch64-perl
+
+      - name: Verify pinned native inputs
+        shell: pwsh
+        run: |
+          & .github/checks/prepare-aarch64-layer3-inputs.ps1 `
+            -Destination "$env:RUNNER_TEMP\layer4-inputs" `
+            -BusyBoxSource "$env:GITHUB_WORKSPACE\.layer4-input-source\busybox-w32" `
+            -BinutilsSource "$env:GITHUB_WORKSPACE\.layer4-input-source\binutils-woarm64"
+
+          $clangArm64 = '${{ steps.msys2.outputs.msys2-location }}\clangarm64'
+          "CC=$clangArm64\bin\clang.exe" | Add-Content $env:GITHUB_ENV
+          "NATIVE_PERL=$clangArm64\bin\perl.exe" | Add-Content $env:GITHUB_ENV
+          "LLVM_READOBJ=$clangArm64\bin\llvm-readobj.exe" |
+            Add-Content $env:GITHUB_ENV
+          "CLANGARM64_LIB=$clangArm64\lib" | Add-Content $env:GITHUB_ENV
+
+      - name: Configure and compile production path object
+        shell: msys2 {0}
+        run: .github/checks/test-aarch64-layer4-path-build.sh
+
+      - name: Compile and execute production layer-4 paths
+        shell: pwsh
+        run: |
+          $env:PATH = "$env:BUSYBOX_BIN;$env:PATH"
+          & $env:BUSYBOX_SH '.github/checks/test-aarch64-layer4-runtime.sh'
+          if ($LASTEXITCODE -ne 0) {
+            throw "Native ARM64 layer-4 controls failed with exit code $LASTEXITCODE"
+          }
+
+  x64-on-arm64-fastcwd:
+    name: x86_64-on-ARM64 fastcwd validation (emulated x86_64)
+    runs-on: windows-11-arm
+
+    steps:
+      - name: Checkout runtime source
+        uses: actions/checkout@v7
+
+      - name: Verify native ARM64 host
+        shell: pwsh
+        run: |
+          & .github/checks/assert-runner-architecture.ps1 `
+            -ExpectedNativeMachine ARM64 `
+            -ExpectedProcessArchitecture Arm64 `
+            -EvidencePath "$env:RUNNER_TEMP\x64-on-arm64-host.txt"
+
+      - id: msys2
+        name: Set up native Clang ARM64 tools
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: CLANGARM64
+          update: true
+          install: >-
+            mingw-w64-clang-aarch64-clang
+            mingw-w64-clang-aarch64-llvm
+
+      - name: Compile and execute x86_64 production fastcwd path
+        shell: pwsh
+        run: .github/checks/test-x64-on-arm64-fastcwd.ps1
+        env:
+          LAYER4_LLVM_BIN: >-
+            ${{ steps.msys2.outputs.msys2-location }}\clangarm64\bin

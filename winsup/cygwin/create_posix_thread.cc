@@ -6,12 +6,16 @@ This software is a copyrighted work licensed under the terms of the
 Cygwin license.  Please consult the file "CYGWIN_LICENSE" for
 details. */
 
+#ifdef AARCH64_LAYER4_PTHREAD_CONTROL
+#include "../../.github/checks/aarch64-layer4-pthread-support.h"
+#else
 #include "winsup.h"
 #include <sys/param.h>
 #include "create_posix_thread.h"
 #include "cygheap_malloc.h"
 #include "ntdll.h"
 #include "mmap_alloc.h"
+#endif
 
 /* create_posix_thread
 
@@ -75,7 +79,7 @@ pthread_wrapper (PVOID arg)
   /* Initialize new _cygtls. */
   _my_tls.init_thread (wrapper_arg.stackbase - __CYGTLS_PADSIZE__,
 		       (DWORD (*)(void*, void*)) wrapper_arg.func);
-#ifdef __x86_64__
+#if defined(__x86_64__)
   __asm__ ("\n\
 	   leaq  %[WRAPPER_ARG], %%rbx	# Load &wrapper_arg into rbx	\n\
 	   movq  (%%rbx), %%r12		# Load thread func into r12	\n\
@@ -99,6 +103,23 @@ pthread_wrapper (PVOID arg)
 	   call  *%%r12			# Call thread func		\n"
 	   : : [WRAPPER_ARG] "o" (wrapper_arg),
 	       [CYGTLS] "i" (__CYGTLS_PADSIZE__));
+#elif defined(__aarch64__)
+  /* Sets up a new thread stack, frees the original OS stack,
+   * and calls the thread function with its arg using AArch64 ABI. */
+  __asm__ __volatile__ ("\n\
+	   ldp     x20, x21, [%[WRAPPER_ARG]]    // x20 = thread func, x21 = thread arg \n\
+	   ldp     x0, x1, [%[WRAPPER_ARG], #16] // x0 = stackaddr, x1 = stackbase	\n\
+	   sub     sp, x1, %[CYGTLS]  		 // sp = stackbase - (CYGTLS)    	\n\
+	   mov     fp, xzr              	 // clear frame pointer (x29)    	\n\
+						 // x0 already has stackaddr		\n\
+	   mov     x1, xzr              	 // x1 = 0 (dwSize)              	\n\
+	   mov     x2, #0x8000          	 // x2 = MEM_RELEASE             	\n\
+	   bl      VirtualFree          	 // free original stack          	\n\
+	   mov     x0, x21  			 // Move arg into x0			\n\
+	   blr     x20                  	 // call thread function         	\n"
+	   : : [WRAPPER_ARG] "r" (&wrapper_arg),
+	       [CYGTLS] "r" ((uintptr_t) __CYGTLS_PADSIZE__)
+	   : "x0", "x1", "x2", "x20", "x21", "x29", "memory");
 #else
 #error unimplemented for this target
 #endif
@@ -107,6 +128,7 @@ pthread_wrapper (PVOID arg)
   api_fatal ("Dumb thinko in pthread handling.  Whip the developer.");
 }
 
+#ifndef AARCH64_LAYER4_PTHREAD_CONTROL
 /* We provide the stacks always in 1 Megabyte slots */
 #define THREAD_STACK_SLOT	0x000100000L	/* 1 Meg */
 /* Maximum stack size returned from the pool. */
@@ -356,3 +378,4 @@ err:
     }
   return thread;
 }
+#endif

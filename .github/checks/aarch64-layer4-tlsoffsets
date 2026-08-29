@@ -1,0 +1,6 @@
+.equ _cygtls.start_offset, -12800
+.equ _cygtls.current_sig, -832
+.equ _cygtls.incyg, -828
+.equ _cygtls.stacklock, -824
+.equ _cygtls.stackptr, -816
+.equ _cygtls.initialized, -768
