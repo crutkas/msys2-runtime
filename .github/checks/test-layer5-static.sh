@@ -49,6 +49,11 @@ grep -Fq 'IMAGE_FILE_MACHINE_ARM64' "$repo_root/winsup/utils/profiler.cc"
 grep -Fq 'bfd_arch_aarch64' "$repo_root/winsup/utils/dumper.cc"
 grep -Fq '#define SW_BREAKPOINT_SIZE 4' "$repo_root/winsup/utils/ssp.c"
 grep -Fq 'FlushInstructionCache' "$repo_root/winsup/utils/ssp.c"
+if grep -n 'error %lu' "$repo_root/winsup/utils/ssp.c"
+then
+  echo "SSP Windows error diagnostics must match the 32-bit DWORD type" >&2
+  exit 1
+fi
 grep -Fq '#define ARCH_STR  "&arch=aarch64"' \
   "$repo_root/winsup/utils/mingw/cygcheck.cc"
 

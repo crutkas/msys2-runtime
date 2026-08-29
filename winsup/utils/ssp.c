@@ -154,13 +154,13 @@ write_process_instruction (CONTEXT_REG address, const unsigned char *insn)
       || written != SW_BREAKPOINT_SIZE)
     {
       fprintf (stderr, "WriteProcessMemory failed at " CONTEXT_REG_FMT
-	       " (error %lu)\n", address, GetLastError ());
+	       " (error %u)\n", address, (unsigned int) GetLastError ());
       exit (1);
     }
   if (!FlushInstructionCache (hProcess, (void *) address, SW_BREAKPOINT_SIZE))
     {
       fprintf (stderr, "FlushInstructionCache failed at " CONTEXT_REG_FMT
-	       " (error %lu)\n", address, GetLastError ());
+	       " (error %u)\n", address, (unsigned int) GetLastError ());
       exit (1);
     }
 }
@@ -193,7 +193,7 @@ add_breakpoint (CONTEXT_REG address)
       || rv != SW_BREAKPOINT_SIZE)
     {
       fprintf (stderr, "ReadProcessMemory failed at " CONTEXT_REG_FMT
-	       " (error %lu)\n", address, GetLastError ());
+	       " (error %u)\n", address, (unsigned int) GetLastError ());
       exit (1);
     }
   write_process_instruction (address, brk_insn);
