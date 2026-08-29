@@ -1,0 +1,312 @@
+name: Runtime defect diagnostics (non-consumable)
+
+on:
+  push:
+    branches:
+      - crutkas-finish-runtime-diagnostics
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: runtime-defect-diagnostics-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  DIAGNOSTIC_BASE: 8fbd9808447ee78ed485deead9b79cd1e40c07b7
+  LEGACY_DIAGNOSTIC_HEAD: ab51b0983aec24afd45681340c3b96cfb03d8ca6
+  LEGACY_COPILOT_SESSION: 3d80604e-83b4-423e-aa7b-6ab155a5ec8f
+  INVALID_SESSION_HEAD: bd7d9d7262bf03495c2d8b28f7f9105a919018d3
+  INVALID_RECORDED_COPILOT_SESSION: cd672707-4a81-473e-83de-5d7176b3c6bb
+  PRE_ERRATUM_HEAD: 5d05f55e69600575c07836329eff8dd3ab885023
+  PRE_ERRATUM_COPILOT_SESSION: 076e09d2-a5a3-4f6f-9148-d4a81881aec3
+  SESSION_ERRATUM_HEAD: 80859f2589f5586a91eb6cd3a0b3ca6c26bebd60
+  PRE_AUTHORSHIP_ERRATUM_HEAD: fc0930d89764a49378ae0fb24eff47d4ae16ebbe
+  COPILOT_SESSION: 206997e7-b806-404e-aed4-8664ddcc4a6f
+  DCO_IDENTITY: Clint Rutkas <clint@rutkas.com>
+  REVOKED_COMMITS: >-
+    a527ace21c23b763bb96841745f0e2d8cd984f4a
+    9e616c568dab8a36288456f14dd76e078af41c2d
+    18993f46caab8c71cdb5edaacb79999c87704f63
+    2fc8e6296292a016a019717ff74927324df591c8
+
+jobs:
+  diagnostic-provenance:
+    name: Diagnostic provenance (non-consumable)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout direct head
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Reject synthetic or revoked ancestry
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${GITHUB_EVENT_NAME}" != pull_request
+          test "${GITHUB_REF#refs/pull/}" = "${GITHUB_REF}"
+          git fetch --no-tags origin \
+            "+refs/heads/msys2-3.6.10:refs/remotes/origin/msys2-3.6.10"
+          test "$(git rev-parse refs/remotes/origin/msys2-3.6.10)" = \
+            "${DIAGNOSTIC_BASE}"
+
+          read -r -a revoked <<< "${REVOKED_COMMITS}"
+          test "${#revoked[@]}" -eq 4
+          for commit in "${revoked[@]}"; do
+            git fetch --no-tags origin "$commit"
+          done
+
+          bash .github/checks/audit-diagnostic-commits.sh \
+            "${DIAGNOSTIC_BASE}" \
+            "${LEGACY_DIAGNOSTIC_HEAD}" "${LEGACY_COPILOT_SESSION}" \
+            "${INVALID_SESSION_HEAD}" \
+            "${INVALID_RECORDED_COPILOT_SESSION}" \
+            "${PRE_ERRATUM_HEAD}" "${PRE_ERRATUM_COPILOT_SESSION}" \
+            "${SESSION_ERRATUM_HEAD}" \
+            "${PRE_AUTHORSHIP_ERRATUM_HEAD}" \
+            "${GITHUB_SHA}" "${COPILOT_SESSION}" "${DCO_IDENTITY}" \
+            "${revoked[@]}" | tee provenance.txt
+
+      - name: Verify ordinary build artifact policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/checks/verify-build-artifact-policy.py \
+            .github/workflows/build.yaml | tee build-artifact-policy.txt
+
+      - name: Record blocked native lanes
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > blocked-lanes.txt <<'EOF'
+          classification=diagnostic
+          consumable=false
+          lane=native-arm64
+          status=blocked
+          reason=no-derivable-native-build-recipe
+          evidence_run=33155035777
+          evidence_job=98797414692
+          evidence_job_name=msys2-tests CLANGARM64-clang
+          evidence_runner_label=windows-11-arm
+          detail=That job sets up CLANGARM64, adds the staging repository,
+          detail=updates, downloads the x64 "install" artifact and runs
+          detail=msys2-tests.  It contains no runtime configure or make step,
+          detail=so no ARM64 build recipe can be derived from it, and its own
+          detail=uname reports an ARM64 host running an x86_64 MSYS process
+          detail=(MINGW64_NT-10.0-26200-ARM64 ... x86_64 Msys).
+          detail=Reproducing it would also require consuming a downloaded
+          detail=build artifact, which this workflow must never do.
+          conclusion=No ARM64 claim is made by this workflow.  The native lane
+          conclusion=stays blocked rather than being reported in a shape that
+          conclusion=could be mistaken for a passing native result.
+          EOF
+          cat blocked-lanes.txt
+
+      - name: Upload diagnostic provenance (non-consumable)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: diagnostic-provenance-non-consumable-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            provenance.txt
+            build-artifact-policy.txt
+            blocked-lanes.txt
+          if-no-files-found: error
+          retention-days: 30
+
+  x64-diagnostics:
+    name: x64 runtime diagnostics (non-consumable)
+    needs: diagnostic-provenance
+    runs-on: windows-2025
+    steps:
+      - name: Checkout direct head
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Assert runner architecture
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & .github/checks/assert-runner-architecture.ps1 `
+            -ExpectedNativeMachine AMD64 `
+            -ExpectedProcessArchitecture X64 `
+            -EvidencePath runner-architecture-diagnostic.txt
+          Get-Content -LiteralPath runner-architecture-diagnostic.txt
+
+      - name: Set up run-private mutable MSYS2 toolchain
+        id: msys2
+        uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884
+        with:
+          msystem: MSYS
+          location: ${{ runner.temp }}\msys2-runtime-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-nomatrix
+          path-type: minimal
+          update: true
+          cache: false
+          install: >-
+            autoconf
+            automake
+            base-devel
+            cocom
+            cygutils
+            diffutils
+            docbook-xsl
+            gcc
+            gettext-devel
+            git
+            libiconv-devel
+            libzstd-devel
+            make
+            mingw-w64-cross-crt
+            mingw-w64-cross-gcc
+            mingw-w64-cross-zlib
+            perl
+            xmlto
+            zlib-devel
+
+      - name: Prove run-private MSYS2 root
+        shell: pwsh
+        env:
+          MSYS2_LOCATION: ${{ steps.msys2.outputs.msys2-location }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $leaf = "msys2-runtime-diagnostics-$env:GITHUB_RUN_ID-" +
+            "$env:GITHUB_RUN_ATTEMPT-$env:GITHUB_JOB-nomatrix"
+          $expectedRelativePath = Join-Path $leaf 'msys64'
+          & .github/checks/assert-private-msys2-root.ps1 `
+            -BasePath $env:RUNNER_TEMP `
+            -CandidatePath $env:MSYS2_LOCATION `
+            -ExpectedRelativePath $expectedRelativePath `
+            -EvidencePath msys2-root-diagnostic.txt
+
+      - name: Assert MSYS process architecture
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          machine=$(uname -m)
+          test "$machine" = x86_64
+          printf 'classification=diagnostic\nconsumable=false\n' \
+            > msys2-architecture-diagnostic.txt
+          printf 'msys_machine=%s\nmsys_uname=%s\n' \
+            "$machine" "$(uname -a)" >> msys2-architecture-diagnostic.txt
+          cat msys2-architecture-diagnostic.txt
+
+      - name: Build runtime and run targeted x64 diagnostics
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          (cd winsup && ./autogen.sh)
+          mkdir build
+          (
+            cd build
+            ../configure --disable-dependency-tracking \
+              --with-msys2-runtime-commit="${GITHUB_SHA}"
+          )
+          make -C build -j"$(nproc)"
+          testsuite=$(find build -type d -path '*/winsup/testsuite' -print -quit)
+          test -n "$testsuite"
+          mkdir -p "$testsuite/testinst/tmp"
+          make -C "$testsuite" \
+            winsup.api/argv_spawn.exe \
+            winsup.api/dll_unload.exe \
+            winsup.api/dll_unload_helper.dll
+          test_status=0
+          make -C "$testsuite" check-TESTS \
+            check_PROGRAMS='winsup.api/argv_spawn.exe winsup.api/dll_unload.exe' \
+            TESTS='winsup.api/argv_spawn winsup.api/dll_unload' \
+            TEST_SUITE_LOG=runtime-diagnostics.log \
+            AM_COLOR_TESTS=always || test_status=$?
+
+          # Always surface the suite output, so a passing run publishes its
+          # own per-case evidence instead of only failures being visible.
+          mkdir -p diagnostic-records
+          for log in \
+            "$testsuite"/winsup.api/argv_spawn*.log \
+            "$testsuite"/winsup.api/dll_unload*.log \
+            "$testsuite"/runtime-diagnostics.log; do
+            if [[ -f "$log" ]]; then
+              cp "$log" diagnostic-records/
+              echo "::group::${log#$testsuite/}"
+              cat "$log"
+              echo "::endgroup::"
+            fi
+          done
+          exit "$test_status"
+
+      - name: Verify diagnostic success records
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $logs = @(
+            'diagnostic-records/argv_spawn.log'
+            'diagnostic-records/dll_unload.log'
+          )
+          foreach ($log in $logs) {
+            if (-not (Test-Path -LiteralPath $log)) {
+              throw "Missing diagnostic record log: $log"
+            }
+          }
+          $python = Get-Command python -ErrorAction SilentlyContinue
+          if (-not $python) {
+            $python = Get-Command python3 -ErrorAction SilentlyContinue
+          }
+          if (-not $python) { throw 'No Python interpreter is available' }
+          $output = & $python.Source `
+            .github/checks/verify-diagnostic-records.py @logs 2>&1
+          $code = $LASTEXITCODE
+          $output | ForEach-Object { Write-Host $_ }
+          $output | Out-File `
+            -LiteralPath diagnostic-records/record-verification.txt `
+            -Encoding ascii
+          if ($code -ne 0) {
+            throw "Diagnostic record verification failed with $code"
+          }
+
+      - name: Collect diagnostic metadata and logs only
+        if: ${{ always() }}
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          evidence=diagnostic-evidence-non-consumable/x64
+          mkdir -p "$evidence/logs"
+          printf '%s\n' \
+            'classification=diagnostic' \
+            'consumable=false' \
+            'toolchain=moving-windows-2025-setup-msys2-update-true-unversioned-packages' \
+            > "$evidence/identity.txt"
+          printf 'head=%s\ntree=%s\nrun=%s\nattempt=%s\njob=%s\n' \
+            "$(git rev-parse HEAD)" "$(git rev-parse 'HEAD^{tree}')" \
+            "${GITHUB_RUN_ID}" "${GITHUB_RUN_ATTEMPT}" "${GITHUB_JOB}" \
+            >> "$evidence/identity.txt"
+          pacman -Q > "$evidence/packages.txt"
+          for report in msys2-root-diagnostic.txt \
+            runner-architecture-diagnostic.txt \
+            msys2-architecture-diagnostic.txt; do
+            if [[ -f "$report" ]]; then
+              cp "$report" "$evidence/"
+            fi
+          done
+          if [[ -d diagnostic-records ]]; then
+            cp -r diagnostic-records "$evidence/records"
+          fi
+          find build -type f \( -name '*.log' -o -name '*.trs' \) \
+            -exec cp --parents '{}' "$evidence/logs" \;
+          (
+            cd "$evidence"
+            find . -type f ! -name SHA256SUMS -print0 \
+              | sort -z | xargs -0 sha256sum > SHA256SUMS
+          )
+
+      - name: Upload diagnostic metadata and logs (non-consumable)
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: x64-runtime-diagnostics-non-consumable-${{ github.sha }}-${{ github.run_attempt }}
+          path: diagnostic-evidence-non-consumable/x64
+          if-no-files-found: error
+          retention-days: 30

@@ -32,10 +32,12 @@ libltp_a_SOURCES = \
 	libltp/lib/write_log.c
 
 check_PROGRAMS = \
+	winsup.api/argv_spawn \
 	winsup.api/checksignal \
 	winsup.api/crlf \
 	winsup.api/devdsp \
 	winsup.api/devzero \
+	winsup.api/dll_unload \
 	winsup.api/iospeed \
 	winsup.api/mmaptest01 \
 	winsup.api/mmaptest02 \
@@ -318,7 +320,7 @@ check_PROGRAMS = \
 # flags for linking against the just built implib
 # TODO: use -nostdinc and to-be-installed headers as well?
 LDFLAGS_FOR_TESTDLL = -nodefaultlibs
-LDADD_FOR_TESTDLL = $(builddir)/../cygwin/libcygwin.a -lgcc -lkernel32 -luser32
+LDADD_FOR_TESTDLL = $(builddir)/../cygwin/libmsys-2.0.a -lgcc -lkernel32 -luser32
 
 # flags for test executables
 AM_CPPFLAGS = -I$(srcdir)/libltp/include
@@ -327,6 +329,23 @@ LDADD = $(builddir)/libltp.a $(builddir)/../cygwin/binmode.o $(LDADD_FOR_TESTDLL
 
 # additional flags for specific test executables
 winsup_api_devdsp_LDADD = -lwinmm $(LDADD)
+
+# Build a Cygwin-aware helper DLL against the runtime under test.
+check_DATA = winsup.api/dll_unload_helper.dll
+
+# The helper is built by a custom rule, so automake cannot infer it as a
+# source and it has to be distributed explicitly.
+EXTRA_DIST = winsup.api/dll_unload_helper.c
+
+winsup.api/dll_unload_helper.dll: \
+	$(srcdir)/winsup.api/dll_unload_helper.c \
+	$(builddir)/../cygwin/libmsys-2.0.a
+	$(AM_V_at)$(MKDIR_P) $(@D)
+	$(AM_V_CCLD)$(CC) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) \
+		$(LDFLAGS_FOR_TESTDLL) -shared -Wl,--export-all-symbols \
+		-o $@ $< $(LDADD_FOR_TESTDLL)
+
+EXTRA_winsup_api_dll_unload_DEPENDENCIES = winsup.api/dll_unload_helper.dll
 
 # all tests
 TESTS = $(check_PROGRAMS) \
@@ -370,10 +389,11 @@ check-local:
 	cd ${builddir}/testinst/bin && cp /usr/libexec/busybox/bin/busybox.exe ls.exe
 
 # target to build all the programs needed by check, without running check
-check_programs: $(check_PROGRAMS)
+check_programs: $(check_PROGRAMS) $(check_DATA)
 
 clean-local:
 	rm -f *.stackdump
+	rm -f $(check_DATA)
 	rm -rf ${builddir}/testinst/tmp
 
 if CROSS_BOOTSTRAP

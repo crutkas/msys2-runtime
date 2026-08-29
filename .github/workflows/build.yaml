@@ -1,12 +1,29 @@
 name: build
 
-on: [push, pull_request]
+on:
+  push:
+    # The runtime diagnostics branch must never publish an ordinary binary
+    # install artifact.  Keep the branch exclusion separate from the explicit
+    # tag inclusion: defining only a branch filter would disable every tag.
+    branches-ignore:
+      - crutkas-finish-runtime-diagnostics
+    tags:
+      - '**'
+  pull_request:
 
 permissions:
   contents: read
 
 jobs:
   build:
+    # Suppress only the same-repository diagnostic PR.  A fork may legitimately
+    # use the same branch leaf, and non-PR events have no pull_request payload.
+    if: >-
+      ${{
+        github.event_name != 'pull_request' ||
+        github.event.pull_request.head.repo.full_name != github.repository ||
+        github.event.pull_request.head.ref != 'crutkas-finish-runtime-diagnostics'
+      }}
     runs-on: windows-latest
 
     steps:
@@ -39,6 +56,12 @@ jobs:
           path: _dest/
 
   generate-msys2-tests-matrix:
+    if: >-
+      ${{
+        github.event_name != 'pull_request' ||
+        github.event.pull_request.head.repo.full_name != github.repository ||
+        github.event.pull_request.head.ref != 'crutkas-finish-runtime-diagnostics'
+      }}
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
@@ -92,4 +115,3 @@ jobs:
 
       - name: Run tests
         uses: msys2/msys2-tests@main
-
