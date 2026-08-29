@@ -498,7 +498,7 @@ uname_version.c: .FORCE
 version.cc: scripts/mkvers.sh include/cygwin/version.h winver.rc $(src_files)
 	@echo "Making version.cc and winver.o";\
 	export CC="$(CC)";\
-	/bin/sh $(word 1,$^) $(word 2,$^) $(word 3,$^) $(WINDRES) -I$(srcdir)/include $(CFLAGS) $(VERSION_CFLAGS)
+	$(SHELL) $(word 1,$^) $(word 2,$^) $(word 3,$^) $(WINDRES) -I$(srcdir)/include $(CFLAGS) $(VERSION_CFLAGS)
 
 winver.o: version.cc
 

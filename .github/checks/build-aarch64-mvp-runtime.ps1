@@ -6,6 +6,7 @@ param(
     [Parameter(Mandatory)] [string] $BusyBoxArchive,
     [Parameter(Mandatory)] [string] $GeneratorArchive,
     [Parameter(Mandatory)] [string] $MinGitArchive,
+    [string] $NativePerl,
     [ValidateRange(1, 64)] [int] $Jobs = 20
 )
 
@@ -71,36 +72,61 @@ $bashSource = Join-Path $Work 'bash-source'
 $bashBuild = Join-Path $Work 'bash-build'
 $minGit = Join-Path $Work 'mingit'
 $shim = Join-Path $Work 'native-shims'
+$tempRoot = Join-Path $Work 'tmp'
+$generatorHostRoot = [IO.Path]::GetTempPath()
 New-Item -ItemType Directory -Path $inputRoot, $sourceRoot, $buildRoot, $bashSource,
-    $bashBuild, $minGit, $shim -Force | Out-Null
+    $bashBuild, $minGit, $shim, $tempRoot -Force | Out-Null
+$env:TEMP = $tempRoot
+$env:TMP = $tempRoot
+$env:TMPDIR = To-Posix $tempRoot
 
 tar -xf $BusyBoxArchive -C $inputRoot
 $busy = (Get-ChildItem -LiteralPath $inputRoot -Filter busybox.exe -File -Recurse |
     Select-Object -First 1).FullName
 Assert-Arm64 $busy 'BusyBox shell'
-Expand-Archive -LiteralPath $GeneratorArchive -DestinationPath $Work -Force
-$generatorRoot = Join-Path $Work 'native-generators-arm64'
+$generatorExtractRoot = Join-Path $generatorHostRoot `
+    "msys2-runtime-generators-$sourceCommit"
+if (Test-Path -LiteralPath $generatorExtractRoot) {
+    Remove-Item -LiteralPath $generatorExtractRoot -Recurse -Force
+}
+New-Item -ItemType Directory -Path $generatorExtractRoot -Force | Out-Null
+Expand-Archive -LiteralPath $GeneratorArchive -DestinationPath $generatorExtractRoot -Force
+$generatorRoot = Join-Path $generatorExtractRoot 'native-generators-arm64'
 $generatorPrefix = Join-Path $generatorRoot 'prefix'
 $generatorBin = Join-Path $generatorPrefix 'bin'
 $generatorToolchain = Join-Path $generatorRoot 'toolchain\bin'
-$nativePerl = Join-Path $ClangPrefix 'perl.exe'
+$nativePerl = if ($NativePerl) { $NativePerl } else { Join-Path $ClangPrefix 'perl.exe' }
 $generatorPrefixPosix = To-Posix $generatorPrefix
 $nativePerlPosix = To-Posix $nativePerl
 Get-ChildItem -LiteralPath $generatorPrefix -File -Recurse | ForEach-Object {
     $bytes = [IO.File]::ReadAllBytes($_.FullName)
     if ($bytes.Length -ge 2 -and $bytes[0] -eq 0x4D -and $bytes[1] -eq 0x5A) { return }
     $text = [Text.Encoding]::UTF8.GetString($bytes)
-    if ($text.Contains('@GENERATOR_PREFIX@') -or $text.Contains('@NATIVE_PERL@')) {
-        $text = $text.Replace('@GENERATOR_PREFIX@', $generatorPrefixPosix).
-            Replace('@NATIVE_PERL@', $nativePerlPosix)
-        [IO.File]::WriteAllText($_.FullName, $text, [Text.UTF8Encoding]::new($false))
+    $relocated = $text.Replace('@GENERATOR_PREFIX@', $generatorPrefixPosix).
+        Replace('@NATIVE_PERL@', $nativePerlPosix)
+    $relocated = $relocated -replace `
+        '/[A-Za-z]/Users/[^/]+/\.copilot/session-state/[0-9a-f-]+/files/native-preflight/prefix', `
+        $generatorPrefixPosix
+    $relocated = $relocated -replace `
+        '[A-Za-z]:/Users/[^/]+/\.copilot/session-state/[0-9a-f-]+/files/driver/msys2-root/msys64/clangarm64/bin/perl\.exe', `
+        $nativePerlPosix
+    if ($_.Name -in @('aclocal', 'aclocal-1.15')) {
+        $needle = 'my $fullfile = File::Spec->canonpath ("$m4dir/$file");'
+        $replacement = "$needle`n`t  `$fullfile =~ tr{\\}{/};"
+        $relocated = $relocated.Replace($needle, $replacement)
+    }
+    if ($relocated -ne $text) {
+        [IO.File]::WriteAllText($_.FullName, $relocated, [Text.UTF8Encoding]::new($false))
+    }
+    if ($relocated -match '/[A-Za-z]/Users/[^/]+/.+native-preflight') {
+        throw "Generator script retains an archived local path: $($_.FullName)"
     }
 }
 
 foreach ($name in @('awk', 'basename', 'cat', 'cmp', 'cp', 'cut', 'dirname', 'echo',
-    'env', 'expr', 'find', 'grep', 'head', 'install', 'ln', 'mkdir', 'mv', 'printf',
-    'pwd', 'rm', 'sed', 'sh', 'sort', 'tail', 'test', 'touch', 'tr', 'uname', 'which',
-    'xargs')) {
+    'date', 'env', 'expr', 'find', 'grep', 'head', 'install', 'ln', 'mkdir', 'mv',
+    'patch', 'printf', 'pwd', 'rm', 'sed', 'sh', 'sort', 'tail', 'tee', 'test',
+    'touch', 'tr', 'uname', 'which', 'xargs')) {
     Copy-Item -LiteralPath $busy -Destination (Join-Path $shim "$name.exe") -Force
 }
 
@@ -114,6 +140,7 @@ foreach ($tool in @(
     @($nativePerl, 'Perl'),
     @((Join-Path $generatorBin 'm4.exe'), 'M4'),
     @((Join-Path $generatorToolchain 'autoconf.exe'), 'Autoconf launcher'),
+    @((Join-Path $generatorToolchain 'autom4te.exe'), 'Autom4te launcher'),
     @((Join-Path $generatorToolchain 'automake.exe'), 'Automake launcher'),
     @((Join-Path $generatorBin 'msta'), 'COCOM msta'),
     @((Join-Path $generatorBin 'sprut'), 'COCOM sprut')
@@ -128,16 +155,19 @@ if ($LASTEXITCODE -ne 0) { throw 'native source extraction failed' }
 
 $crtPrefix = Split-Path $ClangPrefix
 $resourceDir = (& $clang -print-resource-dir).Trim()
-$pathBefore = $env:PATH
-$env:PATH = "$generatorToolchain;$generatorBin;$shim;$ClangPrefix;$pathBefore"
+$env:PATH = "$shim;$generatorToolchain;$generatorBin;$ClangPrefix;" +
+    "$env:SystemRoot\System32;$env:SystemRoot"
 $env:NATIVE_PERL = $nativePerl
 $env:AUTOTOOLS_BINDIR = $generatorBin
-$env:ACLOCAL_PATH = Join-Path $generatorPrefix 'share\aclocal'
+$env:ACLOCAL_PATH = To-Posix (Join-Path $generatorPrefix 'share\aclocal')
+$env:autom4te_perllibdir = To-Posix (Join-Path $generatorPrefix 'share\autoconf')
+$env:AC_MACRODIR = $env:autom4te_perllibdir
 $env:ACLOCAL = Join-Path $generatorToolchain 'aclocal.exe'
 $env:AUTOCONF = Join-Path $generatorToolchain 'autoconf.exe'
+$env:AUTOM4TE = Join-Path $generatorToolchain 'autom4te.exe'
 $env:AUTOMAKE = Join-Path $generatorToolchain 'automake.exe'
 $env:RM = Join-Path $shim 'rm.exe'
-$env:M4 = Join-Path $generatorBin 'm4.exe'
+$env:M4 = 'm4.exe'
 $env:BISON = Join-Path $generatorBin 'bison.exe'
 $env:FLEX = Join-Path $generatorBin 'flex.exe'
 $env:CONFIG_SHELL = "$busy sh"
@@ -154,9 +184,23 @@ $env:RANLIB = Join-Path $ClangPrefix 'llvm-ranlib.exe'
 $env:READELF = Join-Path $ClangPrefix 'llvm-readelf.exe'
 $env:STRIP = Join-Path $ClangPrefix 'llvm-strip.exe'
 $env:WINDRES = Join-Path $ClangPrefix 'llvm-windres.exe'
+$busyHash = (Get-FileHash -LiteralPath $busy -Algorithm SHA256).Hash
+foreach ($utility in @('patch', 'date', 'tee', 'awk', 'sed', 'find', 'cmp')) {
+    $resolved = (Get-Command "$utility.exe" -CommandType Application |
+        Select-Object -First 1).Source
+    Assert-Arm64 $resolved "BusyBox $utility utility"
+    if ((Get-FileHash -LiteralPath $resolved -Algorithm SHA256).Hash -ne $busyHash) {
+        throw "$utility did not resolve to the approved BusyBox image: $resolved"
+    }
+    Write-Host "utility-resolution: $utility=$resolved ($busyHash)"
+}
+if (($env:PATH -split ';') -match '[\\/]msys64[\\/]usr[\\/]bin$') {
+    throw "Native build PATH retained an MSYS usr/bin fallback: $env:PATH"
+}
 foreach ($override in @(
     @('ACLOCAL', $env:ACLOCAL, '--version'),
     @('AUTOCONF', $env:AUTOCONF, '--version'),
+    @('AUTOM4TE', $env:AUTOM4TE, '--version'),
     @('AUTOMAKE', $env:AUTOMAKE, '--version'),
     @('RM', $env:RM, '--help')
 )) {
@@ -167,6 +211,15 @@ foreach ($override in @(
     if ($LASTEXITCODE -ne 0) { throw "$($override[0]) override failed its native smoke test" }
     Write-Host "generator-override: $($override[0])=$($override[1]) ($firstLine)"
 }
+& $nativePerl "-I$($env:autom4te_perllibdir)" -MAutom4te::C4che -e 1
+if ($LASTEXITCODE -ne 0) { throw 'Relocated native Perl could not import Autom4te::C4che' }
+Write-Host 'generator-override: relocated native Perl module import passed'
+$makefileSource = Get-Content -LiteralPath (Join-Path $sourceRoot 'winsup\cygwin\Makefile.am') -Raw
+if ($makefileSource.Contains('/bin/sh $(word 1,$^)') -or
+    -not $makefileSource.Contains('$(SHELL) $(word 1,$^)')) {
+    throw 'version.cc generation does not use the configured native $(SHELL)'
+}
+Write-Host 'generator-override: version.cc recipe uses configured native $(SHELL)'
 
 $src = To-Posix $sourceRoot
 $build = To-Posix $buildRoot
