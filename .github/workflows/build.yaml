@@ -403,6 +403,7 @@ jobs:
           install: >-
             mingw-w64-clang-aarch64-toolchain
             mingw-w64-clang-aarch64-autotools
+            mingw-w64-clang-aarch64-perl
 
       - name: Download exact public MVP inputs
         shell: pwsh
@@ -415,6 +416,9 @@ jobs:
           Invoke-WebRequest `
             -Uri 'https://github.com/git-for-windows/git/releases/download/v2.55.0.windows.3/MinGit-2.55.0.3-arm64.zip' `
             -OutFile "$inputs\MinGit-2.55.0.3-arm64.zip"
+          Invoke-WebRequest `
+            -Uri 'https://github.com/crutkas/msys2-runtime/releases/download/native-generators-layer6-20260829/native-generators-arm64.zip' `
+            -OutFile "$inputs\native-generators-arm64.zip"
 
       - name: Build native runtime and Bash from exact source
         shell: pwsh
@@ -424,6 +428,7 @@ jobs:
             -Work "$env:RUNNER_TEMP\git-bash-mvp" `
             -ClangPrefix '${{ steps.msys2.outputs.msys2-location }}\clangarm64\bin' `
             -BusyBoxArchive "$env:RUNNER_TEMP\mvp-inputs\busybox-c26a88d7.tar.gz" `
+            -GeneratorArchive "$env:RUNNER_TEMP\mvp-inputs\native-generators-arm64.zip" `
             -MinGitArchive "$env:RUNNER_TEMP\mvp-inputs\MinGit-2.55.0.3-arm64.zip"
 
       - name: Assemble deterministic MVP artifact

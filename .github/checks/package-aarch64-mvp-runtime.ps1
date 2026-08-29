@@ -104,6 +104,10 @@ $provenance = [ordered]@{
         source = 'this repository and pull-request head'
         base_commit = 'f71b5d07c804433dfa06df122b22efd200e9ec2b'
         toolchain = 'prebuilt native ARM64 Clang/LLD from MSYS2 CLANGARM64'
+        generators = [ordered]@{
+            source = 'https://github.com/crutkas/msys2-runtime/releases/download/native-generators-layer6-20260829/native-generators-arm64.zip'
+            sha256 = 'B8223D2F3D66E536298BD2DE0EFD395F1C4CB55DC0840CFEF4E8E50C58AFC3E7'
+        }
     }
     busybox = [ordered]@{
         source = 'https://github.com/crutkas/busybox-w32 commit c26a88d7e1ec96a1b96fce442e35378f3ddecba4'

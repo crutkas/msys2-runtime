@@ -4,6 +4,7 @@ param(
     [Parameter(Mandatory)] [string] $Work,
     [Parameter(Mandatory)] [string] $ClangPrefix,
     [Parameter(Mandatory)] [string] $BusyBoxArchive,
+    [Parameter(Mandatory)] [string] $GeneratorArchive,
     [Parameter(Mandatory)] [string] $MinGitArchive
 )
 
@@ -40,6 +41,7 @@ function Assert-Sha256([string] $Path, [string] $Expected) {
 function To-Posix([string] $Path) { return $Path.Replace('\', '/') }
 
 Assert-Sha256 $BusyBoxArchive '23D605DDDCFAE3E1865C5E5CC9BF7C54FA104AD62B2313644FA7E058475F6EAE'
+Assert-Sha256 $GeneratorArchive 'B8223D2F3D66E536298BD2DE0EFD395F1C4CB55DC0840CFEF4E8E50C58AFC3E7'
 Assert-Sha256 $MinGitArchive 'F7748965D5068E81AD93CA1923650DB6742D6E22332B1AE7567A841C59F6BDE5'
 
 $inputRoot = Join-Path $Work 'inputs'
@@ -56,6 +58,24 @@ tar -xf $BusyBoxArchive -C $inputRoot
 $busy = (Get-ChildItem -LiteralPath $inputRoot -Filter busybox.exe -File -Recurse |
     Select-Object -First 1).FullName
 Assert-Arm64 $busy 'BusyBox shell'
+Expand-Archive -LiteralPath $GeneratorArchive -DestinationPath $Work -Force
+$generatorRoot = Join-Path $Work 'native-generators-arm64'
+$generatorPrefix = Join-Path $generatorRoot 'prefix'
+$generatorBin = Join-Path $generatorPrefix 'bin'
+$generatorToolchain = Join-Path $generatorRoot 'toolchain\bin'
+$nativePerl = Join-Path $ClangPrefix 'perl.exe'
+$generatorPrefixPosix = To-Posix $generatorPrefix
+$nativePerlPosix = To-Posix $nativePerl
+Get-ChildItem -LiteralPath $generatorPrefix -File -Recurse | ForEach-Object {
+    $bytes = [IO.File]::ReadAllBytes($_.FullName)
+    if ($bytes.Length -ge 2 -and $bytes[0] -eq 0x4D -and $bytes[1] -eq 0x5A) { return }
+    $text = [Text.Encoding]::UTF8.GetString($bytes)
+    if ($text.Contains('@GENERATOR_PREFIX@') -or $text.Contains('@NATIVE_PERL@')) {
+        $text = $text.Replace('@GENERATOR_PREFIX@', $generatorPrefixPosix).
+            Replace('@NATIVE_PERL@', $nativePerlPosix)
+        [IO.File]::WriteAllText($_.FullName, $text, [Text.UTF8Encoding]::new($false))
+    }
+}
 
 foreach ($name in @('awk', 'basename', 'cat', 'cmp', 'cp', 'cut', 'dirname', 'echo',
     'env', 'expr', 'find', 'grep', 'head', 'install', 'ln', 'mkdir', 'mv', 'printf',
@@ -71,14 +91,13 @@ foreach ($tool in @(
     @($clang, 'Clang'), @($clangxx, 'Clang++'), @($make, 'GNU Make'),
     @((Join-Path $ClangPrefix 'llvm-ar.exe'), 'LLVM ar'),
     @((Join-Path $ClangPrefix 'ld.lld.exe'), 'LLD'),
-    @((Join-Path $ClangPrefix 'perl.exe'), 'Perl'),
-    @((Join-Path $ClangPrefix 'm4.exe'), 'M4'),
-    @((Join-Path $ClangPrefix 'autoconf.exe'), 'Autoconf'),
-    @((Join-Path $ClangPrefix 'automake.exe'), 'Automake')
+    @($nativePerl, 'Perl'),
+    @((Join-Path $generatorBin 'm4.exe'), 'M4'),
+    @((Join-Path $generatorToolchain 'autoconf.exe'), 'Autoconf launcher'),
+    @((Join-Path $generatorToolchain 'automake.exe'), 'Automake launcher'),
+    @((Join-Path $generatorBin 'msta'), 'COCOM msta'),
+    @((Join-Path $generatorBin 'sprut'), 'COCOM sprut')
 )) { Assert-Arm64 $tool[0] $tool[1] }
-if (Test-Path -LiteralPath (Join-Path $ClangPrefix 'cocom.exe')) {
-    Assert-Arm64 (Join-Path $ClangPrefix 'cocom.exe') 'COCOM'
-}
 
 # git archive preserves exact blob bytes and avoids autocrlf changes in generated inputs.
 $sourceTar = Join-Path $Work 'source.tar'
@@ -90,7 +109,13 @@ if ($LASTEXITCODE -ne 0) { throw 'native source extraction failed' }
 $crtPrefix = Split-Path $ClangPrefix
 $resourceDir = (& $clang -print-resource-dir).Trim()
 $pathBefore = $env:PATH
-$env:PATH = "$shim;$ClangPrefix;$pathBefore"
+$env:PATH = "$generatorToolchain;$generatorBin;$shim;$ClangPrefix;$pathBefore"
+$env:NATIVE_PERL = $nativePerl
+$env:AUTOTOOLS_BINDIR = $generatorBin
+$env:ACLOCAL_PATH = Join-Path $generatorPrefix 'share\aclocal'
+$env:M4 = Join-Path $generatorBin 'm4.exe'
+$env:BISON = Join-Path $generatorBin 'bison.exe'
+$env:FLEX = Join-Path $generatorBin 'flex.exe'
 $env:CONFIG_SHELL = "$busy sh"
 $env:SHELL = "$busy sh"
 $env:MAKE = $make
