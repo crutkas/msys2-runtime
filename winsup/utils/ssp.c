@@ -48,6 +48,13 @@ static char opts[] = "+cdehlstvV";
 typedef DWORD64 CONTEXT_REG;
 #define CONTEXT_REG_FMT "%016llx"
 #define ADDR_SSCANF_FMT "%lli"
+#elif defined(__aarch64__)
+#define KERNEL_ADDR 0x00007FF000000000
+#define CONTEXT_SP Sp
+#define CONTEXT_IP Pc
+typedef DWORD64 CONTEXT_REG;
+#define CONTEXT_REG_FMT "%016llx"
+#define ADDR_SSCANF_FMT "%lli"
 #else
 #error unimplemented for this target
 #endif
@@ -83,13 +90,26 @@ typedef struct {
   char *name;
 } DllInfo;
 
+/* Size in bytes of the software breakpoint instruction (INT3 on x86_64,
+   BRK on AArch64).  */
+#if defined(__i386__) || defined(__x86_64__)
+#define SW_BREAKPOINT_SIZE 1
+#elif defined(__aarch64__)
+#define SW_BREAKPOINT_SIZE 4
+#else
+#error unimplemented for this target
+#endif
+
 typedef struct {
   CONTEXT_REG address;
-  unsigned char real_byte;
+  unsigned char real_insn[SW_BREAKPOINT_SIZE];
 } PendingBreakpoints;
 
 CONTEXT_REG low_pc, high_pc=0;
 CONTEXT_REG last_pc=0, pc, last_sp=0, sp;
+#if defined(__aarch64__)
+CONTEXT_REG last_lr=0, lr;
+#endif
 int total_cycles, count;
 HANDLE hProcess;
 PROCESS_INFORMATION procinfo;
@@ -125,11 +145,38 @@ PendingBreakpoints pending_breakpoints[MAXPENDS];
 int num_breakpoints=0;
 
 static void
+write_process_instruction (CONTEXT_REG address, const unsigned char *insn)
+{
+  SIZE_T written;
+
+  if (!WriteProcessMemory (hProcess, (void *) address, insn,
+			   SW_BREAKPOINT_SIZE, &written)
+      || written != SW_BREAKPOINT_SIZE)
+    {
+      fprintf (stderr, "WriteProcessMemory failed at " CONTEXT_REG_FMT
+	       " (error %lu)\n", address, GetLastError ());
+      exit (1);
+    }
+  if (!FlushInstructionCache (hProcess, (void *) address, SW_BREAKPOINT_SIZE))
+    {
+      fprintf (stderr, "FlushInstructionCache failed at " CONTEXT_REG_FMT
+	       " (error %lu)\n", address, GetLastError ());
+      exit (1);
+    }
+}
+
+static void
 add_breakpoint (CONTEXT_REG address)
 {
   int i;
   SIZE_T rv;
-  static char int3[] = { 0xcc };
+#if defined(__i386__) || defined(__x86_64__)
+  static unsigned char brk_insn[] = { 0xcc };
+#elif defined(__aarch64__)
+  static unsigned char brk_insn[] = { 0x00, 0x00, 0x20, 0xd4 };
+#else
+#error unimplemented for this target
+#endif
   for (i=0; i<num_breakpoints; i++)
     {
       if (pending_breakpoints[i].address == address)
@@ -140,14 +187,16 @@ add_breakpoint (CONTEXT_REG address)
   if (i == MAXPENDS)
     return;
   pending_breakpoints[i].address = address;
-  ReadProcessMemory (hProcess,
-		     (void *)address,
-		     &(pending_breakpoints[i].real_byte),
-		     1, &rv);
-
-  WriteProcessMemory (hProcess,
-		      (void *)address,
-		      (LPVOID)int3, 1, &rv);
+  if (!ReadProcessMemory (hProcess, (void *) address,
+			  pending_breakpoints[i].real_insn,
+			  SW_BREAKPOINT_SIZE, &rv)
+      || rv != SW_BREAKPOINT_SIZE)
+    {
+      fprintf (stderr, "ReadProcessMemory failed at " CONTEXT_REG_FMT
+	       " (error %lu)\n", address, GetLastError ());
+      exit (1);
+    }
+  write_process_instruction (address, brk_insn);
   if (i >= num_breakpoints)
     num_breakpoints = i+1;
 }
@@ -156,16 +205,13 @@ static int
 remove_breakpoint (CONTEXT_REG address)
 {
   int i;
-  SIZE_T rv;
   for (i=0; i<num_breakpoints; i++)
     {
       if (pending_breakpoints[i].address == address)
 	{
+	  write_process_instruction (address,
+				     pending_breakpoints[i].real_insn);
 	  pending_breakpoints[i].address = 0;
-	  WriteProcessMemory (hProcess,
-			      (void *)address,
-			      &(pending_breakpoints[i].real_byte),
-			      1, &rv);
 	  return 1;
 	}
     }
@@ -200,10 +246,19 @@ set_step_threads (int threadId, int trace)
   if (rv != -1)
     {
       thread_step_flags[tix] = trace;
+#if defined(__i386__) || defined(__x86_64__)
       if (trace)
 	context.EFlags |= 0x100; /* TRAP (single step) flag */
       else
 	context.EFlags &= ~0x100; /* TRAP (single step) flag */
+#elif defined(__aarch64__)
+      if (trace)
+	context.Cpsr |= 0x00200000; /* PSTATE.SS (single step) flag */
+      else
+	context.Cpsr &= ~0x00200000; /* PSTATE.SS (single step) flag */
+#else
+#error unimplemented for this target
+#endif
       SetThreadContext (thread, &context);
     }
 }
@@ -215,7 +270,13 @@ set_steps ()
   for (i=0; i<num_active_threads; i++)
     {
       GetThreadContext (active_threads[i], &context);
+#if defined(__i386__) || defined(__x86_64__)
       s = context.EFlags & 0x0100;
+#elif defined(__aarch64__)
+      s = context.Cpsr & 0x00200000; /* PSTATE.SS (single step) flag */
+#else
+#error unimplemented for this target
+#endif
       if (!s && thread_step_flags[i])
 	{
 	  set_step_threads (active_thread_ids[i], 1);
@@ -257,6 +318,25 @@ dump_registers (HANDLE thread)
 	  context.Rax, context.Rbx, context.Rcx, context.Rdx);
   printf ("esi %016llx edi %016llx ebp %016llx esp %016llx %016llx\n",
 	  context.Rsi, context.Rdi, context.Rbp, context.Rsp, context.Rip);
+#elif defined(__aarch64__)
+  printf ("x0 %016llx x1 %016llx x2 %016llx x3 %016llx\n",
+	  context.X[0], context.X[1], context.X[2], context.X[3]);
+  printf ("x4 %016llx x5 %016llx x6 %016llx x7 %016llx\n",
+	  context.X[4], context.X[5], context.X[6], context.X[7]);
+  printf ("x8 %016llx x9 %016llx x10 %016llx x11 %016llx\n",
+	  context.X[8], context.X[9], context.X[10], context.X[11]);
+  printf ("x12 %016llx x13 %016llx x14 %016llx x15 %016llx\n",
+	  context.X[12], context.X[13], context.X[14], context.X[15]);
+  printf ("x16 %016llx x17 %016llx x18 %016llx x19 %016llx\n",
+	  context.X[16], context.X[17], context.X[18], context.X[19]);
+  printf ("x20 %016llx x21 %016llx x22 %016llx x23 %016llx\n",
+	  context.X[20], context.X[21], context.X[22], context.X[23]);
+  printf ("x24 %016llx x25 %016llx x26 %016llx x27 %016llx\n",
+	  context.X[24], context.X[25], context.X[26], context.X[27]);
+  printf ("x28 %016llx fp %016llx lr %016llx\n",
+	  context.X[28], context.Fp, context.Lr);
+  printf ("sp %016llx pc %016llx cpsr %08lx\n",
+	  context.Sp, context.Pc, context.Cpsr);
 #else
 #error unimplemented for this target
 #endif
@@ -450,11 +530,17 @@ run_program (char *cmdline)
 	    case STATUS_BREAKPOINT:
 	      if (remove_breakpoint ((CONTEXT_REG)event.u.Exception.ExceptionRecord.ExceptionAddress))
 		{
+#if defined(__aarch64__)
+		  if (!rv)
+		    SetThreadContext (hThread, &context);
+		  thread_return_address[tix] = context.Lr;
+#else
 		  context.CONTEXT_IP --;
 		  if (!rv)
 		    SetThreadContext (hThread, &context);
 		  if (ReadProcessMemory (hProcess, (void *)context.CONTEXT_SP, &rv, sizeof(rv), &rv))
 		      thread_return_address[tix] = rv;
+#endif
 		}
 	      set_step_threads (event.dwThreadId, stepping_enabled);
 	      /*FALLTHRU*/
@@ -462,6 +548,9 @@ run_program (char *cmdline)
 	      opcode_count++;
 	      pc = (CONTEXT_REG)event.u.Exception.ExceptionRecord.ExceptionAddress;
 	      sp = context.CONTEXT_SP;
+#if defined(__aarch64__)
+	      lr = context.Lr;
+#endif
 	      if (tracing_enabled)
 		fprintf (tracefile, CONTEXT_REG_FMT " %08x\n", pc, (int)event.dwThreadId);
 	      if (trace_console)
@@ -493,13 +582,27 @@ run_program (char *cmdline)
 		  if (++qq % 100 == 0)
 		    fprintf (stderr, " " CONTEXT_REG_FMT " %d %d \r",
 			    pc, ncalls, opcode_count);
-
+#if defined(__aarch64__)
+		  if (lr != last_lr && lr == last_pc + 4)
+#else
 		  if (sp == last_sp-sizeof(CONTEXT_REG))
+#endif
 		    {
 		      ncalls++;
 		      store_call_edge (last_pc, pc);
 		      if (last_pc < KERNEL_ADDR && pc > KERNEL_ADDR)
 			{
+#if defined(__aarch64__)
+			  CONTEXT_REG retaddr = lr;
+			  if (verbose)
+			    printf ("skip kernel call: " CONTEXT_REG_FMT " -> " CONTEXT_REG_FMT ", ret = " CONTEXT_REG_FMT "\n",
+				    last_pc, pc, retaddr);
+			  if (retaddr && retaddr < KERNEL_ADDR)
+			    {
+			      add_breakpoint (retaddr);
+			      set_step_threads (event.dwThreadId, 0);
+			    }
+#else
 #if 0
 			  CONTEXT_REG retaddr;
 			  SIZE_T rv;
@@ -513,6 +616,7 @@ run_program (char *cmdline)
 			  add_breakpoint (retaddr);
 			  set_step_threads (event.dwThreadId, 0);
 #endif
+#endif
 			}
 		    }
 		}
@@ -520,6 +624,9 @@ run_program (char *cmdline)
 	      total_cycles++;
 	      last_sp = sp;
 	      last_pc = pc;
+#if defined(__aarch64__)
+	      last_lr = lr;
+#endif
 	      if (pc >= low_pc && pc < high_pc)
 		hits[(pc - low_pc)/2] ++;
 	      break;
@@ -534,7 +641,12 @@ run_program (char *cmdline)
 		    dump_registers (hThread);
 		}
 	      contv = DBG_EXCEPTION_NOT_HANDLED;
+#if defined(__aarch64__)
+	      if (!event.u.Exception.dwFirstChance)
+		running = 0;
+#else
 	      running = 0;
+#endif
 	      break;
 	    }
 
@@ -542,19 +654,39 @@ run_program (char *cmdline)
 	    {
 	      if (pc == thread_return_address[tix])
 		{
+#if defined(__i386__) || defined(__x86_64__)
 		  if (context.EFlags & 0x100)
 		    {
 		      context.EFlags &= ~0x100; /* TRAP (single step) flag */
 		      SetThreadContext (hThread, &context);
 		    }
+#elif defined(__aarch64__)
+		  if (context.Cpsr & 0x00200000)
+		    {
+		      context.Cpsr &= ~0x00200000; /* PSTATE.SS (single step) flag */
+		      SetThreadContext (hThread, &context);
+		    }
+#else
+#error unimplemented for this target
+#endif
 		}
 	      else if (stepping_enabled)
 		{
+#if defined(__i386__) || defined(__x86_64__)
 		  if (!(context.EFlags & 0x100))
 		    {
 		      context.EFlags |= 0x100; /* TRAP (single step) flag */
 		      SetThreadContext (hThread, &context);
 		    }
+#elif defined(__aarch64__)
+		  if (!(context.Cpsr & 0x00200000))
+		    {
+		      context.Cpsr |= 0x00200000; /* PSTATE.SS (single step) flag */
+		      SetThreadContext (hThread, &context);
+		    }
+#else
+#error unimplemented for this target
+#endif
 		}
 	    }
 	  break;
@@ -918,8 +1050,23 @@ main (int argc, char **argv)
 
   fprintf (stderr, "prun: [" CONTEXT_REG_FMT "," CONTEXT_REG_FMT "] Running '%s'\n",
 	  low_pc, high_pc, argv[optind]);
-
-  run_program (argv[optind]);
+  {
+    /* CreateProcess (called below with lpApplicationName == NULL) is
+       documented to modify the lpCommandLine buffer in place.  argv[optind]
+       points into our own argv, so passing it directly lets CreateProcess
+       scribble on it; this was observed on aarch64-cygwin as the command
+       line coming back mangled (e.g. 'test_hello.exe' -> 'st_hello.exxee')
+       on later use.  Pass a private writable copy instead.  It is not freed
+       because run_program() stores it in dll_info[0].name, which is read
+       later when printing the DLL-profile table.  */
+    char *cmdline_copy = strdup (argv[optind]);
+    if (!cmdline_copy)
+      {
+	fprintf (stderr, "Out of memory duplicating cmdline\n");
+	exit (1);
+      }
+    run_program (cmdline_copy);
+  }
 
   hdr.lpc = low_pc;
   hdr.hpc = high_pc;
@@ -935,7 +1082,7 @@ main (int argc, char **argv)
 
   if (dll_counts)
     {
-#ifdef __x86_64__
+#if defined(__x86_64__) || defined(__aarch64__)
       /*       1234567 123% 1234567 123% 1234567812345678 xxxxxxxxxxx */
       printf (" Main-Thread Other-Thread BaseAddr         DLL Name\n");
 #else

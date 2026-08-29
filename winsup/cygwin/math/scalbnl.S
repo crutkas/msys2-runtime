@@ -7,15 +7,15 @@
 
 	.file	"scalbnl.S"
 	.text
-#ifdef __x86_64__
+#if defined(__x86_64__)
 	.align 8
-#else
+#elif defined(__i386__)
 	.align 4
 #endif
 .globl __MINGW_USYMBOL(scalbnl)
 	.def	__MINGW_USYMBOL(scalbnl);	.scl	2;	.type	32;	.endef
 __MINGW_USYMBOL(scalbnl):
-#ifdef __x86_64__
+#if defined(__x86_64__)
 	subq  $24, %rsp
 	andl    $-1, %r8d
 	movq	%r8, (%rsp)
@@ -28,14 +28,43 @@ __MINGW_USYMBOL(scalbnl):
 	fstpt	(%rcx)
 	addq $24, %rsp
 	ret
-#else
+#elif defined(__i386__)
 	fildl	16(%esp)
 	fldt	4(%esp)
 	fscale
 	fstp	%st(1)
 	ret
+#elif __SIZEOF_LONG_DOUBLE__ == __SIZEOF_DOUBLE__
+	mov	w1, #-1022
+	cmp	w0, w1
+	b.lt	scalbn
+	cmp	w0, #1023
+	b.gt	scalbn
+
+	stp	x29, x30, [sp, #-32]!
+	mov	x29, sp
+	str	d0, [sp, #16]
+	str	w0, [sp, #24]
+	scvtf	d1, w0
+	fmov	d0, #2.0
+	bl	pow
+	ldr	d1, [sp, #16]
+	fmul	d0, d1, d0
+	fmov	x9, d0
+	ubfx	x9, x9, #52, #11
+	cbz	x9, 1f
+	cmp	x9, #0x7ff
+	b.eq	1f
+	ldp	x29, x30, [sp], #32
+	ret
+1:
+	ldr	d0, [sp, #16]
+	ldr	w0, [sp, #24]
+	ldp	x29, x30, [sp], #32
+	b	scalbn
+#else
+	.error "Not supported on your platform yet"
 #endif
 
 .globl __MINGW_USYMBOL(scalblnl)
 	.set	__MINGW_USYMBOL(scalblnl),__MINGW_USYMBOL(scalbnl)
-

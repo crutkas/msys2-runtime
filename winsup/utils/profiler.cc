@@ -193,8 +193,10 @@ sample (CONTEXT *context, HANDLE h)
       return 0ULL;
     }
   else
-#ifdef __x86_64__
+#if defined(__x86_64__)
     return context->Rip;
+#elif defined(__aarch64__)
+    return context->Pc;
 #else
 #error unimplemented for this target
 #endif
@@ -503,8 +505,10 @@ find_text_section (LPVOID base, HANDLE h)
 
   read_child ((void *) &machine, sizeof (machine),
               &inth->FileHeader.Machine, h);
-#ifdef __x86_64__
+#if defined(__x86_64__)
   if (machine != IMAGE_FILE_MACHINE_AMD64)
+#elif defined(__aarch64__)
+  if (machine != IMAGE_FILE_MACHINE_ARM64)
 #else
 #error unimplemented for this target
 #endif
@@ -530,6 +534,7 @@ find_text_section (LPVOID base, HANDLE h)
 void
 add_span (DWORD pid, WCHAR *name, LPVOID base, HANDLE h)
 {
+  (void) h;
   child *c = get_child (pid);
 
   if (!c)
@@ -618,7 +623,7 @@ make_command_line (linebuf & one_line, char **argv)
 {
   for (; *argv; argv++)
     {
-      char *p = NULL;
+      const char *p = NULL;
       const char *a = *argv;
 
       int len = strlen (a);
@@ -813,6 +818,8 @@ cygwin_pid (DWORD winpid)
 DWORD
 profile1 (FILE *ofile, pid_t pid)
 {
+  (void) ofile;
+  (void) pid;
   DEBUG_EVENT ev;
   DWORD       res = 0;
 
@@ -982,7 +989,7 @@ const char *const opts = "+dehfo:p:s:vVw";
 void __attribute__ ((__noreturn__))
 print_version ()
 {
-  char *year_of_build = strrchr (__DATE__, ' ') + 1;
+  const char *year_of_build = strrchr (__DATE__, ' ') + 1;
   printf ("profiler (cygwin) %d.%d.%d\n"
           "IP-Sampling Profiler\n"
           "Copyright (C) %s%s Cygwin Authors\n"

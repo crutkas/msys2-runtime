@@ -325,3 +325,66 @@ jobs:
         env:
           LAYER4_LLVM_BIN: >-
             ${{ steps.msys2.outputs.msys2-location }}\clangarm64\bin
+
+  aarch64-layer5-math:
+    name: native ARM64 math and diagnostic utilities validation
+    runs-on: windows-11-arm
+
+    steps:
+      - name: Checkout runtime source
+        uses: actions/checkout@v7
+
+      - name: Verify native ARM64 runner
+        shell: pwsh
+        run: |
+          & .github/checks/assert-runner-architecture.ps1 `
+            -ExpectedNativeMachine ARM64 `
+            -ExpectedProcessArchitecture Arm64 `
+            -EvidencePath "$env:RUNNER_TEMP\arm64-layer5-runner.txt"
+
+      - id: msys2
+        name: Set up native Clang ARM64 tools
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: CLANGARM64
+          update: true
+          install: >-
+            mingw-w64-clang-aarch64-clang
+            mingw-w64-clang-aarch64-llvm
+
+      - name: Verify layer-5 source invariants
+        shell: msys2 {0}
+        run: .github/checks/test-layer5-static.sh
+
+      - name: Compile and execute production layer-5 paths
+        shell: msys2 {0}
+        run: .github/checks/test-aarch64-layer5.sh
+        env:
+          CC: /clangarm64/bin/clang.exe
+          CXX: /clangarm64/bin/clang++.exe
+          LLVM_NM: /clangarm64/bin/llvm-nm.exe
+          LLVM_OBJDUMP: /clangarm64/bin/llvm-objdump.exe
+          LLVM_READOBJ: /clangarm64/bin/llvm-readobj.exe
+
+  x86_64-expm1l:
+    name: x86_64 production expm1l regression
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout runtime source
+        uses: actions/checkout@v7
+
+      - name: Set up x86_64 MSYS tools
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MSYS
+          update: true
+          install: gcc
+
+      - name: Verify layer-5 source invariants
+        shell: msys2 {0}
+        run: .github/checks/test-layer5-static.sh
+
+      - name: Compile and execute production expm1l
+        shell: msys2 {0}
+        run: .github/checks/test-x86_64-expm1l.sh

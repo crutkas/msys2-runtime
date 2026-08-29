@@ -7,15 +7,15 @@
 
 	.file	"remainder.S"
 	.text
-#ifdef __x86_64__
+#if defined(__x86_64__)
 	.align 8
-#else
+#elif defined(__i386__)
 	.align 4
 #endif
+#if defined(__x86_64__)
 .globl __MINGW_USYMBOL(remainder)
 	.def	__MINGW_USYMBOL(remainder);	.scl	2;	.type	32;	.endef
 __MINGW_USYMBOL(remainder):
-#ifdef __x86_64__
 	movsd	%xmm0,-16(%rsp)
 	movsd	%xmm1,-32(%rsp)
 	fldl	-32(%rsp)
@@ -28,7 +28,10 @@ __MINGW_USYMBOL(remainder):
 	fstpl	-16(%rsp)
 	movsd	-16(%rsp),%xmm0
 	ret
-#else
+#elif defined(__i386__)
+.globl __MINGW_USYMBOL(remainder)
+	.def	__MINGW_USYMBOL(remainder);	.scl	2;	.type	32;	.endef
+__MINGW_USYMBOL(remainder):
 	fldl	12(%esp)
 	fldl	4(%esp)
 1:	fprem1
@@ -37,4 +40,8 @@ __MINGW_USYMBOL(remainder):
 	jp	1b
 	fstp	%st(1)
 	ret
+#elif __SIZEOF_LONG_DOUBLE__ == __SIZEOF_DOUBLE__
+	/* The double implementation is supplied by libm on this target.  */
+#else
+	.error "Not supported on your platform yet"
 #endif
