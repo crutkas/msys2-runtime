@@ -619,10 +619,14 @@ EXCEPTION_DISPOSITION
 exception::myfault (EXCEPTION_RECORD *e, exception_list *frame, CONTEXT *in,
 		    PDISPATCHER_CONTEXT dispatch)
 {
+  if (IS_UNWINDING(e->ExceptionFlags))
+    return ExceptionContinueSearch;
+
   PSCOPE_TABLE table = (PSCOPE_TABLE) dispatch->HandlerData;
-  RtlUnwindEx (frame,
-	       (char *) dispatch->ImageBase + table->ScopeRecord[0].JumpTarget,
-	       e, 0, in, dispatch->HistoryTable);
+  void *jump_target = ((char *) dispatch->ImageBase) + table->ScopeRecord[0].JumpTarget;
+
+  CONTEXT c;
+  RtlUnwindEx (frame, jump_target, e, 0, &c, dispatch->HistoryTable);
   /* NOTREACHED, make gcc happy. */
   return ExceptionContinueSearch;
 }
@@ -941,6 +945,67 @@ singlestep_handler (EXCEPTION_POINTERS *ep)
 	return EXCEPTION_CONTINUE_EXECUTION;
     }
   return EXCEPTION_CONTINUE_SEARCH;
+}
+#endif
+
+#ifdef __aarch64__
+/* This function uses RtlRestoreContext to ensure that LR does not get
+   clobbered. Note that this function should not return, and the stack
+   contents created by this function are left un-popped. This should
+   not be a problem, since the context restoration also restores SP. */
+void
+_cygtls::sigdelayed_impl(PCONTEXT ctx)
+{
+  int backup_errno = saved_errno;
+
+  call_signal_handler();
+
+  lock();
+
+  if(backup_errno >= 0)
+  {
+    *errno_addr = backup_errno;
+  }
+
+  ctx->Pc = pop();
+
+  /* Atomically clear the return address. */
+  InterlockedExchange64 ((LONG64*)stackptr, 0);
+
+  incyg = 0;
+  unlock();
+
+  RtlRestoreContext(ctx, NULL);
+
+  /* If we got here, something was wrong. */
+  api_fatal ("Failed to restore context in sigdelayed_impl");
+}
+
+/* This function restores the context's clobbered registers and
+   calls the actual sigdelayed implementation. */
+extern "C" void
+sigdelayed_init(PCONTEXT ctx)
+{
+  /* Retrieving the registers stored on stack by sigdelayed. */
+  const DWORD64* sp = ((DWORD64*)ctx->Sp);
+  const DWORD64 stack_x16 = sp[0];
+  const DWORD64 stack_x17 = sp[1];
+  const DWORD64 stack_x0 = sp[2];
+  const DWORD64 stack_lr = sp[3];
+
+  ctx->X16 = stack_x16; // x16 clobbered by RtlCaptureContext
+  ctx->X17 = stack_x17;
+  ctx->X0 = stack_x0; // x0 isn't set by RtlCaptureContext
+  ctx->Lr = stack_lr; // LR is zeroed out by RtlCaptureContext
+
+  /* "sigdelayed" allocates 0x390 bytes for the context, matching the
+     struct's size. This should cause an error if the size of the struct
+     happened to change. */
+  static_assert(sizeof(CONTEXT) == 0x390);
+
+  ctx->Sp += sizeof(CONTEXT) + 32; // undo stack pushes from sigdelayed
+
+  _my_tls.sigdelayed_impl(ctx);
 }
 #endif
 
@@ -1712,6 +1777,7 @@ done:
 
 }
 
+#if defined(__x86_64__) || defined(__aarch64__)
 static void
 altstack_wrapper (int sig, siginfo_t *siginfo, ucontext_t *sigctx,
 		  void (*handler) (int, siginfo_t *, void *))
@@ -1762,6 +1828,7 @@ altstack_wrapper (int sig, siginfo_t *siginfo, ucontext_t *sigctx,
 	teb->Tib.StackLimit = old_limit;
     }
 }
+#endif
 
 int
 _cygtls::call_signal_handler ()

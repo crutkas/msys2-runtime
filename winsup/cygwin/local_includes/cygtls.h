@@ -228,6 +228,11 @@ public: /* Do NOT remove this public: line, it's a marker for gentls_offsets. */
   {
     return initialized == CYGTLS_INITIALIZED;
   }
+
+#ifdef __aarch64__
+  void sigdelayed_impl(PCONTEXT ctx);
+#endif
+
   bool interrupt_now (CONTEXT *, siginfo_t&, void *, struct sigaction&);
   void interrupt_setup (siginfo_t&, void *, struct sigaction&);
 
@@ -335,6 +340,26 @@ public:
   void leave () __attribute__ ((returns_twice));
 };
 
+#if defined(__aarch64__)
+#define EXCEPTION_MYFAULT_REF "_ZN9exception7myfaultEP17_EXCEPTION_RECORDPvP8_CONTEXTP25_DISPATCHER_CONTEXT_ARM64"
+/* An SEH directive that switches back to the code section.  */
+#define SEH_CODE ".text"
+#elif defined(__x86_64__)
+#define EXCEPTION_MYFAULT_REF "_ZN9exception7myfaultEP17_EXCEPTION_RECORDPvP8_CONTEXTP19_DISPATCHER_CONTEXT"
+#define SEH_CODE ".seh_code"
+#endif
+
+#define TRY_HANDLER_DATA \
+  __asm__ goto ("\n\
+    .seh_handler "							  \
+      EXCEPTION_MYFAULT_REF ",						  \
+      @except								\n\
+    .seh_handlerdata							\n\
+    .long 1								\n\
+    .rva %l[__l_try],%l[__l_endtry],%l[__l_except],%l[__l_except]	\n"\
+    SEH_CODE "								\n"\
+    : : : : __l_try, __l_endtry, __l_except)
+
 /* Exception handling macros. This is a handmade SEH try/except. */
 #define __mem_barrier	__asm__ __volatile__ ("" ::: "memory")
 #define __try \
@@ -342,13 +367,7 @@ public:
     __label__ __l_try, __l_except, __l_endtry; \
     __mem_barrier; \
     san __sebastian (&&__l_except); \
-    __asm__ goto ("\n" \
-      "  .seh_handler _ZN9exception7myfaultEP17_EXCEPTION_RECORDPvP8_CONTEXTP19_DISPATCHER_CONTEXT, @except						\n" \
-      "  .seh_handlerdata						\n" \
-      "  .long 1							\n" \
-      "  .rva %l[__l_try],%l[__l_endtry],%l[__l_except],%l[__l_except]	\n" \
-      "  .seh_code							\n" \
-      : : : : __l_try, __l_endtry, __l_except); \
+    TRY_HANDLER_DATA; \
     { \
       __l_try: \
 	__mem_barrier;
