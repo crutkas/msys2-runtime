@@ -541,6 +541,7 @@ def parse_commit_object(raw, oid, dco, session, expect_parents):
     for parent in parents:
         canonical_oid("parent", parent)
 
+    identity_times = {}
     for key in ("author", "committer"):
         match = IDENT_PATTERN.match(values[key])
         if not match:
@@ -548,6 +549,8 @@ def parse_commit_object(raw, oid, dco, session, expect_parents):
         if match.group(1) != dco:
             raise TrailerError("%s identity is %r, expected %r"
                                % (key, match.group(1), dco))
+        identity_times[key] = (int(match.group(2)),
+                               match.group(3).decode("ascii"))
 
     message = raw[separator + 2:]
     if not message:
@@ -587,6 +590,7 @@ def parse_commit_object(raw, oid, dco, session, expect_parents):
     return {
         "tree": values["tree"].decode("ascii"),
         "parents": [p.decode("ascii") for p in parents],
+        "identity_times": identity_times,
         "message_lines": lines,
     }
 
@@ -763,12 +767,50 @@ def require_session_erratum(parsed, invalid_session, correct_session,
         raise TrailerError("correcting commit session erratum block is not exact")
 
 
+def require_authorship_erratum(parsed, affected, affected_commit,
+                               recorded_session, correct_session):
+    expected_identity_time = (1787947708, "-0700")
+    for key in ("author", "committer"):
+        if affected["identity_times"][key] != expected_identity_time:
+            raise TrailerError(
+                "affected commit %s time is %r, expected %r"
+                % (key, affected["identity_times"][key],
+                   expected_identity_time))
+
+    expected = [
+        b"Copilot authoring-session erratum:",
+        b"Affected commit: " + affected_commit.encode("ascii"),
+        b"Invalid recorded session: " + recorded_session.encode("ascii"),
+        b"Commit author timestamp: 2026-08-28T20:08:28Z",
+        b"Commit committer timestamp: 2026-08-28T20:08:28Z",
+        b"Claimed session last recorded event: 2026-08-28T11:39:16.107Z",
+        b"Claimed session seven-character commit matches: 0",
+        b"Claimed session status: not authoring; activity ended 8h29m earlier",
+        b"Correct authoring session: " + correct_session.encode("ascii"),
+        b"Authoring invocation: 2026-08-28T20:08:26.430Z powershell git commit",
+        b"Authoring result: 2026-08-28T20:08:29.877Z contains 5d05f55e6",
+        b"Remediation: additive correcting record; existing objects unchanged",
+    ]
+
+    lines = parsed["message_lines"]
+    starts = [index for index, line in enumerate(lines)
+              if line == expected[0]]
+    if len(starts) != 1:
+        raise TrailerError("correcting commit has %d authorship erratum blocks"
+                           % len(starts))
+    actual = lines[starts[0]:starts[0] + len(expected)]
+    if actual != expected:
+        raise TrailerError(
+            "correcting commit authorship erratum block is not exact")
+
+
 def main(argv):
-    if len(argv) < 12:
+    if len(argv) < 13:
         raise TrailerError(
             "usage: BASE LEGACY_HEAD LEGACY_SESSION INVALID_HEAD"
             " INVALID_RECORDED_SESSION PRE_ERRATUM_HEAD PRE_ERRATUM_SESSION"
-            " ERRATUM_HEAD HEAD SESSION DCO REVOKED...")
+            " ERRATUM_HEAD PRE_AUTHORSHIP_ERRATUM_HEAD HEAD SESSION DCO"
+            " REVOKED...")
 
     initialize_git_environment()
     environment_fixtures = environment_self_test()
@@ -785,10 +827,12 @@ def main(argv):
     pre_erratum_head = resolve_exact_commit("pre-erratum head", argv[6])
     pre_erratum_session = argv[7]
     erratum_head = resolve_exact_commit("erratum head", argv[8])
-    head = resolve_exact_commit("head", argv[9])
-    session = argv[10]
-    dco_text = argv[11]
-    revoked_args = argv[12:]
+    pre_authorship_erratum_head = resolve_exact_commit(
+        "pre-authorship-erratum head", argv[9])
+    head = resolve_exact_commit("head", argv[10])
+    session = argv[11]
+    dco_text = argv[12]
+    revoked_args = argv[13:]
 
     for label, value in (("legacy session", legacy_session),
                          ("invalid recorded session", invalid_session),
@@ -799,6 +843,9 @@ def main(argv):
             raise TrailerError("%s %r is empty or padded" % (label, value))
     if invalid_session in {legacy_session, pre_erratum_session, session}:
         raise TrailerError("invalid recorded session is not distinct")
+    if pre_erratum_session == session:
+        raise TrailerError(
+            "invalid authoring-session claim is not distinct from correction")
 
     dco = dco_text.encode("utf-8")
 
@@ -830,6 +877,14 @@ def main(argv):
     if not is_ancestor(erratum_head, head):
         raise TrailerError("erratum head %s is not an ancestor of head %s"
                            % (erratum_head, head))
+    if not is_ancestor(erratum_head, pre_authorship_erratum_head):
+        raise TrailerError(
+            "erratum head %s is not an ancestor of pre-authorship-erratum"
+            " head %s" % (erratum_head, pre_authorship_erratum_head))
+    if not is_ancestor(pre_authorship_erratum_head, head):
+        raise TrailerError(
+            "pre-authorship-erratum head %s is not an ancestor of head %s"
+            % (pre_authorship_erratum_head, head))
 
     invalid_commits = [
         canonical_oid("erratum-covered commit", value.decode("ascii"))
@@ -851,6 +906,16 @@ def main(argv):
         raise TrailerError(
             "session erratum must be exactly one correcting commit")
     invalid_commit_set = set(invalid_commits)
+    authorship_tail = [
+        canonical_oid("authorship correction commit", value.decode("ascii"))
+        for value in git_bytes(
+            "rev-list", "--reverse",
+            "%s..%s" % (pre_authorship_erratum_head, head)).split()
+    ]
+    if len(authorship_tail) != 1:
+        raise TrailerError(
+            "authorship erratum must be exactly one correcting head commit")
+    authorship_erratum_head = authorship_tail[0]
 
     if len(revoked_args) != EXPECTED_REVOKED:
         raise TrailerError("expected exactly %d revoked commits, received %d"
@@ -883,6 +948,8 @@ def main(argv):
     previous = base
     head_tree = None
     erratum_record = None
+    authorship_invalid_record = None
+    authorship_erratum_record = None
     for oid in commits:
         commit_session = session.encode("ascii")
         for boundary, boundary_session in boundaries:
@@ -902,10 +969,19 @@ def main(argv):
         head_tree = parsed["tree"]
         if oid == erratum_head:
             erratum_record = parsed
+        if oid == pre_erratum_head:
+            authorship_invalid_record = parsed
+        if oid == authorship_erratum_head:
+            authorship_erratum_record = parsed
         if oid in invalid_commit_set:
             print("commit_ok=%s recorded_session=%s session_claim=invalid"
                   " erratum=%s"
                   % (oid, commit_session.decode("ascii"), erratum_head))
+        elif oid == pre_erratum_head:
+            print("commit_ok=%s recorded_session=%s"
+                  " authoring_session_claim=invalid erratum=%s"
+                  % (oid, commit_session.decode("ascii"),
+                     authorship_erratum_head))
         else:
             print("commit_ok=%s session=%s"
                   % (oid, commit_session.decode("ascii")))
@@ -917,6 +993,13 @@ def main(argv):
         raise TrailerError("correcting commit was not parsed")
     require_session_erratum(
         erratum_record, invalid_session, session, invalid_commits)
+    if authorship_erratum_record is None:
+        raise TrailerError("authorship correcting commit was not parsed")
+    if authorship_invalid_record is None:
+        raise TrailerError("invalid authoring-session commit was not parsed")
+    require_authorship_erratum(
+        authorship_erratum_record, authorship_invalid_record,
+        pre_erratum_head, pre_erratum_session, session)
 
     print("classification=diagnostic")
     print("consumable=false")
@@ -934,12 +1017,20 @@ def main(argv):
     print("invalid_recorded_session=%s" % invalid_session)
     print("correct_cli_session=%s" % session)
     print("session_erratum_commit=%s" % erratum_head)
+    print("authorship_erratum=ok")
+    print("authorship_erratum_commits=1")
+    print("invalid_authoring_session_commit=%s" % pre_erratum_head)
+    print("invalid_authoring_session=%s" % pre_erratum_session)
+    print("correct_authoring_session=%s" % session)
+    print("authorship_erratum_commit=%s" % authorship_erratum_head)
     print("audited_commits=%d" % len(commits))
     print("base=%s" % base)
     print("legacy_head=%s" % legacy_head)
     print("invalid_session_head=%s" % invalid_head)
     print("pre_erratum_head=%s" % pre_erratum_head)
     print("erratum_head=%s" % erratum_head)
+    print("pre_authorship_erratum_head=%s"
+          % pre_authorship_erratum_head)
     print("head=%s" % head)
     print("tree=%s" % head_tree)
     return 0
