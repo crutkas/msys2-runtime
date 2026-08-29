@@ -63,6 +63,7 @@ endif
 if TARGET_X86_64
 TARGET_FILES= \
 	x86_64/bcopy.S \
+	aarch64/fastcwd.cc \
 	x86_64/memchr.S \
 	x86_64/memcpy.S \
 	x86_64/memmove.S \
