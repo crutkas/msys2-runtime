@@ -5,6 +5,7 @@ param(
     [Parameter(Mandatory)] [string] $BusyBoxExe,
     [Parameter(Mandatory)] [string] $MinGitRoot,
     [Parameter(Mandatory)] [string] $Destination,
+    [Parameter(Mandatory)] [ValidatePattern('^[0-9a-f]{40}$')] [string] $RuntimeCommit,
     [long] $SourceDateEpoch = 1788034899
 )
 
@@ -102,6 +103,7 @@ $provenance = [ordered]@{
     source_date_epoch = $SourceDateEpoch
     runtime = [ordered]@{
         source = 'this repository and pull-request head'
+        source_commit = $RuntimeCommit
         base_commit = 'f71b5d07c804433dfa06df122b22efd200e9ec2b'
         toolchain = 'prebuilt native ARM64 Clang/LLD from MSYS2 CLANGARM64'
         generators = [ordered]@{

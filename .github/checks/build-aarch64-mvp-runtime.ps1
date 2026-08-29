@@ -41,6 +41,25 @@ function Assert-Sha256([string] $Path, [string] $Expected) {
 
 function To-Posix([string] $Path) { return $Path.Replace('\', '/') }
 
+$sourceCommit = (& git -C $Source rev-parse 'HEAD^{commit}').Trim()
+if ($sourceCommit -notmatch '^[0-9a-f]{40}$') {
+    throw "Source HEAD is not an exact 40-hex commit: $sourceCommit"
+}
+$resolvedWork = [IO.Path]::GetFullPath($Work)
+if ((Split-Path $resolvedWork -Leaf) -ne 'git-bash-mvp' -or
+    [IO.Path]::GetPathRoot($resolvedWork) -eq $resolvedWork) {
+    throw "Refusing to clean unsafe work root: $resolvedWork"
+}
+$staleSentinel = Join-Path $resolvedWork 'stale-sentinel'
+if (Test-Path -LiteralPath $resolvedWork) {
+    Remove-Item -LiteralPath $resolvedWork -Recurse -Force
+}
+if (Test-Path -LiteralPath $staleSentinel) {
+    throw "Stale work-root sentinel survived cleanup: $staleSentinel"
+}
+Write-Host "source-identity: $sourceCommit"
+Write-Host "clean-work-root: $resolvedWork"
+
 Assert-Sha256 $BusyBoxArchive '23D605DDDCFAE3E1865C5E5CC9BF7C54FA104AD62B2313644FA7E058475F6EAE'
 Assert-Sha256 $GeneratorArchive 'B8223D2F3D66E536298BD2DE0EFD395F1C4CB55DC0840CFEF4E8E50C58AFC3E7'
 Assert-Sha256 $MinGitArchive 'F7748965D5068E81AD93CA1923650DB6742D6E22332B1AE7567A841C59F6BDE5'
@@ -135,6 +154,19 @@ $env:RANLIB = Join-Path $ClangPrefix 'llvm-ranlib.exe'
 $env:READELF = Join-Path $ClangPrefix 'llvm-readelf.exe'
 $env:STRIP = Join-Path $ClangPrefix 'llvm-strip.exe'
 $env:WINDRES = Join-Path $ClangPrefix 'llvm-windres.exe'
+foreach ($override in @(
+    @('ACLOCAL', $env:ACLOCAL, '--version'),
+    @('AUTOCONF', $env:AUTOCONF, '--version'),
+    @('AUTOMAKE', $env:AUTOMAKE, '--version'),
+    @('RM', $env:RM, '--help')
+)) {
+    if ($override[1] -match '^[/\\](usr|bin)[/\\]') {
+        throw "$($override[0]) unexpectedly resolved to a system fallback: $($override[1])"
+    }
+    $firstLine = (& $override[1] $override[2] | Select-Object -First 1)
+    if ($LASTEXITCODE -ne 0) { throw "$($override[0]) override failed its native smoke test" }
+    Write-Host "generator-override: $($override[0])=$($override[1]) ($firstLine)"
+}
 
 $src = To-Posix $sourceRoot
 $build = To-Posix $buildRoot
@@ -167,7 +199,7 @@ try {
         '--build=aarch64-w64-mingw32' '--host=aarch64-w64-mingw32' `
         '--target=aarch64-pc-cygwin' '--disable-nls' '--disable-doc' `
         '--disable-dependency-tracking' '--disable-dumper' '--with-cross-bootstrap' `
-        '--with-msys2-runtime-commit=f71b5d07c804433dfa06df122b22efd200e9ec2b'
+        "--with-msys2-runtime-commit=$sourceCommit"
     if ($LASTEXITCODE -ne 0) { throw 'top-level configure failed' }
     & $make -j $Jobs all-target-newlib
     if ($LASTEXITCODE -ne 0) { throw 'newlib build failed' }
@@ -193,7 +225,7 @@ try {
         '--build=aarch64-w64-mingw32' '--host=aarch64-pc-cygwin' `
         '--target=aarch64-pc-cygwin' '--with-newlib' '--disable-nls' '--disable-doc' `
         '--disable-dependency-tracking' '--disable-dumper' '--with-cross-bootstrap' `
-        '--with-msys2-runtime-commit=f71b5d07c804433dfa06df122b22efd200e9ec2b'
+        "--with-msys2-runtime-commit=$sourceCommit"
     if ($LASTEXITCODE -ne 0) { throw 'winsup configure failed' }
     & $make -C cygwin -j $Jobs
     if ($LASTEXITCODE -ne 0) { throw 'runtime DLL build failed' }

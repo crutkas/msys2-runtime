@@ -430,6 +430,9 @@ jobs:
       - name: Build native runtime and Bash from exact source
         shell: pwsh
         run: |
+          New-Item -ItemType Directory -Path "$env:MVP_WORK_ROOT" -Force | Out-Null
+          Set-Content -LiteralPath "$env:MVP_WORK_ROOT\stale-sentinel" `
+            -Value 'must be removed before configuration'
           & .github/checks/build-aarch64-mvp-runtime.ps1 `
             -Source "$env:GITHUB_WORKSPACE" `
             -Work "$env:MVP_WORK_ROOT" `
@@ -443,12 +446,14 @@ jobs:
         shell: pwsh
         run: |
           $work = "$env:MVP_WORK_ROOT"
+          $runtimeCommit = (& git rev-parse 'HEAD^{commit}').Trim()
           & .github/checks/package-aarch64-mvp-runtime.ps1 `
             -RuntimeDll "$work\build\aarch64-pc-cygwin\winsup\cygwin\new-msys-2.0.dll" `
             -BashExe "$work\bash-build\bash.exe" `
             -BusyBoxExe "$work\inputs\busybox-c26a88d7\bin\busybox.exe" `
             -MinGitRoot "$work\mingit" `
-            -Destination "$env:RUNNER_TEMP\git-bash-mvp-publish"
+            -Destination "$env:RUNNER_TEMP\git-bash-mvp-publish" `
+            -RuntimeCommit $runtimeCommit
 
       - name: Exercise runtime, Bash, Git, and emulated x64 child
         shell: pwsh
