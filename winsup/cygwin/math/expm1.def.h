@@ -56,7 +56,7 @@ __FLT_ABI(expm1) (__FLT_TYPE x)
   }
   else if (x_class == FP_INFINITE)
   {
-    return (signbit (x) ? -__FLT_CST(1.0) : __FLT_HUGE_VAL);
+    return (signbit (x) ? -__FLT_CST(1.0) : x);
   }
   else if (x_class == FP_ZERO)
   {
@@ -64,8 +64,19 @@ __FLT_ABI(expm1) (__FLT_TYPE x)
   }
   if (__FLT_ABI (fabs) (x) < __FLT_LOGE2)
     {
-      x /= __FLT_LOGE2;
-      __asm__ __volatile__ ("f2xm1" : "=t" (x) : "0" (x));
+#if defined(__x86_64__)
+      if (__FLT_ABI (fabs) (x) < __FLT_CST (0x1p-64))
+	return x;
+      if (__FLT_ABI (fabs) (x) < __FLT_CST (0x1p-32))
+	return x + x * x / __FLT_CST (2.0);
+      __asm__ __volatile__ (
+	"fldl2e\n\t"
+	"fmulp\n\t"
+	"f2xm1"
+	: "=t" (x) : "0" (x) : "st(1)");
+#elif __SIZEOF_LONG_DOUBLE__ == __SIZEOF_DOUBLE__
+      x = expm1 ((double) x);
+#endif
       return x;
     }
   return __FLT_ABI (exp) (x) - __FLT_CST (1.0);

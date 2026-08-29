@@ -7,9 +7,9 @@
 
 	.file	"log10l.S"
 	.text
-#ifdef __x86_64__
+#if defined(__x86_64__)
 	.align 8
-#else
+#elif defined(__i386__)
 	.align 4
 #endif
 one:	.double 1.0
@@ -19,22 +19,22 @@ one:	.double 1.0
 limit:	.double 0.29
 
 	.text
-#ifdef __x86_64__
+#if defined(__x86_64__)
 	.align 8
-#else
+#elif defined(__i386__)
 	.align 4
 #endif
 .globl __MINGW_USYMBOL(log10l)
 	.def	__MINGW_USYMBOL(log10l);	.scl	2;	.type	32;	.endef
 __MINGW_USYMBOL(log10l):
-#ifdef __x86_64__
+#if defined(__x86_64__)
 	fldlg2			// log10(2)
 	fldt	(%rdx)		// x : log10(2)
 	fxam
 	fnstsw
 	fld	%st		// x : x : log10(2)
 	sahf
-	jc	3f		// in case x is NaN or ±Inf
+	jc	3f		// in case x is NaN or ï¿½Inf
 4:	fsubl	one(%rip)	// x-1 : x : log10(2)
 	fld	%st		// x-1 : x-1 : x : log10(2)
 	fabs			// |x-1| : x-1 : x : log10(2)
@@ -56,21 +56,21 @@ __MINGW_USYMBOL(log10l):
 	fstpt	(%rcx)
 	ret
 
-3:	jp	4b		// in case x is ±Inf
+3:	jp	4b		// in case x is ï¿½Inf
 	fstp	%st(1)
 	fstp	%st(1)
 	movq	%rcx,%rax
 	movq	$0,8(%rcx)
 	fstpt	(%rcx)
 	ret
-#else
+#elif defined(__i386__)
 	fldlg2			// log10(2)
 	fldt	4(%esp)		// x : log10(2)
 	fxam
 	fnstsw
 	fld	%st		// x : x : log10(2)
 	sahf
-	jc	3f		// in case x is NaN or ±Inf
+	jc	3f		// in case x is NaN or ï¿½Inf
 4:	fsubl	one		// x-1 : x : log10(2)
 	fld	%st		// x-1 : x-1 : x : log10(2)
 	fabs			// |x-1| : x-1 : x : log10(2)
@@ -86,8 +86,12 @@ __MINGW_USYMBOL(log10l):
 	fyl2x			// log10(x)
 	ret
 
-3:	jp	4b		// in case x is ±Inf
+3:	jp	4b		// in case x is ï¿½Inf
 	fstp	%st(1)
 	fstp	%st(1)
 	ret
+#elif __SIZEOF_LONG_DOUBLE__ == __SIZEOF_DOUBLE__
+	b	log10
+#else
+	.error "Not supported on your platform yet"
 #endif

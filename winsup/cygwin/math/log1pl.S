@@ -12,18 +12,20 @@
 	   0.29 is a safe value.
 	 */
 
+#if defined(__x86_64__) || defined(__i386__)
 	/* Only gcc understands the .tfloat type
 	   The series of .long below represents
 	   limit:	.tfloat 0.29
 	 */
 	.align 16
+#endif
 limit:
 	.long 2920577761
 	.long 2491081031
 	.long 16381
-#ifdef __x86_64__
+#if defined(__x86_64__)
 	.align 8
-#else
+#elif defined(__i386__)
 	.align 4
 #endif
 	/* Please note:	 we use a double value here.  Since 1.0 has
@@ -38,14 +40,14 @@ one:	.double 1.0
 .globl __MINGW_USYMBOL(log1pl)
 	.def	__MINGW_USYMBOL(log1pl);	.scl	2;	.type	32;	.endef
 __MINGW_USYMBOL(log1pl):
-#ifdef __x86_64__
+#if defined(__x86_64__)
 	fldln2
 	fldt	(%rdx)
 	fxam
 	fnstsw
 	fld	%st
 	sahf
-	jc	3f		// in case x is NaN or ±Inf
+	jc	3f		// in case x is NaN or ï¿½Inf
 4:
 	fabs
 	fldt	limit(%rip)
@@ -66,21 +68,21 @@ __MINGW_USYMBOL(log1pl):
 	fstpt	(%rcx)
 	ret
 
-3:	jp	4b		// in case x is ±Inf
+3:	jp	4b		// in case x is ï¿½Inf
 	fstp	%st(1)
 	fstp	%st(1)
 	movq	%rcx,%rax
 	movq	$0,8(%rcx)
 	fstpt	(%rcx)
 	ret
-#else
+#elif defined(__i386__)
 	fldln2
 	fldt	4(%esp)
 	fxam
 	fnstsw
 	fld	%st
 	sahf
-	jc	3f		// in case x is NaN or ±Inf
+	jc	3f		// in case x is NaN or ï¿½Inf
 4:
 	fabs
 	fldt	limit
@@ -95,8 +97,12 @@ __MINGW_USYMBOL(log1pl):
 2:	fyl2xp1
 	ret
 
-3:	jp	4b		// in case x is ±Inf
+3:	jp	4b		// in case x is ï¿½Inf
 	fstp	%st(1)
 	fstp	%st(1)
 	ret
+#elif __SIZEOF_LONG_DOUBLE__ == __SIZEOF_DOUBLE__
+	b	log1p
+#else
+	.error "Not supported on your platform yet"
 #endif
