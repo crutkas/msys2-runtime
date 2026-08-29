@@ -148,3 +148,72 @@ jobs:
       - name: Compile and execute ARM64 foundations
         shell: msys2 {0}
         run: .github/checks/test-aarch64-foundations.sh
+
+  aarch64-link-runtime:
+    name: native ARM64 linker/runtime focused validation
+    runs-on: windows-11-arm
+
+    steps:
+      - name: Checkout runtime source
+        uses: actions/checkout@v7
+
+      - name: Checkout pinned BusyBox source
+        uses: actions/checkout@v7
+        with:
+          repository: crutkas/busybox-w32
+          ref: c26a88d7e1ec96a1b96fce442e35378f3ddecba4
+          fetch-depth: 0
+          path: .layer3-input-source/busybox-w32
+
+      - name: Checkout reviewed Binutils source
+        uses: actions/checkout@v7
+        with:
+          repository: crutkas/binutils-woarm64
+          ref: eb40c26f66fc723d7e87c294c2a4ca840d5d7f7d
+          fetch-depth: 0
+          fetch-tags: true
+          path: .layer3-input-source/binutils-woarm64
+
+      - name: Verify native ARM64 runner
+        shell: pwsh
+        run: |
+          & .github/checks/assert-runner-architecture.ps1 `
+            -ExpectedNativeMachine ARM64 `
+            -ExpectedProcessArchitecture Arm64 `
+            -EvidencePath "$env:RUNNER_TEMP\arm64-layer3-runner.txt"
+
+      - id: msys2
+        name: Set up native CLANGARM64 tools
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: CLANGARM64
+          update: true
+          install: >-
+            mingw-w64-clang-aarch64-clang
+            mingw-w64-clang-aarch64-llvm
+            mingw-w64-clang-aarch64-perl
+
+      - name: Verify pinned native inputs
+        shell: pwsh
+        run: |
+          & .github/checks/prepare-aarch64-layer3-inputs.ps1 `
+            -Destination "$env:RUNNER_TEMP\layer3-inputs" `
+            -BusyBoxSource "$env:GITHUB_WORKSPACE\.layer3-input-source\busybox-w32" `
+            -BinutilsSource "$env:GITHUB_WORKSPACE\.layer3-input-source\binutils-woarm64"
+
+          $clangArm64 = '${{ steps.msys2.outputs.msys2-location }}\clangarm64'
+          "CC=$clangArm64\bin\clang.exe" | Add-Content $env:GITHUB_ENV
+          "NATIVE_PERL=$clangArm64\bin\perl.exe" | Add-Content $env:GITHUB_ENV
+          "LLVM_NM=$clangArm64\bin\llvm-nm.exe" | Add-Content $env:GITHUB_ENV
+          "LLVM_OBJCOPY=$clangArm64\bin\llvm-objcopy.exe" |
+            Add-Content $env:GITHUB_ENV
+          "CLANGARM64_LIB=$clangArm64\lib" | Add-Content $env:GITHUB_ENV
+
+      - name: Compile, link, and execute focused ARM64 controls
+        shell: pwsh
+        run: |
+          $env:PATH = "$env:BUSYBOX_BIN;$env:PATH"
+          & $env:BUSYBOX_SH '.github/checks/test-aarch64-link-runtime.sh'
+          if ($LASTEXITCODE -ne 0) {
+            throw "Focused native ARM64 controls failed with exit code $LASTEXITCODE"
+          }

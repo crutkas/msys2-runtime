@@ -49,6 +49,12 @@ NEW_DLL_NAME=new-msys-2.0.dll
 DEF_FILE=msys.def
 LIB_NAME=libmsys-2.0.a
 
+if TARGET_AARCH64
+runtime_aslr_ldflags = -Wl,--dynamicbase -Wl,--disable-high-entropy-va
+else
+runtime_aslr_ldflags =
+endif
+
 #
 # sources
 #
@@ -610,7 +616,8 @@ $(NEW_DLL_NAME): $(LDSCRIPT) libdll.a $(VERSION_OFILES) $(LIBSERVER)\
 		  $(newlib_build)/libm.a $(newlib_build)/libc.a
 	$(AM_V_CXXLD)$(CXX) $(CXXFLAGS) \
 	-mno-use-libstdc-wrappers \
-	-Wl,--gc-sections -nostdlib -Wl,-T$(LDSCRIPT) -static \
+	-Wl,--gc-sections -nostdlib -Wl,-T$(LDSCRIPT) \
+	$(runtime_aslr_ldflags) -static \
 	$${SOURCE_DATE_EPOCH:+-Wl,--no-insert-timestamp} \
 	-Wl,--heap=0 -Wl,--out-implib,msysdll.a -shared -o $@ \
 	-e @DLL_ENTRY@ $(DEF_FILE) \
@@ -626,8 +633,12 @@ $(NEW_DLL_NAME): $(LDSCRIPT) libdll.a $(VERSION_OFILES) $(LIBSERVER)\
 # msys-2.0 import library
 toolopts=--cpu=@target_cpu@ --ar=@AR@ --as=@AS@ --nm=@NM@ --objcopy=@OBJCOPY@
 
-$(DEF_FILE): scripts/gendef cygwin.din
-	$(AM_V_GEN)$(srcdir)/scripts/gendef --cpu=@target_cpu@ --output-def=$(DEF_FILE) $(srcdir)/cygwin.din
+# Architecture-specific .din files
+ARCH_DIN = $(srcdir)/@target_cpu@/cygwin.din
+
+$(DEF_FILE): scripts/gendef cygwin.din $(wildcard $(ARCH_DIN))
+	$(AM_V_GEN)$(srcdir)/scripts/gendef --cpu=@target_cpu@ --output-def=$(DEF_FILE) \
+	  $(wildcard $(ARCH_DIN)) $(srcdir)/cygwin.din
 
 sigfe.s: $(DEF_FILE) tlsoffsets
 	@[ -s $@ ] || \

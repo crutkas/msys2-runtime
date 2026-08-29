@@ -324,7 +324,12 @@ LDADD_FOR_TESTDLL = $(builddir)/../cygwin/libmsys-2.0.a -lgcc -lkernel32 -luser3
 
 # flags for test executables
 AM_CPPFLAGS = -I$(srcdir)/libltp/include
-AM_LDFLAGS = $(LDFLAGS_FOR_TESTDLL)
+if TARGET_AARCH64
+testsuite_aslr_ldflags = -Wl,--disable-high-entropy-va
+else
+testsuite_aslr_ldflags =
+endif
+AM_LDFLAGS = $(LDFLAGS_FOR_TESTDLL) $(testsuite_aslr_ldflags)
 LDADD = $(builddir)/libltp.a $(builddir)/../cygwin/binmode.o $(LDADD_FOR_TESTDLL)
 
 # additional flags for specific test executables
@@ -342,7 +347,8 @@ winsup.api/dll_unload_helper.dll: \
 	$(builddir)/../cygwin/libmsys-2.0.a
 	$(AM_V_at)$(MKDIR_P) $(@D)
 	$(AM_V_CCLD)$(CC) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) \
-		$(LDFLAGS_FOR_TESTDLL) -shared -Wl,--export-all-symbols \
+		$(LDFLAGS_FOR_TESTDLL) $(testsuite_aslr_ldflags) \
+		-shared -Wl,--export-all-symbols \
 		-o $@ $< $(LDADD_FOR_TESTDLL)
 
 EXTRA_winsup_api_dll_unload_DEPENDENCIES = winsup.api/dll_unload_helper.dll
