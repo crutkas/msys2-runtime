@@ -49,9 +49,10 @@ NEW_DLL_NAME=new-msys-2.0.dll
 DEF_FILE=msys.def
 LIB_NAME=libmsys-2.0.a
 
-RUNTIME_ASLR_LDFLAGS =
 if TARGET_AARCH64
-RUNTIME_ASLR_LDFLAGS = -Wl,--dynamicbase -Wl,--disable-high-entropy-va
+runtime_aslr_ldflags = -Wl,--dynamicbase -Wl,--disable-high-entropy-va
+else
+runtime_aslr_ldflags =
 endif
 
 #
@@ -621,7 +622,7 @@ $(NEW_DLL_NAME): $(LDSCRIPT) libdll.a $(VERSION_OFILES) $(LIBSERVER)\
 	$(AM_V_CXXLD)$(CXX) $(CXXFLAGS) \
 	-mno-use-libstdc-wrappers \
 	-Wl,--gc-sections -nostdlib -Wl,-T$(LDSCRIPT) \
-	$(RUNTIME_ASLR_LDFLAGS) -static \
+	$(runtime_aslr_ldflags) -static \
 	$${SOURCE_DATE_EPOCH:+-Wl,--no-insert-timestamp} \
 	-Wl,--heap=0 -Wl,--out-implib,msysdll.a -shared -o $@ \
 	-e @DLL_ENTRY@ $(DEF_FILE) \
