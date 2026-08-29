@@ -5,7 +5,8 @@ param(
     [Parameter(Mandatory)] [string] $ClangPrefix,
     [Parameter(Mandatory)] [string] $BusyBoxArchive,
     [Parameter(Mandatory)] [string] $GeneratorArchive,
-    [Parameter(Mandatory)] [string] $MinGitArchive
+    [Parameter(Mandatory)] [string] $MinGitArchive,
+    [ValidateRange(1, 64)] [int] $Jobs = 20
 )
 
 $ErrorActionPreference = 'Stop'
@@ -164,7 +165,7 @@ try {
         '--disable-dependency-tracking' '--disable-dumper' '--with-cross-bootstrap' `
         '--with-msys2-runtime-commit=f71b5d07c804433dfa06df122b22efd200e9ec2b'
     if ($LASTEXITCODE -ne 0) { throw 'top-level configure failed' }
-    & $make -j 2 all-target-newlib
+    & $make -j $Jobs all-target-newlib
     if ($LASTEXITCODE -ne 0) { throw 'newlib build failed' }
 }
 finally { Pop-Location }
@@ -190,7 +191,7 @@ try {
         '--disable-dependency-tracking' '--disable-dumper' '--with-cross-bootstrap' `
         '--with-msys2-runtime-commit=f71b5d07c804433dfa06df122b22efd200e9ec2b'
     if ($LASTEXITCODE -ne 0) { throw 'winsup configure failed' }
-    & $make -C cygwin -j 2
+    & $make -C cygwin -j $Jobs
     if ($LASTEXITCODE -ne 0) { throw 'runtime DLL build failed' }
 }
 finally { Pop-Location }
@@ -221,7 +222,7 @@ try {
         '--build=aarch64-pc-cygwin' '--host=aarch64-pc-cygwin' '--prefix=/usr' `
         '--without-bash-malloc' '--disable-nls' '--disable-rpath' '--enable-job-control'
     if ($LASTEXITCODE -ne 0) { throw 'Bash configure failed' }
-    try { & $make -j 2 bash.exe }
+    try { & $make -j $Jobs bash.exe }
     catch {
         $generator = Join-Path $bashBuild 'builtins\mkbuiltins.exe'
         if (-not (Test-Path -LiteralPath $generator)) { throw }
@@ -230,7 +231,7 @@ try {
                 & $generator -D (Join-Path $bashSource 'bash-5.3\builtins') $_.FullName
                 if ($LASTEXITCODE -ne 0) { throw "mkbuiltins failed for $($_.Name)" }
             }
-        & $make -j 2 bash.exe
+        & $make -j $Jobs bash.exe
     }
     if ($LASTEXITCODE -ne 0) { throw 'Bash build failed' }
 }

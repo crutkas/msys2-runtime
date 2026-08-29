@@ -408,7 +408,14 @@ jobs:
       - name: Download exact public MVP inputs
         shell: pwsh
         run: |
-          $inputs = "$env:RUNNER_TEMP\mvp-inputs"
+          $workRoot = if (Test-Path -LiteralPath 'D:\') {
+            'D:\git-bash-mvp'
+          } else {
+            "$env:RUNNER_TEMP\git-bash-mvp"
+          }
+          "MVP_WORK_ROOT=$workRoot" | Out-File -FilePath $env:GITHUB_ENV -Append
+          $inputs = "$workRoot-inputs"
+          "MVP_INPUT_ROOT=$inputs" | Out-File -FilePath $env:GITHUB_ENV -Append
           New-Item -ItemType Directory -Path $inputs -Force | Out-Null
           Invoke-WebRequest `
             -Uri 'https://github.com/crutkas/binutils-woarm64/releases/download/native-binutils-eb40c26f66fc/busybox-c26a88d7.tar.gz' `
@@ -425,16 +432,17 @@ jobs:
         run: |
           & .github/checks/build-aarch64-mvp-runtime.ps1 `
             -Source "$env:GITHUB_WORKSPACE" `
-            -Work "$env:RUNNER_TEMP\git-bash-mvp" `
+            -Work "$env:MVP_WORK_ROOT" `
             -ClangPrefix '${{ steps.msys2.outputs.msys2-location }}\clangarm64\bin' `
-            -BusyBoxArchive "$env:RUNNER_TEMP\mvp-inputs\busybox-c26a88d7.tar.gz" `
-            -GeneratorArchive "$env:RUNNER_TEMP\mvp-inputs\native-generators-arm64.zip" `
-            -MinGitArchive "$env:RUNNER_TEMP\mvp-inputs\MinGit-2.55.0.3-arm64.zip"
+            -BusyBoxArchive "$env:MVP_INPUT_ROOT\busybox-c26a88d7.tar.gz" `
+            -GeneratorArchive "$env:MVP_INPUT_ROOT\native-generators-arm64.zip" `
+            -MinGitArchive "$env:MVP_INPUT_ROOT\MinGit-2.55.0.3-arm64.zip" `
+            -Jobs 20
 
       - name: Assemble deterministic MVP artifact
         shell: pwsh
         run: |
-          $work = "$env:RUNNER_TEMP\git-bash-mvp"
+          $work = "$env:MVP_WORK_ROOT"
           & .github/checks/package-aarch64-mvp-runtime.ps1 `
             -RuntimeDll "$work\build\aarch64-pc-cygwin\winsup\cygwin\new-msys-2.0.dll" `
             -BashExe "$work\bash-build\bash.exe" `
@@ -445,7 +453,7 @@ jobs:
       - name: Exercise runtime, Bash, Git, and emulated x64 child
         shell: pwsh
         run: |
-          $work = "$env:RUNNER_TEMP\git-bash-mvp"
+          $work = "$env:MVP_WORK_ROOT"
           & .github/checks/test-aarch64-mvp-runtime.ps1 `
             -RuntimeRoot "$env:RUNNER_TEMP\git-bash-mvp-publish\native-git-bash-mvp-arm64" `
             -RuntimeSource "$env:GITHUB_WORKSPACE" `
