@@ -8,6 +8,12 @@
 
 include $(top_srcdir)/Makefile.am.common
 
+if TARGET_AARCH64
+cygserver_aslr_ldflags = -Wl,--disable-high-entropy-va
+else
+cygserver_aslr_ldflags =
+endif
+
 cygserver_flags=$(cxxflags_common) -Wimplicit-fallthrough=5 -Werror -DSYSCONFDIR="\"$(sysconfdir)\""
 AM_CXXFLAGS = $(CFLAGS)
 
@@ -36,7 +42,7 @@ cygserver_SOURCES = \
 
 cygserver_CXXFLAGS = $(cygserver_flags) -D__OUTSIDE_CYGWIN__
 cygserver_LDADD = -lntdll
-cygserver_LDFLAGS = -static -static-libgcc
+cygserver_LDFLAGS = -static -static-libgcc $(cygserver_aslr_ldflags)
 
 # Note: the objects in libcygserver are built without -D__OUTSIDE_CYGWIN__,
 # unlike cygserver.exe

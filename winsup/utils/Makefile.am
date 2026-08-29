@@ -73,14 +73,20 @@ tzmap.h:
 
 BUILT_SOURCES = tzmap.h
 
-AM_LDFLAGS = -static -Wl,--enable-auto-import
+if TARGET_AARCH64
+utils_aslr_ldflags = -Wl,--disable-high-entropy-va
+else
+utils_aslr_ldflags =
+endif
+
+AM_LDFLAGS = -static -Wl,--enable-auto-import $(utils_aslr_ldflags)
 LDADD = -lnetapi32
 
 cygpath_CXXFLAGS = -fno-threadsafe-statics $(AM_CXXFLAGS)
 cygpath_LDADD = $(LDADD) -luserenv -lntdll
 dumper_CXXFLAGS = -I$(top_srcdir)/../include $(AM_CXXFLAGS)
 dumper_LDADD = $(LDADD) -lpsapi -lntdll -lbfd @BFD_LIBS@
-dumper_LDFLAGS =
+dumper_LDFLAGS = $(utils_aslr_ldflags)
 ldd_LDADD = $(LDADD) -lpsapi -lntdll
 mount_CXXFLAGS = -DFSTAB_ONLY $(AM_CXXFLAGS)
 minidumper_LDADD = $(LDADD) -ldbghelp
