@@ -334,6 +334,14 @@ jobs:
       - name: Checkout runtime source
         uses: actions/checkout@v7
 
+      - name: Checkout reviewed BFD headers
+        uses: actions/checkout@v7
+        with:
+          repository: crutkas/binutils-woarm64
+          ref: eb40c26f66fc723d7e87c294c2a4ca840d5d7f7d
+          fetch-depth: 1
+          path: .layer5-bfd-headers
+
       - name: Verify native ARM64 runner
         shell: pwsh
         run: |
@@ -356,12 +364,13 @@ jobs:
         shell: msys2 {0}
         run: .github/checks/test-layer5-static.sh
 
-      - name: Compile and execute production layer-5 paths
+      - name: Compile utilities and execute production math and SSP paths
         shell: msys2 {0}
         run: .github/checks/test-aarch64-layer5.sh
         env:
           CC: /clangarm64/bin/clang.exe
           CXX: /clangarm64/bin/clang++.exe
+          BFD_SOURCE_ROOT: ${{ github.workspace }}/.layer5-bfd-headers
           LLVM_NM: /clangarm64/bin/llvm-nm.exe
           LLVM_OBJDUMP: /clangarm64/bin/llvm-objdump.exe
           LLVM_READOBJ: /clangarm64/bin/llvm-readobj.exe

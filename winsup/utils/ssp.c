@@ -120,6 +120,13 @@ struct gmonhdr hdr;
 int running = 1, profiling = 1;
 char dll_name[1024], *dll_ptr, *cp;
 unsigned opcode_count = 0;
+unsigned breakpoint_insert_count = 0;
+unsigned breakpoint_restore_count = 0;
+unsigned instruction_cache_flush_count = 0;
+#if defined(__aarch64__)
+unsigned arm64_step_update_count = 0;
+unsigned arm64_lr_edge_count = 0;
+#endif
 
 int stepping_enabled = 1;
 int tracing_enabled = 0;
@@ -163,6 +170,7 @@ write_process_instruction (CONTEXT_REG address, const unsigned char *insn)
 	       " (error %u)\n", address, (unsigned int) GetLastError ());
       exit (1);
     }
+  instruction_cache_flush_count++;
 }
 
 static void
@@ -173,7 +181,8 @@ add_breakpoint (CONTEXT_REG address)
 #if defined(__i386__) || defined(__x86_64__)
   static unsigned char brk_insn[] = { 0xcc };
 #elif defined(__aarch64__)
-  static unsigned char brk_insn[] = { 0x00, 0x00, 0x20, 0xd4 };
+  /* Windows recognizes BRK #0xf000 as STATUS_BREAKPOINT.  */
+  static unsigned char brk_insn[] = { 0x00, 0x00, 0x3e, 0xd4 };
 #else
 #error unimplemented for this target
 #endif
@@ -197,6 +206,7 @@ add_breakpoint (CONTEXT_REG address)
       exit (1);
     }
   write_process_instruction (address, brk_insn);
+  breakpoint_insert_count++;
   if (i >= num_breakpoints)
     num_breakpoints = i+1;
 }
@@ -211,6 +221,7 @@ remove_breakpoint (CONTEXT_REG address)
 	{
 	  write_process_instruction (address,
 				     pending_breakpoints[i].real_insn);
+	  breakpoint_restore_count++;
 	  pending_breakpoints[i].address = 0;
 	  return 1;
 	}
@@ -237,30 +248,59 @@ lookup_thread_id (DWORD threadId, int *tix)
 }
 
 static void
+get_thread_context_or_die (HANDLE thread, DWORD threadId)
+{
+  if (!GetThreadContext (thread, &context))
+    {
+      fprintf (stderr, "GetThreadContext failed for thread %08x"
+	       " (error %u)\n", (unsigned int) threadId,
+	       (unsigned int) GetLastError ());
+      exit (1);
+    }
+}
+
+static void
+set_thread_context_or_die (HANDLE thread, DWORD threadId)
+{
+  if (!SetThreadContext (thread, &context))
+    {
+      fprintf (stderr, "SetThreadContext failed for thread %08x"
+	       " (error %u)\n", (unsigned int) threadId,
+	       (unsigned int) GetLastError ());
+      exit (1);
+    }
+}
+
+static void
 set_step_threads (int threadId, int trace)
 {
-  int rv, tix;
+  int tix;
   HANDLE thread = lookup_thread_id (threadId, &tix);
 
-  rv = GetThreadContext (thread, &context);
-  if (rv != -1)
+  if (!thread)
     {
-      thread_step_flags[tix] = trace;
+      fprintf (stderr, "No thread handle for thread %08x\n", threadId);
+      exit (1);
+    }
+  get_thread_context_or_die (thread, (DWORD) threadId);
+  thread_step_flags[tix] = trace;
 #if defined(__i386__) || defined(__x86_64__)
-      if (trace)
-	context.EFlags |= 0x100; /* TRAP (single step) flag */
-      else
-	context.EFlags &= ~0x100; /* TRAP (single step) flag */
+  if (trace)
+    context.EFlags |= 0x100; /* TRAP (single step) flag */
+  else
+    context.EFlags &= ~0x100; /* TRAP (single step) flag */
 #elif defined(__aarch64__)
-      if (trace)
-	context.Cpsr |= 0x00200000; /* PSTATE.SS (single step) flag */
-      else
-	context.Cpsr &= ~0x00200000; /* PSTATE.SS (single step) flag */
+  if (trace)
+    context.Cpsr |= 0x00200000; /* PSTATE.SS (single step) flag */
+  else
+    context.Cpsr &= ~0x00200000; /* PSTATE.SS (single step) flag */
 #else
 #error unimplemented for this target
 #endif
-      SetThreadContext (thread, &context);
-    }
+  set_thread_context_or_die (thread, (DWORD) threadId);
+#if defined(__aarch64__)
+  arm64_step_update_count++;
+#endif
 }
 
 static void
@@ -269,7 +309,7 @@ set_steps ()
   int i, s;
   for (i=0; i<num_active_threads; i++)
     {
-      GetThreadContext (active_threads[i], &context);
+      get_thread_context_or_die (active_threads[i], active_thread_ids[i]);
 #if defined(__i386__) || defined(__x86_64__)
       s = context.EFlags & 0x0100;
 #elif defined(__aarch64__)
@@ -524,20 +564,20 @@ run_program (char *cmdline)
 	  break;
 
 	case EXCEPTION_DEBUG_EVENT:
-	  rv = GetThreadContext (hThread, &context);
+	  get_thread_context_or_die (hThread, event.dwThreadId);
 	  switch (event.u.Exception.ExceptionRecord.ExceptionCode)
 	    {
 	    case STATUS_BREAKPOINT:
 	      if (remove_breakpoint ((CONTEXT_REG)event.u.Exception.ExceptionRecord.ExceptionAddress))
 		{
 #if defined(__aarch64__)
-		  if (!rv)
-		    SetThreadContext (hThread, &context);
+		  context.Pc
+		    = (CONTEXT_REG) event.u.Exception.ExceptionRecord.ExceptionAddress;
+		  set_thread_context_or_die (hThread, event.dwThreadId);
 		  thread_return_address[tix] = context.Lr;
 #else
 		  context.CONTEXT_IP --;
-		  if (!rv)
-		    SetThreadContext (hThread, &context);
+		  set_thread_context_or_die (hThread, event.dwThreadId);
 		  if (ReadProcessMemory (hProcess, (void *)context.CONTEXT_SP, &rv, sizeof(rv), &rv))
 		      thread_return_address[tix] = rv;
 #endif
@@ -588,6 +628,9 @@ run_program (char *cmdline)
 		  if (sp == last_sp-sizeof(CONTEXT_REG))
 #endif
 		    {
+#if defined(__aarch64__)
+		      arm64_lr_edge_count++;
+#endif
 		      ncalls++;
 		      store_call_edge (last_pc, pc);
 		      if (last_pc < KERNEL_ADDR && pc > KERNEL_ADDR)
@@ -650,21 +693,21 @@ run_program (char *cmdline)
 	      break;
 	    }
 
-	  if (!rv)
-	    {
+	  {
 	      if (pc == thread_return_address[tix])
 		{
 #if defined(__i386__) || defined(__x86_64__)
 		  if (context.EFlags & 0x100)
 		    {
 		      context.EFlags &= ~0x100; /* TRAP (single step) flag */
-		      SetThreadContext (hThread, &context);
+		      set_thread_context_or_die (hThread, event.dwThreadId);
 		    }
 #elif defined(__aarch64__)
 		  if (context.Cpsr & 0x00200000)
 		    {
 		      context.Cpsr &= ~0x00200000; /* PSTATE.SS (single step) flag */
-		      SetThreadContext (hThread, &context);
+		      set_thread_context_or_die (hThread, event.dwThreadId);
+		      arm64_step_update_count++;
 		    }
 #else
 #error unimplemented for this target
@@ -676,13 +719,14 @@ run_program (char *cmdline)
 		  if (!(context.EFlags & 0x100))
 		    {
 		      context.EFlags |= 0x100; /* TRAP (single step) flag */
-		      SetThreadContext (hThread, &context);
+		      set_thread_context_or_die (hThread, event.dwThreadId);
 		    }
 #elif defined(__aarch64__)
 		  if (!(context.Cpsr & 0x00200000))
 		    {
 		      context.Cpsr |= 0x00200000; /* PSTATE.SS (single step) flag */
-		      SetThreadContext (hThread, &context);
+		      set_thread_context_or_die (hThread, event.dwThreadId);
+		      arm64_step_update_count++;
 		    }
 #else
 #error unimplemented for this target
@@ -792,6 +836,14 @@ run_program (char *cmdline)
       count += hits[(pc - low_pc)/2];
     }
   printf ("total cycles: %d, counted cycles: %d\n", total_cycles, count);
+#if defined(__aarch64__)
+  if (getenv ("SSP_VALIDATION_EVIDENCE"))
+    printf ("SSP_VALIDATION breakpoints_inserted=%u breakpoints_restored=%u"
+	    " cache_flushes=%u pstate_updates=%u lr_edges=%u\n",
+	    breakpoint_insert_count, breakpoint_restore_count,
+	    instruction_cache_flush_count, arm64_step_update_count,
+	    arm64_lr_edge_count);
+#endif
 
   if (tracing_enabled)
     fclose (tracefile);

@@ -9,6 +9,7 @@ cxx=${CXX:-clang++}
 readobj=${LLVM_READOBJ:-llvm-readobj}
 objdump=${LLVM_OBJDUMP:-llvm-objdump}
 nm=${LLVM_NM:-llvm-nm}
+bfd_source=${BFD_SOURCE_ROOT:-}
 
 cleanup()
 {
@@ -24,9 +25,30 @@ aarch64-*-windows-* | aarch64-*-mingw*) ;;
   exit 1
   ;;
 esac
+if test -z "$bfd_source" \
+   || test ! -f "$bfd_source/bfd/bfd-in2.h" \
+   || test ! -f "$bfd_source/include/elf/common.h"
+then
+  echo "BFD_SOURCE_ROOT must name the reviewed Binutils source tree" >&2
+  exit 1
+fi
 
 cflags="-target aarch64-w64-windows-gnu -O2 -Wall -Wextra -Werror \
   -Wno-unknown-warning-option -fno-builtin"
+
+mkdir -p "$work/bfd-include"
+sed \
+  -e 's/@supports_plugins@/1/g' \
+  -e 's/@wordsize@/64/g' \
+  -e 's/@bfd_default_target_size@/64/g' \
+  -e 's/@bfd_file_ptr@/int64_t/g' \
+  -e 's/@bfd_ufile_ptr@/uint64_t/g' \
+  "$bfd_source/bfd/bfd-in2.h" >"$work/bfd-include/bfd.h"
+if grep -Eq '@[A-Za-z0-9_]+@' "$work/bfd-include/bfd.h"
+then
+  echo "generated pinned bfd.h still contains configure substitutions" >&2
+  exit 1
+fi
 
 math_sources="
 acoshl.c acosl.c asinhl.c asinl.c atan2l.c atanhl.c atanl.c cosl_internal.S
@@ -75,12 +97,27 @@ done
   -idirafter "$repo_root/winsup/cygwin/include" \
   "$repo_root/winsup/utils/ssp.c" -o "$work/ssp.exe"
 
+"$cc" $cflags -D_WIN32_WINNT=0x0a00 \
+  "$repo_root/.github/checks/aarch64-layer5-ssp-child.c" \
+  -o "$work/ssp-child.exe"
+
 "$cxx" $cflags -include windows.h \
   -DS_IRUSR=0400 -DS_IWUSR=0200 -DS_IRGRP=0040 -DS_IROTH=0004 \
   -I"$repo_root/winsup/utils" \
   -idirafter "$repo_root/winsup/cygwin/local_includes" \
   -idirafter "$repo_root/winsup/cygwin/include" \
   -c "$repo_root/winsup/utils/profiler.cc" -o "$work/profiler.o"
+
+"$cxx" $cflags -Wno-unused-parameter -Wno-missing-field-initializers \
+  -fno-exceptions -fno-rtti \
+  '-DMIN(a,b)=((a)<(b)?(a):(b))' \
+  '-Dprogram_invocation_short_name=__argv[0]' \
+  -I"$repo_root/winsup/utils" \
+  -I"$work/bfd-include" \
+  -I"$bfd_source/include" \
+  -idirafter "$repo_root/winsup/cygwin/local_includes" \
+  -idirafter "$repo_root/winsup/cygwin/include" \
+  -c "$repo_root/winsup/utils/dumper.cc" -o "$work/dumper.o"
 
 "$cxx" $cflags -Wno-unused-parameter -Wno-missing-field-initializers \
   -fno-exceptions -fno-rtti -fno-use-cxa-atexit \
@@ -102,16 +139,22 @@ done
 
 if test "${LAYER5_COMPILE_ONLY:-0}" = 1
 then
-  echo "ARM64 production layer-5 paths compiled and linked."
+  echo "ARM64 math/SSP linked; profiler, dumper, and cygcheck compile-only paths passed."
   exit 0
 fi
 
 "$work/layer5-math.exe"
-"$work/ssp.exe" --help >/dev/null
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File \
+  "$(cygpath -w "$repo_root/.github/checks/run-aarch64-layer5-ssp.ps1")" \
+  -SspPath "$(cygpath -w "$work/ssp.exe")" \
+  -ChildPath "$(cygpath -w "$work/ssp-child.exe")" \
+  -WorkingDirectory "$(cygpath -w "$work")"
 
 printf '%s\n' \
   "Native ARM64 layer-5 validation passed:" \
   "  production long-double math objects compiled as AA64 COFF" \
   "  production math executed across values, quadrants, exponents, and errors" \
-  "  production SSP linked and executed; profiler and cygcheck compiled" \
+  "  production SSP debugger paths executed against a controlled ARM64 child" \
+  "  profiler.cc, dumper.cc, and cygcheck.cc compiled only as AA64 COFF" \
+  "  those compile-only utility surfaces were not linked or executed" \
   "  process, PE/COFF, tail-call, and empty-symbol invariants verified"

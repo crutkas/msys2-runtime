@@ -48,7 +48,21 @@ grep -Fq 'return context->Pc;' "$repo_root/winsup/utils/profiler.cc"
 grep -Fq 'IMAGE_FILE_MACHINE_ARM64' "$repo_root/winsup/utils/profiler.cc"
 grep -Fq 'bfd_arch_aarch64' "$repo_root/winsup/utils/dumper.cc"
 grep -Fq '#define SW_BREAKPOINT_SIZE 4' "$repo_root/winsup/utils/ssp.c"
+grep -Fq '0x00, 0x00, 0x3e, 0xd4' "$repo_root/winsup/utils/ssp.c"
 grep -Fq 'FlushInstructionCache' "$repo_root/winsup/utils/ssp.c"
+grep -Fq 'SSP_VALIDATION breakpoints_inserted=' "$repo_root/winsup/utils/ssp.c"
+grep -Fq '= (CONTEXT_REG) event.u.Exception.ExceptionRecord.ExceptionAddress;' \
+  "$repo_root/winsup/utils/ssp.c"
+if awk '
+  /case EXCEPTION_DEBUG_EVENT:/ { exception = 1 }
+  /case OUTPUT_DEBUG_STRING_EVENT:/ { exception = 0 }
+  exception && /if \(!rv\)/ { found = 1 }
+  END { exit found ? 0 : 1 }
+' "$repo_root/winsup/utils/ssp.c"
+then
+  echo "SSP exception handling must not treat successful operations as failures" >&2
+  exit 1
+fi
 if grep -n 'error %lu' "$repo_root/winsup/utils/ssp.c"
 then
   echo "SSP Windows error diagnostics must match the 32-bit DWORD type" >&2
