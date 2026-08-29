@@ -6,6 +6,15 @@ layer3_import_add (int value)
   return value + layer3_import_data;
 }
 
+__declspec(dllexport) int
+WSAStartup (unsigned short version, void *data)
+{
+  unsigned short *words = (unsigned short *) data;
+  words[0] = version;
+  words[1] = version;
+  return 0;
+}
+
 int
 DllMainCRTStartup (void *instance, unsigned long reason, void *reserved)
 {

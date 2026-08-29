@@ -201,10 +201,19 @@ grep -q '40000000' "$work/pseudo-link.rdata"
   ./import-main.exe
   ./import-address.exe
   ./production-autoload.exe
+  LAYER3_AUTOLOAD_CASE=a ./production-autoload.exe
+  LAYER3_AUTOLOAD_CASE=d ./production-autoload.exe
+  LAYER3_AUTOLOAD_CASE=g ./production-autoload.exe
   LAYER3_AUTOLOAD_CASE=n ./production-autoload.exe
   LAYER3_AUTOLOAD_CASE=l ./production-autoload.exe
+  if LAYER3_AUTOLOAD_CASE=p ./production-autoload.exe; then
+    echo "fatal production autoload procedure path unexpectedly returned" >&2
+    exit 1
+  else
+    test "$?" -eq 91
+  fi
   if LAYER3_AUTOLOAD_CASE=f ./production-autoload.exe; then
-    echo "fatal production autoload path unexpectedly returned" >&2
+    echo "fatal production autoload DLL path unexpectedly returned" >&2
     exit 1
   else
     test "$?" -eq 91
@@ -270,6 +279,7 @@ grep -Eq 'LONG *\(-1\); LONG *\(-1\).*LONG *\(0\); LONG *\(0\)' \
 printf '%s\n' \
   "Native ARM64 layer-3 validation passed:" \
   "  AA64 import DLL, rewritten mkimport archive, and consumers executed" \
+  "  production autoload load/retry/reentrancy/WSAStartup chains executed" \
   "  production 12/21-bit and linked pseudo-relocation paths executed" \
   "  malformed thunk/width and forbidden loader options failed closed" \
   "  DYNAMICBASE, base relocations, linker script, and split exports verified"

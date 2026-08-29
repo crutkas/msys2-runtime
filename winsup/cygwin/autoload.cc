@@ -7,13 +7,47 @@ Cygwin license.  Please consult the file "CYGWIN_LICENSE" for
 details. */
 
 #ifdef AARCH64_LAYER3_AUTOLOAD_CONTROL
+# include <stddef.h>
 # include <stdint.h>
 typedef void *HANDLE;
+typedef HANDLE HMODULE;
 typedef int32_t LONG;
+typedef uint32_t DWORD;
 typedef uintptr_t UINT_PTR;
 typedef uint16_t WCHAR;
+typedef WCHAR *PWCHAR;
+typedef struct { uint64_t opaque[8]; } fenv_t;
+typedef struct
+{
+  uint16_t wVersion;
+  uint16_t wHighVersion;
+  uint16_t iMaxSockets;
+  uint16_t iMaxUdpDg;
+  char *lpVendorInfo;
+  char szDescription[257];
+  char szSystemStatus[129];
+} WSADATA;
 # define NO_COPY
+# define MAX_PATH 260
+# define ERROR_SUCCESS 0
+# define ERROR_NOACCESS 998
+# define ERROR_DLL_INIT_FAILED 1114
+# define INVALID_HANDLE_VALUE ((HANDLE) (intptr_t) -1)
+# define MAKEWORD(low, high) ((uint16_t) ((low) | ((high) << 8)))
+extern "C" LONG InterlockedIncrement (volatile LONG *);
+extern "C" LONG InterlockedDecrement (volatile LONG *);
 extern "C" HANDLE LoadLibraryW (const WCHAR *);
+extern "C" void *GetProcAddress (HMODULE, const char *);
+extern "C" DWORD GetLastError ();
+extern "C" void SetLastError (DWORD);
+extern "C" int fegetenv (fenv_t *);
+extern "C" int fesetenv (const fenv_t *);
+extern "C" WCHAR *wcpcpy (WCHAR *, const WCHAR *);
+extern "C" void yield ();
+extern "C" void api_fatal (const char *, ...);
+extern "C" void layer3_debug_printf (const char *, ...);
+extern "C" WCHAR windows_system_directory[MAX_PATH];
+# define debug_printf layer3_debug_printf
 #else
 #include "winsup.h"
 #include "miscfuncs.h"
@@ -350,7 +384,6 @@ union retchain
 
   http://www.microsoft.com/technet/security/advisory/2269637.mspx
   https://msdn.microsoft.com/library/ff919712 */
-#ifndef AARCH64_LAYER3_AUTOLOAD_CONTROL
 static __inline bool
 dll_load (HANDLE& handle, PWCHAR name)
 {
@@ -368,7 +401,6 @@ dll_load (HANDLE& handle, PWCHAR name)
   handle = h;
   return true;
 }
-#endif
 
 #define RETRY_COUNT 10
 
@@ -456,20 +488,6 @@ _" #func ":                                              \n\
 #error unimplemented for this target
 #endif
 
-#ifdef AARCH64_LAYER3_AUTOLOAD_CONTROL
-extern "C" __attribute__ ((used, noinline)) two_addr_t
-std_dll_init (struct func_info *func)
-{
-  struct dll_info *dll = func->dll;
-  retchain ret;
-
-  if (!dll->handle)
-    dll->handle = LoadLibraryW (dll->name);
-  ret.low = (uintptr_t) dll->init;
-  ret.high = (uintptr_t) func;
-  return ret.ll;
-}
-#else
 __attribute__ ((used, noinline)) static two_addr_t
 std_dll_init (struct func_info *func)
 {
@@ -523,7 +541,6 @@ std_dll_init (struct func_info *func)
   InterlockedDecrement (&dll->here);
   return ret.ll;
 }
-#endif
 
 /* Initialization function for winsock stuff. */
 
@@ -534,20 +551,6 @@ INIT_WRAPPER (wsock_init)
 #error unimplemented for this target
 #endif
 
-#ifdef AARCH64_LAYER3_AUTOLOAD_CONTROL
-extern "C" LONG layer3_autoload_chain_calls;
-LONG layer3_autoload_chain_calls;
-
-extern "C" __attribute__ ((used, noinline)) two_addr_t
-wsock_init (struct func_info *func)
-{
-  retchain ret;
-  ++layer3_autoload_chain_calls;
-  ret.low = (uintptr_t) dll_func_load;
-  ret.high = (uintptr_t) func;
-  return ret.ll;
-}
-#else
 __attribute__ ((used, noinline)) static two_addr_t
 wsock_init (struct func_info *func)
 {
@@ -593,7 +596,6 @@ wsock_init (struct func_info *func)
   ret.high = (uintptr_t) func;
   return ret.ll;
 }
-#endif
 
 #ifdef AARCH64_LAYER3_AUTOLOAD_CONTROL
 extern "C" void _std_dll_init ();
@@ -632,6 +634,31 @@ LoadDLLfunc (layer3_import_add, layer3_import)
 LoadDLLfuncEx2 (layer3_missing_optional, layer3_import, 1, 73)
 LoadDLLfunc (layer3_missing_fatal, layer3_import)
 LoadDLLfuncEx2 (layer3_absent_optional, layer3_absent, 1, 74)
+LoadDLLfunc (layer3_absent_fatal, layer3_absent)
+
+extern "C" void
+layer3_control_set_import_here (LONG value)
+{
+  layer3_import_info.here = value;
+}
+
+extern "C" void
+layer3_control_set_import_handle (HANDLE value)
+{
+  layer3_import_info.handle = value;
+}
+
+extern "C" LONG
+layer3_control_import_here ()
+{
+  return layer3_import_info.here;
+}
+
+extern "C" bool
+layer3_control_wsock_started ()
+{
+  return wsock_started;
+}
 #else
 LoadDLLprime (ws2_32, _wsock_init, 0)
 
