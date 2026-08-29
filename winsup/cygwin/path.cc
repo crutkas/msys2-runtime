@@ -4840,6 +4840,7 @@ fcwd_access_t::SetDirHandleFromBufferPointer (PWCHAR buf_p, HANDLE dir)
    it's not exported from the DLL, unfortunately.  Therefore we have to
    use some knowledge to figure out the address. */
 
+#ifdef __x86_64__
 #define peek32(x)	(*(int32_t *)(x))
 
 static fcwd_access_t **
@@ -4963,6 +4964,7 @@ find_fast_cwd_pointer ()
   /* Compute address of the fcwd_access_t ** pointer. */
   return (fcwd_access_t **) (testrbx + peek32 (movrbx + 3));
 }
+#endif
 
 fcwd_access_t **
 find_fast_cwd_pointer_aarch64 ();
