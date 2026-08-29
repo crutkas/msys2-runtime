@@ -6199,7 +6199,7 @@ fi
 
 
 case $host in
-  aarch64-*-cygwin* | aarch64-*-mingw*)
+  aarch64-*-cygwin* | aarch64-*-mingw* | aarch64-*-msys*)
     IS_AARCH64_WINDOWS=yes ;;
   *)
     IS_AARCH64_WINDOWS=no ;;
