@@ -65,10 +65,10 @@ __FLT_ABI(expm1) (__FLT_TYPE x)
   if (__FLT_ABI (fabs) (x) < __FLT_LOGE2)
     {
       x /= __FLT_LOGE2;
-#if defined(_x86_64__)
+#if defined(__x86_64__)
       __asm__ __volatile__ ("f2xm1" : "=t" (x) : "0" (x));
 #elif __SIZEOF_LONG_DOUBLE__ == __SIZEOF_DOUBLE__
-  x = exp2(x) - 1.0;
+      x = exp2 (x) - 1.0;
 #endif
       return x;
     }

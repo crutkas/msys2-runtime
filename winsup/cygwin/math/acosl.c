@@ -12,7 +12,7 @@ long double acosl (long double x)
 {
   long double res = 0.0L;
 
-  /* acosl = atanl (sqrtl(1 - x^2) / x) */
+  /* acosl = atan2l (sqrtl (1 - x^2), x) */
 #if defined(__x86_64__)
   asm volatile (
 	"fld	%%st\n\t"
@@ -24,7 +24,7 @@ long double acosl (long double x)
 	"fpatan"
 	: "=t" (res) : "0" (x) : "st(1)");
 #elif __SIZEOF_LONG_DOUBLE__ == __SIZEOF_DOUBLE__
-  res = atanl (sqrtl(1 - x*x) / x);
+  res = atan2l (sqrtl (1 - x * x), x);
 #endif
   return res;
 }
