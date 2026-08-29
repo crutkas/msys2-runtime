@@ -16,6 +16,7 @@ permissions:
 
 jobs:
   build:
+    name: x86_64 MSYS runtime build
     # Suppress only the same-repository diagnostic PR.  A fork may legitimately
     # use the same branch leaf, and non-PR events have no pull_request payload.
     if: >-
@@ -56,6 +57,7 @@ jobs:
           path: _dest/
 
   generate-msys2-tests-matrix:
+    name: compatibility test matrix
     if: >-
       ${{
         github.event_name != 'pull_request' ||
@@ -76,7 +78,9 @@ jobs:
       matrix:
         include: ${{ fromJson(needs.generate-msys2-tests-matrix.outputs.matrix) }}
 
-    name: msys2-tests ${{ matrix.msystem }}-${{ matrix.cc }}
+    # These lanes consume the x86_64 MSYS runtime artifact produced above.
+    # CLANGARM64 here verifies compatibility, not native ARM64 runtime code.
+    name: compatibility tests ${{ matrix.msystem }}-${{ matrix.cc }} (x86_64 runtime)
     runs-on: ${{ matrix.runner }}
     env:
       CC: ${{ matrix.cc }}
@@ -115,3 +119,32 @@ jobs:
 
       - name: Run tests
         uses: msys2/msys2-tests@main
+
+  aarch64-foundations:
+    name: native ARM64 foundation validation
+    runs-on: windows-11-arm
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Verify native ARM64 runner
+        shell: pwsh
+        run: |
+          & .github/checks/assert-runner-architecture.ps1 `
+            -ExpectedNativeMachine ARM64 `
+            -ExpectedProcessArchitecture Arm64 `
+            -EvidencePath "$env:RUNNER_TEMP\arm64-runner.txt"
+
+      - name: Set up native CLANGARM64 tools
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: CLANGARM64
+          update: true
+          install: >-
+            mingw-w64-clang-aarch64-clang
+            mingw-w64-clang-aarch64-llvm
+
+      - name: Compile and execute ARM64 foundations
+        shell: msys2 {0}
+        run: .github/checks/test-aarch64-foundations.sh
