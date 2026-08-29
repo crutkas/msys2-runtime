@@ -26,17 +26,31 @@ GetArm64ProcAddress (HMODULE hModule, LPCSTR procname)
 #if defined (__x86_64__)
   /* see
      https://learn.microsoft.com/en-us/windows/arm/arm64ec-abi#fast-forward-sequences */
-  static const BYTE thunk[] = "\x48\x8b\xc4\x48\x89\x58\x20\x55\x5d\xe9";
+  static const BYTE thunk[] = "\x48\x8b\xc4\x48\x89\x58\x20\x55\x5d";
   /* on windows 11 22000 the thunk is different than documented on that page */
-  static const BYTE thunk2[] = "\x48\x8b\xff\x55\x48\x8b\xec\x5d\x90\xe9";
+  static const BYTE thunk2[] = "\x48\x8b\xff\x55\x48\x8b\xec\x5d\x90";
 #else
 #error "Unhandled architecture for thunk detection"
 #endif
-  if (proc && (memcmp (proc, thunk, sizeof (thunk) - 1) == 0 ||
-	(sizeof(thunk2) && memcmp (proc, thunk2, sizeof (thunk2) - 1) == 0)))
+  if (proc && (memcmp (proc, thunk, sizeof (thunk) - 1) == 0
+	       || memcmp (proc, thunk2, sizeof (thunk2) - 1) == 0))
+    proc += sizeof (thunk) - 1;
+  else
+    return NULL;
+
+  /* Fast-forward stubs may chain a short jump into a shared near-jump thunk. */
+  for (unsigned int hops = 0; hops < 4; ++hops)
     {
-      proc += sizeof (thunk) - 1;
-      proc += 4 + *(const int32_t *) proc;
+      if (*proc == 0xe9)
+	{
+	  int32_t displacement;
+	  memcpy (&displacement, proc + 1, sizeof displacement);
+	  proc += 5 + displacement;
+	}
+      else if (*proc == 0xeb)
+	proc += 2 + *(const int8_t *) (proc + 1);
+      else
+	break;
     }
   return proc;
 #endif
@@ -158,14 +172,18 @@ find_fast_cwd_pointer_aarch64 ()
   /* work backwards, find a bl to RtlEnterCriticalSection whose argument
      is the fast peb lock */
 
-  for (pc = ldrpc; pc >= start; pc--)
+  pc = ldrpc;
+  for (;;)
     {
       if (IS_INSN (pc, bl) && extract_bl_target (pc) == ent_crit)
 	break;
+      if (pc == start)
+	return NULL;
+      --pc;
     }
   uint32_t addoffset;
   uint32_t addrn;
-  for (; pc >= start; pc--)
+  for (;;)
     {
       if (IS_INSN (pc, add) && (*pc & 0x1F) == 0)
 	{
@@ -173,9 +191,12 @@ find_fast_cwd_pointer_aarch64 ()
 	  addrn = (*pc >> 5) & 0x1F;
 	  break;
 	}
+      if (pc == start)
+	return NULL;
+      --pc;
     }
   PRTL_CRITICAL_SECTION lockaddr = NULL;
-  for (; pc >= start; pc--)
+  for (;;)
     {
       if (IS_INSN (pc, adrp) && (*pc & 0x1F) == addrn)
 	{
@@ -183,13 +204,17 @@ find_fast_cwd_pointer_aarch64 ()
 					      addoffset);
 	  break;
 	}
+      if (pc == start)
+	return NULL;
+      --pc;
     }
   if (lockaddr != NtCurrentTeb ()->Peb->FastPebLock)
     return NULL;
 
   /* work backwards from the ldr to find the corresponding adrp */
   fcwd_access_t **RtlpCurDirRef = NULL;
-  for (pc = ldrpc; pc >= start; pc--)
+  pc = ldrpc;
+  for (;;)
     {
       if (IS_INSN (pc, adrp) && (*pc & 0x1F) == ldrrn)
 	{
@@ -197,6 +222,9 @@ find_fast_cwd_pointer_aarch64 ()
 					      ldroffset);
 	  break;
 	}
+      if (pc == start)
+	return NULL;
+      --pc;
     }
 
   return RtlpCurDirRef;

@@ -22,7 +22,15 @@ _BEGIN_STD_C
 #endif
 
 #if defined(__aarch64__)
-#define _JBLEN 22
+# if defined(__CYGWIN__)
+/*
+ * The Cygwin jump buffer adds its signal-stack pointer to the Windows Arm64
+ * register state saved by the generated setjmp and longjmp entry points.
+ */
+#  define _JBLEN 25
+# else
+#  define _JBLEN 22
+# endif
 #define _JBTYPE long long
 #endif
 

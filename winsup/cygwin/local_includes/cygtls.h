@@ -251,13 +251,15 @@ public: /* Do NOT remove this public: line, it's a marker for gentls_offsets. */
       {
 #ifdef __x86_64__
 	__asm__ ("pause");
+#elif defined (__aarch64__)
+	__asm__ ("yield");
 #else
 #error unimplemented for this target
 #endif
 	Sleep (0);
       }
   }
-  void unlock () { stacklock = 0; }
+  void unlock () { InterlockedExchange (&stacklock, 0); }
   bool locked () { return !!stacklock; }
   HANDLE get_signal_arrived (bool wait_for_lock = true)
   {

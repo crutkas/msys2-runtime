@@ -6,12 +6,16 @@ This software is a copyrighted work licensed under the terms of the
 Cygwin license.  Please consult the file "CYGWIN_LICENSE" for
 details. */
 
+#ifdef AARCH64_LAYER4_PTHREAD_CONTROL
+#include "../../.github/checks/aarch64-layer4-pthread-support.h"
+#else
 #include "winsup.h"
 #include <sys/param.h>
 #include "create_posix_thread.h"
 #include "cygheap_malloc.h"
 #include "ntdll.h"
 #include "mmap_alloc.h"
+#endif
 
 /* create_posix_thread
 
@@ -114,7 +118,7 @@ pthread_wrapper (PVOID arg)
 	   mov     x0, x21  			 // Move arg into x0			\n\
 	   blr     x20                  	 // call thread function         	\n"
 	   : : [WRAPPER_ARG] "r" (&wrapper_arg),
-	       [CYGTLS] "r" (__CYGTLS_PADSIZE__)
+	       [CYGTLS] "r" ((uintptr_t) __CYGTLS_PADSIZE__)
 	   : "x0", "x1", "x2", "x20", "x21", "x29", "memory");
 #else
 #error unimplemented for this target
@@ -124,6 +128,7 @@ pthread_wrapper (PVOID arg)
   api_fatal ("Dumb thinko in pthread handling.  Whip the developer.");
 }
 
+#ifndef AARCH64_LAYER4_PTHREAD_CONTROL
 /* We provide the stacks always in 1 Megabyte slots */
 #define THREAD_STACK_SLOT	0x000100000L	/* 1 Meg */
 /* Maximum stack size returned from the pool. */
@@ -373,3 +378,4 @@ err:
     }
   return thread;
 }
+#endif

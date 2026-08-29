@@ -464,14 +464,15 @@ _sigbe:
 	.global	sigdelayed
 	.seh_proc sigdelayed
 sigdelayed:
-	sub	sp,	sp,	0x390 	// sizeof(ARM64_NT_CONTEXT)
-	.seh_stackalloc 0x390
-	stp	x0,	x30,	[sp, #-16]!
+	sub	sp,	sp,	0x3b0 	// CONTEXT plus four saved registers
+	.seh_stackalloc 0x3b0
+	stp	x0,	x30,	[sp, #16]
+	.seh_save_reg x30, 24
 
 	// x16 gets clobbered after calling RtlCaptureContext.
 	// Both x16 and x17 are considered volatile registers, so we preserve both.
-	stp	x16,	x17,	[sp, #-16]!
-	.seh_save_regp_x x16, 16
+	stp	x16,	x17,	[sp]
+	.seh_nop
 	.seh_endprologue
 
 	// RtlCaptureContext captures the current CPU state
@@ -710,29 +711,24 @@ EOF
 	.seh_proc sigsetjmp
 sigsetjmp:
 	// prologue
-	stp		fp, lr, [sp, #-0x10]!	// save FP and LR registers
-	.seh_save_fplr_x 0x10
-	mov		fp, sp			// set FP to current SP
-	.seh_set_fp
+	stp	fp, lr, [sp, #-0x20]!		// preserve the caller's frame
+	.seh_save_fplr_x 0x20
 	.seh_endprologue
+	str	x0, [sp, #0x10]			// preserve buf across pthread_sigmask
 	str	w1, [x0, #0xc8]			// buf->savemask = savemask
 	cbz     w1, 1f				// If savemask == 0, skip fetching sigmask
-	sub     sp, sp, #32			// Allocate 32 bytes on stack call
-	str     x0, [sp, #16]			// Preserve buf across pthread_sigmask
 	add     x2, x0, #0xd0			// &buf->sigmask
 	mov     x0, #0                         	// SIG_SETMASK
 	mov     x1, xzr                        	// newmask = NULL
 	bl      pthread_sigmask
-	ldr     x0, [sp, #16]			// Restore buf for setjmp
-	add     sp, sp, #32
 1:
-	bl	setjmp
+	ldr	x0, [sp, #0x10]			// restore buf for setjmp
 	// epilogue
 	.seh_startepilogue
-	ldp	fp, lr, [sp], #0x10		// restore saved FP and LR registers
-	.seh_save_fplr_x 0x10
+	ldp	fp, lr, [sp], #0x20		// restore the caller's frame
+	.seh_save_fplr_x 0x20
 	.seh_endepilogue
-	ret
+	b	setjmp				// capture the original caller, not this frame
 	.seh_endproc
 
 	.globl  setjmp
@@ -781,9 +777,7 @@ setjmp:
 	// decrement the stack lock
 	ldr	x2, =_cygtls.stacklock		// load the symbol offset
 	add	x2, x10, x2			// x2 = tls_base + &stacklock
-	ldr	w3, [x2]			// load current stacklock value
-	sub	w3, w3, #1			// decrement
-	str	w3, [x2]			// store back
+	stlr	wzr, [x2]			// release the signal-stack lock
 
 	mov	w0, wzr				// return 0
 
@@ -832,12 +826,16 @@ siglongjmp:
 	.seh_proc longjmp
 longjmp:
 	// prologue
-	stp	x0, x1, [sp, #-0x10]!		// save function args (jmp_buf and return value)
-	.seh_stackalloc 0x10
+	stp	fp, lr, [sp, #-0x20]!		// keep this call frame unwindable
+	.seh_save_fplr_x 0x20
+	mov	fp, sp
+	.seh_set_fp
+	stp	x0, x1, [sp, #0x10]		// save jmp_buf and return value
+	.seh_nop
 	.seh_endprologue
 1:
 	bl	stabilize_sig_stack		// call stabilize_sig_stack (returns TLS in x10)
-	ldp	x2, x3, [sp], #0x10		// restore jmp_buf and return value to x2 and x3
+	ldp	x2, x3, [sp, #0x10]		// restore jmp_buf and return value to x2 and x3
 	ldr	x9, [x2]			// get old signal stack from jump buffer
 
 	// restore stack pointer in TLS
@@ -845,18 +843,16 @@ longjmp:
 	add	x11, x10, x11			// x11 = tls_base + &stackptr
 	str	x9, [x11]			// store signal stack into stackptr
 
-	// release lock by decrementing counter
-	ldr	x11, =_cygtls.stacklock		// load the symbol offset
-	add	x11, x10, x11			// x11 = tls_base + &stacklock
-	ldr	w12, [x11]			// load current stacklock value
-	sub	w12, w12, #1			// decrement
-	str	w12, [x11]			// store back
-
 	// we're not in cygwin anymore, clear "in cygwin" flag
 	ldr	x11, =_cygtls.incyg		// load the symbol offset
 	add	x11, x10, x11			// x11 = tls_base + &incyg
 	mov	w12, wzr			// clear the incyg counter
 	str	w12, [x11]			// store back the new value
+
+	// publish stackptr and incyg before releasing the signal-stack lock
+	ldr	x11, =_cygtls.stacklock		// load the symbol offset
+	add	x11, x10, x11			// x11 = tls_base + &stacklock
+	stlr	wzr, [x11]			// release the signal-stack lock
 
 	// use second argument as the return value
 	mov	x0, x3				// move saved return value to x0
