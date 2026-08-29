@@ -188,7 +188,6 @@ $env:autom4te_perllibdir = To-Posix (Join-Path $generatorPrefix 'share\autoconf'
 $env:AC_MACRODIR = $env:autom4te_perllibdir
 $env:ACLOCAL = Join-Path $generatorToolchain 'aclocal.exe'
 $env:AUTOCONF = Join-Path $generatorToolchain 'autoconf.exe'
-$env:AUTOHEADER = Join-Path $generatorToolchain 'autoheader.exe'
 $env:AUTOM4TE = Join-Path $generatorToolchain 'autom4te.exe'
 $env:AUTOMAKE = Join-Path $generatorToolchain 'automake.exe'
 $env:RM = To-Posix (Join-Path $shim 'rm.exe')
@@ -241,7 +240,6 @@ if (($env:PATH -split ';') -match '[\\/]msys64[\\/]usr[\\/]bin$') {
 foreach ($override in @(
     @('ACLOCAL', $env:ACLOCAL, '--version'),
     @('AUTOCONF', $env:AUTOCONF, '--version'),
-    @('AUTOHEADER', $env:AUTOHEADER, '--version'),
     @('AUTOM4TE', $env:AUTOM4TE, '--version'),
     @('AUTOMAKE', $env:AUTOMAKE, '--version'),
     @('RM', $env:RM, '--help')
