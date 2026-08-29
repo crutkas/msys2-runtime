@@ -30,7 +30,7 @@ my $sym_prefix = '';
 
 while (<$nm_fd>) {
     chomp;
-    my ($fn, $type, $sym) = /^$inpdll:(.*?):\S+\s+(\S)\s+(\S+)$/o;
+    my ($fn, $type, $sym) = /^\Q$inpdll\E:(.*?):\S+\s+(\S)\s+(\S+)$/;
     next unless $fn;
     $text{$fn} = $sym if $type eq 'T';
     $import{$fn} = $sym if $type eq 'I';
