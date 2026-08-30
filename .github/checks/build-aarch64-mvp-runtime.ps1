@@ -323,8 +323,14 @@ if (-not $ptySource.Contains('static size_t ixput = 0;') -or
 Write-Host 'source-regression: PTY response buffer index uses size_t'
 $exceptionsSource = Get-Content -LiteralPath (
     Join-Path $sourceRoot 'winsup\cygwin\exceptions.cc') -Raw
+$altstackArm64 = [regex]::Match(
+    $exceptionsSource,
+    '(?s)#elif defined\(__aarch64__\)(.*?)#else\s*#error unimplemented')
+if (-not $altstackArm64.Success) {
+    throw 'AArch64 alternate-stack assembly block is missing'
+}
 foreach ($register in 0..31) {
-    if (-not $exceptionsSource.Contains("`"v$register`"")) {
+    if (-not $altstackArm64.Groups[1].Value.Contains("`"v$register`"")) {
         throw "AArch64 alternate-stack call omits SIMD clobber v$register"
     }
 }
