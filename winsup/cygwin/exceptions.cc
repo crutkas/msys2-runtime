@@ -1185,27 +1185,6 @@ out:
   return interrupted;
 }
 
-static inline bool
-has_visible_window_station ()
-{
-  HWINSTA station_hdl;
-  USEROBJECTFLAGS uof;
-  DWORD len;
-
-  /* Check if the process is associated with a visible window station.
-     These are processes running on the local desktop as well as processes
-     running in terminal server sessions.
-     Processes running in a service session not explicitely associated
-     with the desktop (using the "Allow service to interact with desktop"
-     property) are running in an invisible window station. */
-  if ((station_hdl = GetProcessWindowStation ())
-      && GetUserObjectInformationW (station_hdl, UOI_FLAGS, &uof,
-				    sizeof uof, &len)
-      && (uof.dwFlags & WSF_VISIBLE))
-    return true;
-  return false;
-}
-
 /* Keyboard interrupt handler.  */
 static BOOL
 ctrl_c_handler (DWORD type)
