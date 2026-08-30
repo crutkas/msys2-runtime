@@ -139,7 +139,7 @@ Get-ChildItem -LiteralPath $generatorPrefix -File -Recurse | ForEach-Object {
     if ($relocated -ne $text) {
         [IO.File]::WriteAllText($_.FullName, $relocated, [Text.UTF8Encoding]::new($false))
     }
-    if ($relocated -match '/[A-Za-z]/Users/[^/]+/.+native-preflight') {
+    if ($relocated -match '/[A-Za-z]/Users/') {
         throw "Generator script retains an archived local path: $($_.FullName)"
     }
 }
@@ -225,7 +225,8 @@ $env:READELF_FOR_TARGET = $env:READELF
 $env:STRIP_FOR_TARGET = $env:STRIP
 $env:WINDRES_FOR_TARGET = $env:WINDRES
 $busyHash = (Get-FileHash -LiteralPath $busy -Algorithm SHA256).Hash
-foreach ($utility in @('patch', 'date', 'tee', 'awk', 'sed', 'find', 'cmp')) {
+foreach ($utility in @('patch', 'date', 'tee', 'awk', 'sed', 'find', 'cmp',
+    'grep', 'rm', 'touch')) {
     $resolved = (Get-Command "$utility.exe" -CommandType Application |
         Select-Object -First 1).Source
     Assert-Arm64 $resolved "BusyBox $utility utility"
@@ -307,10 +308,35 @@ $newlibBuild = "$build/aarch64-pc-cygwin/newlib"
 $cygwinBuild = Join-Path $buildRoot 'aarch64-pc-cygwin\winsup'
 $cygwinBuildPosix = To-Posix $cygwinBuild
 New-Item -ItemType Directory -Path $cygwinBuild -Force | Out-Null
-$runtimeCc = "$bin/clang.exe -target aarch64-w64-windows-gnu -fuse-ld=lld --sysroot=$empty " +
+$windowsOverlay = Join-Path $Work 'windows-header-overlay'
+$w32apiOverlay = Join-Path $windowsOverlay 'w32api'
+New-Item -ItemType Directory -Path $w32apiOverlay -Force | Out-Null
+$corecrtSource = Join-Path $crtPrefix 'include\corecrt.h'
+$corecrtText = Get-Content -LiteralPath $corecrtSource -Raw
+$mbstatePattern = '(?ms)^#if defined\(_UCRT\) \|\| defined\(__LARGE_MBSTATE_T\)\r?$' +
+    '.*?^#endif\r?$'
+$mbstateMatches = [regex]::Matches($corecrtText, $mbstatePattern)
+if ($mbstateMatches.Count -ne 1) {
+    throw 'MinGW corecrt.h mbstate_t block did not match the Cygwin overlay guard'
+}
+$mbstateBlock = $mbstateMatches[0].Value
+$corecrtText = $corecrtText.Replace(
+    $mbstateBlock, "#ifndef __CYGWIN__`n$mbstateBlock`n#endif")
+[IO.File]::WriteAllText(
+    (Join-Path $windowsOverlay 'corecrt.h'), $corecrtText,
+    [Text.UTF8Encoding]::new($false))
+foreach ($header in @('iphlpapi.h', 'mswsock.h', 'mstcpip.h', 'ntstatus.h',
+    'shlobj.h', 'userenv.h', 'windows.h', 'winioctl.h', 'ws2tcpip.h')) {
+    [IO.File]::WriteAllText(
+        (Join-Path $w32apiOverlay $header), "#include <$header>`n",
+        [Text.UTF8Encoding]::new($false))
+}
+$windowsOverlayPosix = To-Posix $windowsOverlay
+$runtimeCc = "$bin/clang.exe -target aarch64-w64-windows-gnu -fuse-ld=lld " +
+    "--sysroot=$empty $targetDefines " +
     "-L$cygwinBuildPosix/cygwin -I$src/winsup/cygwin/include " +
     "-B$newlibBuild -I$newlibBuild/targ-include -I$src/newlib/libc/include " +
-    "-idirafter $src/winsup/w32api/include -idirafter $crt/include -L$crt/lib -B$crt/lib"
+    "-idirafter $windowsOverlayPosix -idirafter $crt/include -L$crt/lib -B$crt/lib"
 $runtimeCxx = $runtimeCc.Replace('clang.exe', 'clang++.exe')
 $env:CC = $runtimeCc
 $env:CXX = $runtimeCxx
