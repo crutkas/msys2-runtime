@@ -321,6 +321,14 @@ if (-not $ptySource.Contains('static size_t ixput = 0;') -or
     throw 'PTY response buffer index does not match its size_t capacity'
 }
 Write-Host 'source-regression: PTY response buffer index uses size_t'
+$exceptionsSource = Get-Content -LiteralPath (
+    Join-Path $sourceRoot 'winsup\cygwin\exceptions.cc') -Raw
+foreach ($register in 0..31) {
+    if (-not $exceptionsSource.Contains("`"v$register`"")) {
+        throw "AArch64 alternate-stack call omits SIMD clobber v$register"
+    }
+}
+Write-Host 'source-regression: AArch64 alternate-stack call clobbers v0-v31'
 
 $src = To-Posix $sourceRoot
 $build = To-Posix $buildRoot
