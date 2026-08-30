@@ -188,7 +188,7 @@ $env:autom4te_perllibdir = To-Posix (Join-Path $generatorPrefix 'share\autoconf'
 $env:AC_MACRODIR = $env:autom4te_perllibdir
 $env:ACLOCAL = Join-Path $generatorToolchain 'aclocal.exe'
 $env:AUTOCONF = Join-Path $generatorToolchain 'autoconf.exe'
-$env:AUTOM4TE = Join-Path $generatorToolchain 'autom4te.exe'
+$env:AUTOM4TE = 'autom4te.exe'
 $env:AUTOMAKE = Join-Path $generatorToolchain 'automake.exe'
 $env:RM = To-Posix (Join-Path $shim 'rm.exe')
 $env:AWK = To-Posix (Join-Path $shim 'awk.exe')
@@ -253,6 +253,13 @@ foreach ($override in @(
     if ($LASTEXITCODE -ne 0) { throw "$($override[0]) override failed its native smoke test" }
     Write-Host "generator-override: $($override[0])=$($override[1]) ($firstLine)"
 }
+$resolvedAutom4te = (Get-Command $env:AUTOM4TE -CommandType Application |
+    Select-Object -First 1).Source
+if ([IO.Path]::GetFullPath($resolvedAutom4te) -ne
+    [IO.Path]::GetFullPath((Join-Path $generatorToolchain 'autom4te.exe'))) {
+    throw "AUTOM4TE did not resolve to the pinned native launcher: $resolvedAutom4te"
+}
+Write-Host "generator-override: AUTOM4TE resolved through sealed PATH to $resolvedAutom4te"
 & $nativePerl "-I$($env:autom4te_perllibdir)" -MAutom4te::C4che -e 1
 if ($LASTEXITCODE -ne 0) { throw 'Relocated native Perl could not import Autom4te::C4che' }
 Write-Host 'generator-override: relocated native Perl module import passed'
