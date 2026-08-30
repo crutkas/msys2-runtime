@@ -80,12 +80,16 @@ foreach ($required in @(
     'IMAGE_DLL_CHARACTERISTICS_DYNAMIC_BASE',
     'IMAGE_DLL_CHARACTERISTICS_NX_COMPAT',
     'Name: .reloc',
-    'Name: .cygwin_',
-    'IMAGE_SCN_MEM_SHARED',
     'Name: KERNEL32.dll',
     'Name: ntdll.dll'
 )) {
     if (-not $peReport.Contains($required)) { throw "Runtime PE invariant missing: $required" }
+}
+$commonSection = @($peReport -split '\r?\n\s*Section \{' |
+    Where-Object { $_ -match 'Name: \.cygwin_' })
+if ($commonSection.Count -ne 1 -or
+    $commonSection[0] -notmatch 'IMAGE_SCN_MEM_SHARED') {
+    throw 'Runtime .cygwin_ section is not marked IMAGE_SCN_MEM_SHARED'
 }
 $exportCount = ([regex]::Matches($peReport, '(?m)^\s+Ordinal:')).Count
 if ($exportCount -lt 1700) { throw "Unexpectedly small runtime export table: $exportCount" }
@@ -106,11 +110,30 @@ $tmp = Join-Path $RuntimeRoot 'tmp'
 New-Item -ItemType Directory -Path $tmp -Force | Out-Null
 $oldLocation = Get-Location
 $oldPath = $env:PATH
-$env:PATH = "$(Join-Path $RuntimeRoot 'usr\bin');$(Join-Path $RuntimeRoot 'cmd');" +
-    "$(Join-Path $RuntimeRoot 'clangarm64\bin');$oldPath"
+$oldMsys2PathType = $env:MSYS2_PATH_TYPE
+$sealedPathDirectories = @(
+    (Join-Path $RuntimeRoot 'usr\bin'),
+    (Join-Path $RuntimeRoot 'cmd'),
+    (Join-Path $RuntimeRoot 'clangarm64\bin'),
+    $ClangPrefix,
+    (Split-Path $BusyBox)
+)
+foreach ($directory in $sealedPathDirectories) {
+    if (-not (Test-Path -LiteralPath $directory -PathType Container)) {
+        throw "Sealed validation PATH directory is missing: $directory"
+    }
+    Get-ChildItem -LiteralPath $directory -Filter *.exe -File | ForEach-Object {
+        $machine = Get-PeMachine $_.FullName
+        if ($null -ne $machine -and $machine -ne 0xAA64) {
+            throw "Sealed validation PATH contains non-ARM64 executable: $($_.FullName)"
+        }
+    }
+}
+$env:PATH = $sealedPathDirectories -join ';'
 $env:HOME = Join-Path $RuntimeRoot 'home'
-$env:MSYS2_PATH_TYPE = 'inherit'
+$env:MSYS2_PATH_TYPE = 'strict'
 $env:MSYS = 'winsymlinks:sys'
+$tests.Add('sealed native validation PATH excludes host and x64 tools')
 New-Item -ItemType Directory -Path $env:HOME -Force | Out-Null
 try {
     Set-Location (Join-Path $RuntimeRoot 'usr\bin')
@@ -207,6 +230,7 @@ printf "git-smoke: version=%s commit=%s\n" "$(git --version)" "$(git -C repo rev
 finally {
     Set-Location $oldLocation
     $env:PATH = $oldPath
+    $env:MSYS2_PATH_TYPE = $oldMsys2PathType
 }
 
 [ordered]@{

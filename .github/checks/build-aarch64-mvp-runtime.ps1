@@ -51,6 +51,7 @@ if ((Split-Path $resolvedWork -Leaf) -ne 'git-bash-mvp' -or
     [IO.Path]::GetPathRoot($resolvedWork) -eq $resolvedWork) {
     throw "Refusing to clean unsafe work root: $resolvedWork"
 }
+$Work = $resolvedWork
 $staleSentinel = Join-Path $resolvedWork 'stale-sentinel'
 if (Test-Path -LiteralPath $resolvedWork) {
     Remove-Item -LiteralPath $resolvedWork -Recurse -Force
@@ -83,9 +84,12 @@ tar -xf $BusyBoxArchive -C $inputRoot
 $busy = (Get-ChildItem -LiteralPath $inputRoot -Filter busybox.exe -File -Recurse |
     Select-Object -First 1).FullName
 Assert-Arm64 $busy 'BusyBox shell'
-$generatorExtractRoot = Join-Path ([IO.Path]::GetPathRoot($Work)) 'g'
-if (Test-Path -LiteralPath $generatorExtractRoot) {
-    Remove-Item -LiteralPath $generatorExtractRoot -Recurse -Force
+$generatorExtractRoot = Join-Path $inputRoot 'generators'
+$resolvedGeneratorRoot = [IO.Path]::GetFullPath($generatorExtractRoot)
+$workPrefix = $resolvedWork.TrimEnd('\') + '\'
+if (-not $resolvedGeneratorRoot.StartsWith(
+        $workPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+    throw "Generator extraction escaped guarded work root: $resolvedGeneratorRoot"
 }
 New-Item -ItemType Directory -Path $generatorExtractRoot -Force | Out-Null
 Expand-Archive -LiteralPath $GeneratorArchive -DestinationPath $generatorExtractRoot -Force
@@ -139,7 +143,9 @@ Get-ChildItem -LiteralPath $generatorPrefix -File -Recurse | ForEach-Object {
     if ($relocated -ne $text) {
         [IO.File]::WriteAllText($_.FullName, $relocated, [Text.UTF8Encoding]::new($false))
     }
-    if ($relocated -match '/[A-Za-z]/Users/') {
+    $unexpectedPaths = $relocated.Replace($generatorPrefixPosix, '').
+        Replace($nativePerlPosix, '')
+    if ($unexpectedPaths -match '(/[A-Za-z]/Users/|[A-Za-z]:/Users/|\.copilot/session-state/)') {
         throw "Generator script retains an archived local path: $($_.FullName)"
     }
 }
@@ -153,12 +159,13 @@ foreach ($name in @('awk', 'basename', 'cat', 'cmp', 'cp', 'cut', 'dirname', 'ec
 
 $clang = Join-Path $ClangPrefix 'clang.exe'
 $clangxx = Join-Path $ClangPrefix 'clang++.exe'
+$lld = Join-Path $ClangPrefix 'ld.lld.exe'
 $make = Join-Path $ClangPrefix 'mingw32-make.exe'
 $makeCommand = 'mingw32-make.exe'
 foreach ($tool in @(
     @($clang, 'Clang'), @($clangxx, 'Clang++'), @($make, 'GNU Make'),
     @((Join-Path $ClangPrefix 'llvm-ar.exe'), 'LLVM ar'),
-    @((Join-Path $ClangPrefix 'ld.lld.exe'), 'LLD'),
+    @($lld, 'LLD'),
     @($nativePerl, 'Perl'),
     @((Join-Path $generatorBin 'm4.exe'), 'M4'),
     @((Join-Path $generatorToolchain 'autoconf.exe'), 'Autoconf launcher'),
@@ -167,6 +174,28 @@ foreach ($tool in @(
     @((Join-Path $generatorBin 'msta'), 'COCOM msta'),
     @((Join-Path $generatorBin 'sprut'), 'COCOM sprut')
 )) { Assert-Arm64 $tool[0] $tool[1] }
+$toolchainLockPath = Join-Path $PSScriptRoot 'aarch64-mvp-toolchain-lock.json'
+$toolchainLock = Get-Content -LiteralPath $toolchainLockPath -Raw | ConvertFrom-Json
+$workflowSource = Get-Content -LiteralPath (
+    Join-Path $Source '.github\workflows\build.yaml') -Raw
+if (-not $workflowSource.Contains(
+        "msys2/setup-msys2@$($toolchainLock.setup_msys2_commit)")) {
+    throw 'Hosted MVP workflow does not pin the locked setup-msys2 commit'
+}
+foreach ($package in $toolchainLock.packages) {
+    if (-not $workflowSource.Contains($package)) {
+        throw "Hosted MVP workflow does not pin locked package $package"
+    }
+}
+foreach ($tool in $toolchainLock.tools) {
+    $path = if ($tool.path -eq 'perl.exe') {
+        $nativePerl
+    } else {
+        Join-Path $ClangPrefix $tool.path
+    }
+    Assert-Sha256 $path $tool.sha256
+}
+Write-Host "toolchain-seal: $($toolchainLock.tools.Count) native files match locked SHA-256 values"
 
 # git archive preserves exact blob bytes and avoids autocrlf changes in generated inputs.
 $sourceTar = Join-Path $Work 'source.tar'
@@ -225,6 +254,13 @@ $env:RANLIB_FOR_TARGET = $env:RANLIB
 $env:READELF_FOR_TARGET = $env:READELF
 $env:STRIP_FOR_TARGET = $env:STRIP
 $env:WINDRES_FOR_TARGET = $env:WINDRES
+$resolvedLd = (Get-Command $env:LD -CommandType Application |
+    Select-Object -First 1).Source
+if ([IO.Path]::GetFullPath($resolvedLd) -ne [IO.Path]::GetFullPath($lld) -or
+    $env:LD_FOR_TARGET -ne $env:LD) {
+    throw "LD_FOR_TARGET is not bound to the sealed native LLD: $resolvedLd"
+}
+Write-Host "toolchain-seal: LD_FOR_TARGET resolves to $resolvedLd"
 $busyHash = (Get-FileHash -LiteralPath $busy -Algorithm SHA256).Hash
 foreach ($utility in @('patch', 'date', 'tee', 'awk', 'sed', 'find', 'cmp',
     'grep', 'rm', 'touch')) {

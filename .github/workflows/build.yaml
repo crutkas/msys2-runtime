@@ -32,7 +32,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: setup-msys2
-        uses: msys2/setup-msys2@v2
+        uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884
         with:
           msystem: MSYS
           update: true
@@ -88,7 +88,7 @@ jobs:
       FC: ${{ matrix.fc }}
     steps:
       - id: msys2
-        uses: msys2/setup-msys2@v2
+        uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884
         with:
           msystem: ${{ matrix.msystem }}
           update: true
@@ -137,7 +137,7 @@ jobs:
             -EvidencePath "$env:RUNNER_TEMP\arm64-runner.txt"
 
       - name: Set up native CLANGARM64 tools
-        uses: msys2/setup-msys2@v2
+        uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884
         with:
           msystem: CLANGARM64
           update: true
@@ -184,7 +184,7 @@ jobs:
 
       - id: msys2
         name: Set up native CLANGARM64 tools
-        uses: msys2/setup-msys2@v2
+        uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884
         with:
           msystem: CLANGARM64
           update: true
@@ -204,6 +204,7 @@ jobs:
           $clangArm64 = '${{ steps.msys2.outputs.msys2-location }}\clangarm64'
           "CC=$clangArm64\bin\clang.exe" | Add-Content $env:GITHUB_ENV
           "NATIVE_PERL=$clangArm64\bin\perl.exe" | Add-Content $env:GITHUB_ENV
+          "LLVM_AR=$clangArm64\bin\llvm-ar.exe" | Add-Content $env:GITHUB_ENV
           "LLVM_NM=$clangArm64\bin\llvm-nm.exe" | Add-Content $env:GITHUB_ENV
           "LLVM_OBJCOPY=$clangArm64\bin\llvm-objcopy.exe" |
             Add-Content $env:GITHUB_ENV
@@ -253,7 +254,7 @@ jobs:
 
       - id: msys2
         name: Set up native Clang ARM64 tools
-        uses: msys2/setup-msys2@v2
+        uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884
         with:
           msystem: CLANGARM64
           update: true
@@ -311,7 +312,7 @@ jobs:
 
       - id: msys2
         name: Set up native Clang ARM64 tools
-        uses: msys2/setup-msys2@v2
+        uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884
         with:
           msystem: CLANGARM64
           update: true
@@ -352,7 +353,7 @@ jobs:
 
       - id: msys2
         name: Set up native Clang ARM64 tools
-        uses: msys2/setup-msys2@v2
+        uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884
         with:
           msystem: CLANGARM64
           update: true
@@ -397,14 +398,23 @@ jobs:
 
       - id: msys2
         name: Set up approved native ARM64 build tools
-        uses: msys2/setup-msys2@v2
+        uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884
         with:
           msystem: CLANGARM64
           update: true
           install: >-
-            mingw-w64-clang-aarch64-toolchain
-            mingw-w64-clang-aarch64-autotools
-            mingw-w64-clang-aarch64-perl
+            mingw-w64-clang-aarch64-clang=22.1.8-2
+            mingw-w64-clang-aarch64-compiler-rt=22.1.8-2
+            mingw-w64-clang-aarch64-crt=14.0.0.r302.gd7f3c5201-1
+            mingw-w64-clang-aarch64-headers=14.0.0.r302.gd7f3c5201-1
+            mingw-w64-clang-aarch64-lld=22.1.8-2
+            mingw-w64-clang-aarch64-libwinpthread=14.0.0.r302.gd7f3c5201-1
+            mingw-w64-clang-aarch64-llvm=22.1.8-2
+            mingw-w64-clang-aarch64-llvm-tools=22.1.8-2
+            mingw-w64-clang-aarch64-make=4.4.1-5
+            mingw-w64-clang-aarch64-ncurses=6.6-4
+            mingw-w64-clang-aarch64-perl=5.44.0-3
+            mingw-w64-clang-aarch64-winpthreads=14.0.0.r302.gd7f3c5201-1
 
       - name: Download exact public MVP inputs
         shell: pwsh
@@ -454,6 +464,7 @@ jobs:
             -BusyBoxExe "$work\inputs\busybox-c26a88d7\bin\busybox.exe" `
             -MinGitRoot "$work\mingit" `
             -ClangPrefix '${{ steps.msys2.outputs.msys2-location }}\clangarm64\bin' `
+            -NativePerl '${{ steps.msys2.outputs.msys2-location }}\clangarm64\bin\perl.exe' `
             -NativeSsh "$env:SystemRoot\System32\OpenSSH\ssh.exe" `
             -Destination "$env:RUNNER_TEMP\git-bash-mvp-publish" `
             -RuntimeCommit $runtimeCommit
@@ -499,7 +510,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up x86_64 MSYS tools
-        uses: msys2/setup-msys2@v2
+        uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884
         with:
           msystem: MSYS
           update: true

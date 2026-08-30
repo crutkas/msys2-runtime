@@ -5,6 +5,7 @@ param(
     [Parameter(Mandatory)] [string] $BusyBoxExe,
     [Parameter(Mandatory)] [string] $MinGitRoot,
     [Parameter(Mandatory)] [string] $ClangPrefix,
+    [Parameter(Mandatory)] [string] $NativePerl,
     [Parameter(Mandatory)] [string] $NativeSsh,
     [Parameter(Mandatory)] [string] $Destination,
     [Parameter(Mandatory)] [ValidatePattern('^[0-9a-f]{40}$')] [string] $RuntimeCommit,
@@ -14,6 +15,8 @@ param(
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $true
 $arm64 = 0xAA64
+$toolchainLockPath = Join-Path $PSScriptRoot 'aarch64-mvp-toolchain-lock.json'
+$toolchainLock = Get-Content -LiteralPath $toolchainLockPath -Raw | ConvertFrom-Json
 
 function Get-PeMachine([string] $Path) {
     $stream = [IO.File]::OpenRead($Path)
@@ -79,6 +82,20 @@ foreach ($path in @(
         throw "$path is not a native ARM64 PE image"
     }
 }
+foreach ($tool in $toolchainLock.tools) {
+    $path = if ($tool.path -eq 'perl.exe') {
+        $NativePerl
+    } else {
+        Join-Path $ClangPrefix $tool.path
+    }
+    if ((Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash -ne $tool.sha256) {
+        throw "Native toolchain seal mismatch: $path"
+    }
+}
+if ((Get-FileHash -LiteralPath $NativeSsh -Algorithm SHA256).Hash -ne
+    $toolchainLock.ssh.sha256) {
+    throw "Native SSH seal mismatch: $NativeSsh"
+}
 
 $root = Join-Path $Destination 'native-git-bash-mvp-arm64'
 if (Test-Path -LiteralPath $root) { Remove-Item -LiteralPath $root -Recurse -Force }
@@ -120,7 +137,7 @@ $provenance = [ordered]@{
         source = 'this repository and pull-request head'
         source_commit = $RuntimeCommit
         base_commit = 'f71b5d07c804433dfa06df122b22efd200e9ec2b'
-        toolchain = 'prebuilt native ARM64 Clang/LLD from MSYS2 CLANGARM64'
+        toolchain = $toolchainLock
         copied_prebuilt_runtime = @(
             'libncursesw6.dll from the pinned native MSYS2 CLANGARM64 prefix'
         )
@@ -144,7 +161,7 @@ $provenance = [ordered]@{
         excluded = @('x64 usr subtree', 'Git Credential Manager', 'Scalar')
     }
     ssh = [ordered]@{
-        source = 'Windows 11 ARM inbox OpenSSH client'
+        source = $toolchainLock.ssh.source
         sha256 = (Get-FileHash -LiteralPath $NativeSsh -Algorithm SHA256).Hash
         machine = '0xAA64'
     }

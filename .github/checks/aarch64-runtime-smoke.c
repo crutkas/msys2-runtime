@@ -17,6 +17,9 @@ extern char **environ;
 
 static pthread_key_t tls_key;
 static volatile sig_atomic_t signal_seen;
+static volatile sig_atomic_t altstack_signal_seen;
+static char *altstack_begin;
+static char *altstack_end;
 
 static void
 fail (const char *operation)
@@ -29,6 +32,14 @@ static void
 on_signal (int signal_number)
 {
   signal_seen = signal_number;
+}
+
+static void
+on_altstack_signal (int signal_number)
+{
+  char marker;
+  if (&marker >= altstack_begin && &marker < altstack_end)
+    altstack_signal_seen = signal_number;
 }
 
 static void *
@@ -120,6 +131,27 @@ main (int argc, char **argv)
   if (signal (SIGUSR1, on_signal) == SIG_ERR || raise (SIGUSR1) != 0
       || signal_seen != SIGUSR1)
     fail ("signal");
+
+  stack_t alternate_stack = {0};
+  struct sigaction alternate_action = {0};
+  alternate_stack.ss_size = SIGSTKSZ;
+  alternate_stack.ss_sp = malloc (alternate_stack.ss_size);
+  if (!alternate_stack.ss_sp)
+    fail ("alternate stack allocation");
+  altstack_begin = (char *) alternate_stack.ss_sp;
+  altstack_end = altstack_begin + alternate_stack.ss_size;
+  alternate_action.sa_handler = on_altstack_signal;
+  alternate_action.sa_flags = SA_ONSTACK;
+  sigemptyset (&alternate_action.sa_mask);
+  if (sigaltstack (&alternate_stack, NULL) != 0
+      || sigaction (SIGUSR2, &alternate_action, NULL) != 0
+      || raise (SIGUSR2) != 0
+      || altstack_signal_seen != SIGUSR2)
+    fail ("alternate signal stack");
+  alternate_stack.ss_flags = SS_DISABLE;
+  if (sigaltstack (&alternate_stack, NULL) != 0)
+    fail ("disable alternate signal stack");
+  free (altstack_begin);
 
   if (socketpair (AF_UNIX, SOCK_STREAM, 0, socket_fds) != 0)
     fail ("socketpair");

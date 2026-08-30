@@ -7,6 +7,12 @@ layer3_import_add (int value)
 }
 
 __declspec(dllexport) int
+layer3_import_add_v2 (int value)
+{
+  return value + layer3_import_data + 1;
+}
+
+__declspec(dllexport) int
 WSAStartup (unsigned short version, void *data)
 {
   unsigned short *words = (unsigned short *) data;
