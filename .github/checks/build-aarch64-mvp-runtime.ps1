@@ -377,7 +377,7 @@ $wrapper = To-Posix (Join-Path $sourceRoot '.github\checks\aarch64-cygwin-clang.
 $env:CC = "$busy sh $wrapper"
 Push-Location $bashBuild
 try {
-    & $busy sh (To-Posix (Join-Path $bashSource 'bash-5.3\configure')) `
+    & $busy sh '../bash-source/bash-5.3/configure' `
         '--build=aarch64-pc-cygwin' '--host=aarch64-pc-cygwin' '--prefix=/usr' `
         '--without-bash-malloc' '--disable-nls' '--disable-rpath' '--enable-job-control'
     if ($LASTEXITCODE -ne 0) { throw 'Bash configure failed' }
