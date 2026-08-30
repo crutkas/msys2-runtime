@@ -194,6 +194,7 @@ $env:RM = To-Posix (Join-Path $shim 'rm.exe')
 $env:AWK = To-Posix (Join-Path $shim 'awk.exe')
 $env:DATE = To-Posix (Join-Path $shim 'date.exe')
 $env:GREP = To-Posix (Join-Path $shim 'grep.exe')
+$env:EGREP_TRADITIONAL = $env:GREP
 $env:PATCH = To-Posix (Join-Path $shim 'patch.exe')
 $env:SED = To-Posix (Join-Path $shim 'sed.exe')
 $env:TEE = To-Posix (Join-Path $shim 'tee.exe')
@@ -374,7 +375,7 @@ $env:MVP_CRT_PREFIX = $crt
 $env:MVP_RUNTIME_SOURCE = $src
 $env:MVP_RUNTIME_BUILD = $build
 $wrapper = To-Posix (Join-Path $sourceRoot '.github\checks\aarch64-cygwin-clang.sh')
-$env:CC = "$busy sh $wrapper"
+$env:CC = "sh.exe $wrapper"
 Push-Location $bashBuild
 try {
     & $busy sh '../bash-source/bash-5.3/configure' `
