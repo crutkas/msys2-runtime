@@ -270,10 +270,10 @@ if ($makefileSource.Contains('/bin/sh $(word 1,$^)') -or
 }
 Write-Host 'generator-override: version.cc recipe uses configured native $(SHELL)'
 if (-not $makefileSource.Contains(
-        '.cygwin_dll_common=alloc,load,data,contents,share')) {
-    throw 'Clang post-link fix does not mark .cygwin_dll_common shared'
+        '.cygwin_=alloc,load,data,contents,share')) {
+    throw 'Clang post-link fix does not mark the PE .cygwin_ section shared'
 }
-Write-Host 'source-regression: Clang post-link fix marks .cygwin_dll_common shared'
+Write-Host 'source-regression: Clang post-link fix marks the PE .cygwin_ section shared'
 $ptySource = Get-Content -LiteralPath (
     Join-Path $sourceRoot 'winsup\cygwin\fhandler\pty.cc') -Raw
 if (-not $ptySource.Contains('static size_t ixput = 0;') -or
@@ -377,6 +377,14 @@ finally { Pop-Location }
 
 $runtimeDll = Join-Path $cygwinBuild 'cygwin\new-msys-2.0.dll'
 Assert-Arm64 $runtimeDll 'source-built msys-2.0.dll'
+$sectionDump = (& (Join-Path $ClangPrefix 'llvm-readobj.exe') --sections $runtimeDll) -join "`n"
+$commonSection = @($sectionDump -split '\n\s*Section \{' |
+    Where-Object { $_ -match 'Name: \.cygwin_' })
+if ($commonSection.Count -ne 1 -or
+    $commonSection[0] -notmatch 'IMAGE_SCN_MEM_SHARED') {
+    throw 'Runtime .cygwin_ section is not marked IMAGE_SCN_MEM_SHARED'
+}
+Write-Host 'runtime-regression: .cygwin_ is IMAGE_SCN_MEM_SHARED'
 $runtimeStage = Join-Path $Work 'runtime-stage'
 New-Item -ItemType Directory -Path $runtimeStage -Force | Out-Null
 Copy-Item -LiteralPath $runtimeDll -Destination (Join-Path $runtimeStage 'msys-2.0.dll')

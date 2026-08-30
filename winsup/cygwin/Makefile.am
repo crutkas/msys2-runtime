@@ -26,7 +26,7 @@ runtime_cxx_compile_flags=-fno-c++-static-destructors
 runtime_ldscript_flag=
 runtime_heap_ldflags=
 runtime_post_link=$(OBJCOPY) --set-section-flags \
-	.cygwin_dll_common=alloc,load,data,contents,share $(NEW_DLL_NAME)
+	.cygwin_=alloc,load,data,contents,share $(NEW_DLL_NAME)
 if TARGET_AARCH64
 runtime_builtin_lib=-lclang_rt.builtins-aarch64
 else
