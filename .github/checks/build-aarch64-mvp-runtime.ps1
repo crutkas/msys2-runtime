@@ -99,6 +99,7 @@ $generatorBin = Join-Path $generatorPrefix 'bin'
 $generatorToolchain = Join-Path $generatorRoot 'toolchain\bin'
 $nativePerl = if ($NativePerl) { $NativePerl } else { Join-Path $ClangPrefix 'perl.exe' }
 $generatorPrefixPosix = To-Posix $generatorPrefix
+$generatorToolchainRootPosix = To-Posix (Split-Path $generatorToolchain)
 $nativePerlPosix = To-Posix $nativePerl
 Get-ChildItem -LiteralPath $generatorPrefix -File -Recurse | ForEach-Object {
     $bytes = [IO.File]::ReadAllBytes($_.FullName)
@@ -107,8 +108,11 @@ Get-ChildItem -LiteralPath $generatorPrefix -File -Recurse | ForEach-Object {
     $relocated = $text.Replace('@GENERATOR_PREFIX@', $generatorPrefixPosix).
         Replace('@NATIVE_PERL@', $nativePerlPosix)
     $relocated = $relocated -replace `
-        '/[A-Za-z]/Users/[^/]+/\.copilot/session-state/[0-9a-f-]+/files/native-preflight/prefix', `
+        '(?:/[A-Za-z]|[A-Za-z]:)/Users/[^/]+/\.copilot/session-state/[0-9a-f-]+/files/native-preflight/prefix', `
         $generatorPrefixPosix
+    $relocated = $relocated -replace `
+        '(?:/[A-Za-z]|[A-Za-z]:)/Users/[^/]+/\.copilot/session-state/[0-9a-f-]+/files/native-preflight/toolchain', `
+        $generatorToolchainRootPosix
     $relocated = $relocated -replace `
         '[A-Za-z]:/Users/[^/]+/\.copilot/session-state/[0-9a-f-]+/files/driver/msys2-root/msys64/clangarm64/bin/perl\.exe', `
         $nativePerlPosix
