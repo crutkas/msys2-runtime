@@ -5,6 +5,7 @@ param(
     [Parameter(Mandatory)] [string] $BusyBoxExe,
     [Parameter(Mandatory)] [string] $MinGitRoot,
     [Parameter(Mandatory)] [string] $ClangPrefix,
+    [Parameter(Mandatory)] [string] $NativeSsh,
     [Parameter(Mandatory)] [string] $Destination,
     [Parameter(Mandatory)] [ValidatePattern('^[0-9a-f]{40}$')] [string] $RuntimeCommit,
     [long] $SourceDateEpoch = 1788034899
@@ -71,6 +72,7 @@ foreach ($path in @(
     $RuntimeDll,
     $BashExe,
     $BusyBoxExe,
+    $NativeSsh,
     (Join-Path $ClangPrefix 'libncursesw6.dll')
 )) {
     if ((Get-PeMachine $path) -ne $arm64) {
@@ -85,6 +87,7 @@ New-Item -ItemType Directory -Path "$root\usr\bin", "$root\cmd", "$root\clangarm
 Copy-Item -LiteralPath $RuntimeDll -Destination "$root\usr\bin\msys-2.0.dll"
 Copy-Item -LiteralPath $BashExe -Destination "$root\usr\bin\bash.exe"
 Copy-Item -LiteralPath $BusyBoxExe -Destination "$root\usr\bin\busybox.exe"
+Copy-Item -LiteralPath $NativeSsh -Destination "$root\usr\bin\ssh.exe"
 Copy-Item -LiteralPath (Join-Path $ClangPrefix 'libncursesw6.dll') `
     -Destination "$root\usr\bin\libncursesw6.dll"
 @(
@@ -104,6 +107,10 @@ Copy-NativeTree (Join-Path $MinGitRoot 'clangarm64\share\git-core') `
     (Join-Path $root 'clangarm64\share\git-core')
 if (Test-Path -LiteralPath (Join-Path $MinGitRoot 'etc')) {
     Copy-NativeTree (Join-Path $MinGitRoot 'etc') (Join-Path $root 'etc')
+}
+$langProfile = Join-Path $root 'etc\profile.d\lang.sh'
+if (Test-Path -LiteralPath $langProfile) {
+    Remove-Item -LiteralPath $langProfile -Force
 }
 
 $provenance = [ordered]@{
@@ -135,6 +142,14 @@ $provenance = [ordered]@{
         source = 'https://github.com/git-for-windows/git/releases/download/v2.55.0.windows.3/MinGit-2.55.0.3-arm64.zip'
         sha256 = 'F7748965D5068E81AD93CA1923650DB6742D6E22332B1AE7567A841C59F6BDE5'
         excluded = @('x64 usr subtree', 'Git Credential Manager', 'Scalar')
+    }
+    ssh = [ordered]@{
+        source = 'Windows 11 ARM inbox OpenSSH client'
+        sha256 = (Get-FileHash -LiteralPath $NativeSsh -Algorithm SHA256).Hash
+        machine = '0xAA64'
+    }
+    profile = [ordered]@{
+        excluded = @('etc/profile.d/lang.sh because locale.exe and NLS catalogs are omitted')
     }
     release_only_gaps = @(
         'self-hosted native GCC',

@@ -454,6 +454,7 @@ jobs:
             -BusyBoxExe "$work\inputs\busybox-c26a88d7\bin\busybox.exe" `
             -MinGitRoot "$work\mingit" `
             -ClangPrefix '${{ steps.msys2.outputs.msys2-location }}\clangarm64\bin' `
+            -NativeSsh "$env:SystemRoot\System32\OpenSSH\ssh.exe" `
             -Destination "$env:RUNNER_TEMP\git-bash-mvp-publish" `
             -RuntimeCommit $runtimeCommit
 

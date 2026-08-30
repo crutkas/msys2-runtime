@@ -62,8 +62,10 @@ import_address (void *imp)
   __try
     {
 #if defined(__aarch64__)
-      /* If first three instructions of the imp are:
+      /* Accept both compact import thunks and the four-instruction form
+	 emitted by current PE linkers:
 	   adrp x16, X
+	   add  x16, x16, #:lo12:X (optional)
 	   ldr x16, [x16, #:lo12:X]
 	   br x16
 	 References:
@@ -76,13 +78,21 @@ import_address (void *imp)
       uint32_t opcode1 = *((uint32_t *) imp);
       uint32_t opcode2 = *(((uint32_t *) imp) + 1);
       uint32_t opcode3 = *(((uint32_t *) imp) + 2);
+      uint32_t add_imm12 = 0;
+      if (((opcode2 & 0xffc003ff) == 0x91000210))
+	{
+	  add_imm12 = (opcode2 >> 10) & 0xfff;
+	  opcode2 = opcode3;
+	  opcode3 = *(((uint32_t *) imp) + 3);
+	}
       if (((opcode1 & 0x9f00001f) == 0x90000010) &&
 	  ((opcode2 & 0xffc003ff) == 0xf9400210) &&
 	  (opcode3 == 0xd61f0200))
 	{
 	  uint32_t immhi = (opcode1 >> 5) & 0x7ffff;
 	  uint32_t immlo = (opcode1 >> 29) & 0x3;
-	  uint32_t imm12 = ((opcode2 >> 10) & 0xfff) * 8; // 64 bit scale
+	  uint32_t imm12 = add_imm12
+			   + ((opcode2 >> 10) & 0xfff) * 8; // 64 bit scale
 	  int64_t pages = (immhi << 2) | immlo;
 	  if (pages & (1 << 20))
 	    pages -= 1 << 21;

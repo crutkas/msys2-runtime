@@ -269,6 +269,13 @@ if ($makefileSource.Contains('/bin/sh $(word 1,$^)') -or
     throw 'version.cc generation does not use the configured native $(SHELL)'
 }
 Write-Host 'generator-override: version.cc recipe uses configured native $(SHELL)'
+$ptySource = Get-Content -LiteralPath (
+    Join-Path $sourceRoot 'winsup\cygwin\fhandler\pty.cc') -Raw
+if (-not $ptySource.Contains('static size_t ixput = 0;') -or
+    $ptySource.Contains('static int ixput = 0;')) {
+    throw 'PTY response buffer index does not match its size_t capacity'
+}
+Write-Host 'source-regression: PTY response buffer index uses size_t'
 
 $src = To-Posix $sourceRoot
 $build = To-Posix $buildRoot

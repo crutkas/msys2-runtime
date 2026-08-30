@@ -2274,7 +2274,7 @@ fhandler_pty_master::write (const void *ptr, size_t len)
 	 put them together into wpbuf and write all at once. */
       static constexpr size_t wpbuf_len = sizeof ("\033[32768;32868R") - 1;
       static char wpbuf[wpbuf_len];
-      static int ixput = 0;
+      static size_t ixput = 0;
       static int state = 0;
       static DWORD wp_tid = 0;
 

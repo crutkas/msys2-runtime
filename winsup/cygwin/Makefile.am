@@ -18,9 +18,9 @@ COMMON_CFLAGS=-Wno-deprecated-non-prototype -Wno-implicit-fallthrough \
 	-Wno-mismatched-tags -Wno-gnu-designator -Wno-missing-braces \
 	-Wno-nontrivial-memcall \
 	-Wno-unknown-warning-option -Wno-unused-command-line-argument \
-	-Wno-unused-const-variable -Wno-unused-function -Wno-unused-private-field \
+	-Wno-unused-const-variable -Wno-unused-private-field \
 	-Wno-varargs \
-	-Wno-vla-cxx-extension -Werror
+	-Wno-vla-cxx-extension -Wimplicit-fallthrough -Werror
 runtime_cxx_link_flags=
 runtime_cxx_compile_flags=-fno-c++-static-destructors
 runtime_ldscript_flag=

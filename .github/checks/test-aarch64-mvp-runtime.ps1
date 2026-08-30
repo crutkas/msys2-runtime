@@ -39,15 +39,36 @@ function Invoke-Native([string] $Path, [string[]] $Arguments, [string] $Class) {
 
 $processes = [Collections.Generic.List[object]]::new()
 $tests = [Collections.Generic.List[string]]::new()
+$packagedNonArm64 = Get-ChildItem -LiteralPath $RuntimeRoot -File -Recurse |
+    ForEach-Object {
+        $machine = Get-PeMachine $_.FullName
+        if ($null -ne $machine -and $machine -ne 0xAA64) { $_.FullName }
+    }
+if ($packagedNonArm64) {
+    throw "Artifact contains non-ARM64 PE files: $($packagedNonArm64 -join ', ')"
+}
+foreach ($unsupportedSshComponent in @('sshd.exe', 'ssh-agent.exe', 'ssh-pkcs11-helper.exe')) {
+    if (Get-ChildItem -LiteralPath $RuntimeRoot -Filter $unsupportedSshComponent -File -Recurse) {
+        throw "Supported SSH path contains unsupported server/helper: $unsupportedSshComponent"
+    }
+}
+$tests.Add('zero packaged x64 PE files')
+$tests.Add('supported SSH path excludes server and helper processes')
 $bash = Join-Path $RuntimeRoot 'usr\bin\bash.exe'
 $runtimeDll = Join-Path $RuntimeRoot 'usr\bin\msys-2.0.dll'
 $git = Join-Path $RuntimeRoot 'cmd\git.exe'
 $gitRemoteHttps = Join-Path $RuntimeRoot 'clangarm64\bin\git-remote-https.exe'
+$ssh = Join-Path $RuntimeRoot 'usr\bin\ssh.exe'
+$langProfile = Join-Path $RuntimeRoot 'etc\profile.d\lang.sh'
+if (Test-Path -LiteralPath $langProfile) {
+    throw 'NLS-disabled MVP artifact retained locale-dependent lang.sh'
+}
 $clang = Join-Path $ClangPrefix 'clang.exe'
 Assert-Arm64 $runtimeDll 'runtime DLL'
 Assert-Arm64 $bash 'Bash'
 Assert-Arm64 $git 'Git'
 Assert-Arm64 $gitRemoteHttps 'Git HTTPS transport'
+Assert-Arm64 $ssh 'native Windows OpenSSH client'
 Assert-Arm64 $clang 'Clang'
 Assert-Arm64 $BusyBox 'BusyBox shell'
 $readobj = Join-Path $ClangPrefix 'llvm-readobj.exe'
@@ -105,17 +126,34 @@ try {
     $tests.Add('locale C baseline without catalogs')
     $tests.Add('posix_spawn/exec')
 
-    Invoke-Native $bash @('-lc',
+    $oldLang = $env:LANG
+    $oldLcAll = $env:LC_ALL
+    $oldLcCtype = $env:LC_CTYPE
+    $env:LANG = $null
+    $env:LC_ALL = $null
+    $env:LC_CTYPE = $null
+    $loginStderr = Join-Path $tmp 'bash-login.stderr'
+    Assert-Arm64 $bash 'Bash clean login workflow'
+    try {
+        & $bash '-lc' (
         'set -eu; x=ARM64; test "$(printf "%s" "$x" | tr A-Z a-z)" = arm64; ' +
         '(exit 7) || test $? = 7; printf "bash-smoke: %s %s\n" "$MACHTYPE" "$PWD"') `
-        'Bash workflow'
-    $tests.Add('Bash variables/command substitution/pipeline/subshell')
-
-    $x64Ssh = Join-Path $MinGitRoot 'usr\bin\ssh.exe'
-    if ((Get-PeMachine $x64Ssh) -ne 0x8664) {
-        throw "Expected MinGit usr/bin/ssh.exe to be the explicitly emulated x64 SSH child"
+            2> $loginStderr
+        if ($LASTEXITCODE -ne 0) { throw "Bash clean login workflow failed with exit code $LASTEXITCODE" }
+        $loginError = Get-Content -LiteralPath $loginStderr -Raw -ErrorAction SilentlyContinue
+        if ($loginError) { throw "Bash login wrote stderr: $loginError" }
     }
-    $env:MVP_X64_SSH = '/' + $x64Ssh.Replace('\', '/').Replace(':', '')
+    finally {
+        $env:LANG = $oldLang
+        $env:LC_ALL = $oldLcAll
+        $env:LC_CTYPE = $oldLcCtype
+    }
+    $tests.Add('Bash variables/command substitution/pipeline/subshell')
+    $tests.Add('Bash login has clean stderr without locale/NLS')
+
+    Invoke-Native $ssh @('-F', 'NUL', '-G', 'github.com') 'native SSH configuration workflow'
+    $tests.Add('native ARM64 Windows OpenSSH supported path')
+
     $gitScript = @'
 set -eu
 export PATH=/cmd:/clangarm64/bin:/usr/bin
@@ -135,7 +173,7 @@ test "$(git -C clone log -1 --format=%s)" = native
 https_head="$(git ls-remote https://github.com/git/git.git HEAD | awk '{print $1}')"
 test "${#https_head}" = 40
 ssh_log=/tmp/git-ssh.log
-if GIT_SSH_COMMAND="$MVP_X64_SSH -V" \
+if GIT_SSH_COMMAND="/usr/bin/ssh.exe -V" \
     git ls-remote ssh://example.invalid/repo >/dev/null 2>"$ssh_log"
 then
     echo "controlled SSH probe unexpectedly reached a repository" >&2
@@ -150,12 +188,7 @@ printf "git-smoke: version=%s commit=%s\n" "$(git --version)" "$(git -C repo rev
     $tests.Add('Git init/add/commit')
     $tests.Add('Git local clone/log')
     $tests.Add('Git HTTPS ls-remote')
-    $tests.Add('Git controlled SSH transport selection (explicitly emulated x64)')
-    $processes.Add([ordered]@{
-        class = 'explicitly emulated x64 SSH interoperability child'
-        path = $x64Ssh
-        machine = '0x8664'
-    })
+    $tests.Add('Git controlled native ARM64 SSH transport selection')
 
     $x64Child = Join-Path $MinGitRoot 'usr\bin\true.exe'
     if ((Get-PeMachine $x64Child) -ne 0x8664) {
