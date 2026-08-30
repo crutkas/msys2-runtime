@@ -273,7 +273,7 @@ $buildCc = "$bin/clang.exe -target aarch64-w64-windows-gnu -fuse-ld=lld " +
     "-isystem $crt/include -L$crt/lib -B$crt/lib"
 $buildCxx = "$bin/clang++.exe -target aarch64-w64-windows-gnu -fuse-ld=lld " +
     "-isystem $crt/include -L$crt/lib -B$crt/lib"
-$targetDefines = '-D__CYGWIN__ -D__MSYS__ -D__WINT_TYPE__=unsigned'
+$targetDefines = '-D__CYGWIN__ -D__MSYS__ -U__WINT_TYPE__ -D__WINT_TYPE__=unsigned'
 $targetCc = "$bin/clang.exe -target aarch64-w64-windows-gnu -fuse-ld=lld " +
     "--sysroot=$empty $targetDefines"
 $targetCxx = "$bin/clang++.exe -target aarch64-w64-windows-gnu -fuse-ld=lld " +
