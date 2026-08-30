@@ -17,10 +17,10 @@ function Get-PeMachine([string] $Path) {
     $stream = [IO.File]::OpenRead($Path)
     try {
         $reader = [IO.BinaryReader]::new($stream)
-        if ($reader.ReadUInt16() -ne 0x5A4D) { throw "$Path is not a PE image" }
+        if ($reader.ReadUInt16() -ne 0x5A4D) { return $null }
         $stream.Position = 0x3C
         $stream.Position = $reader.ReadUInt32()
-        if ($reader.ReadUInt32() -ne 0x00004550) { throw "$Path has no PE signature" }
+        if ($reader.ReadUInt32() -ne 0x00004550) { return $null }
         return $reader.ReadUInt16()
     }
     finally { $stream.Dispose() }
