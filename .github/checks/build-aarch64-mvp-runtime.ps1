@@ -217,7 +217,7 @@ $env:STRIP = 'llvm-strip.exe'
 $env:WINDRES = 'llvm-windres.exe'
 $env:AR_FOR_TARGET = $env:AR
 $env:AS_FOR_TARGET = $clang
-$env:LD_FOR_TARGET = $lld
+$env:LD_FOR_TARGET = $env:LD
 $env:NM_FOR_TARGET = $env:NM
 $env:OBJCOPY_FOR_TARGET = $env:OBJCOPY
 $env:OBJDUMP_FOR_TARGET = $env:OBJDUMP
@@ -269,6 +269,11 @@ if ($makefileSource.Contains('/bin/sh $(word 1,$^)') -or
     throw 'version.cc generation does not use the configured native $(SHELL)'
 }
 Write-Host 'generator-override: version.cc recipe uses configured native $(SHELL)'
+if (-not $makefileSource.Contains(
+        '.cygwin_dll_common=alloc,load,data,contents,share')) {
+    throw 'Clang post-link fix does not mark .cygwin_dll_common shared'
+}
+Write-Host 'source-regression: Clang post-link fix marks .cygwin_dll_common shared'
 $ptySource = Get-Content -LiteralPath (
     Join-Path $sourceRoot 'winsup\cygwin\fhandler\pty.cc') -Raw
 if (-not $ptySource.Contains('static size_t ixput = 0;') -or
