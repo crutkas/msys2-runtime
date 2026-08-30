@@ -330,12 +330,26 @@ $altstackArm64 = @([regex]::Matches(
 if ($altstackArm64.Count -ne 1) {
     throw 'AArch64 alternate-stack assembly block is missing'
 }
-foreach ($register in 0..31) {
-    if (-not $altstackArm64[0].Value.Contains("`"v$register`"")) {
-        throw "AArch64 alternate-stack call omits SIMD clobber v$register"
-    }
+function Test-CompleteArm64SimdClobbers([string] $AssemblyBlock) {
+    $clobbers = [regex]::Match(
+        $AssemblyBlock,
+        '(?s):\s*((?:"[^"]+"\s*,?\s*)+)\);')
+    if (-not $clobbers.Success) { return $false }
+    $simd = @([regex]::Matches($clobbers.Groups[1].Value, '"v([0-9]+)"') |
+        ForEach-Object { [int] $_.Groups[1].Value } |
+        Sort-Object)
+    return $simd.Count -eq 32 -and
+        ($simd -join ',') -eq ((0..31) -join ',')
 }
-Write-Host 'source-regression: AArch64 alternate-stack call clobbers v0-v31'
+if (-not (Test-CompleteArm64SimdClobbers $altstackArm64[0].Value)) {
+    throw 'AArch64 alternate-stack call does not clobber exactly v0-v31'
+}
+$missingV8 = $altstackArm64[0].Value.Replace('"v8",', '"x20",') + "`n// `"v8`""
+if ($missingV8 -eq $altstackArm64[0].Value -or
+    (Test-CompleteArm64SimdClobbers $missingV8)) {
+    throw 'AArch64 SIMD clobber regression accepted the missing-v8 mutant'
+}
+Write-Host 'source-regression: exact v0-v31 clobber set passed missing-v8 negative control'
 
 $src = To-Posix $sourceRoot
 $build = To-Posix $buildRoot
