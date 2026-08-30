@@ -6,6 +6,7 @@ set -eu
 : "${MVP_RUNTIME_BUILD:?MVP_RUNTIME_BUILD is required}"
 : "${MVP_CRT_PREFIX:?MVP_CRT_PREFIX is required}"
 : "${MVP_CLANG_RESOURCE_DIR:?MVP_CLANG_RESOURCE_DIR is required}"
+: "${MVP_WINDOWS_HEADERS:?MVP_WINDOWS_HEADERS is required}"
 
 compiler=clang.exe
 case "${MVP_CXX:-0}" in
@@ -27,6 +28,7 @@ includes="-I${MVP_RUNTIME_SOURCE}/winsup/cygwin/include
   -I${MVP_RUNTIME_BUILD}/aarch64-pc-cygwin/newlib/targ-include
   -I${MVP_RUNTIME_SOURCE}/newlib/libc/include
   -isystem ${MVP_CLANG_RESOURCE_DIR}/include
+  -idirafter ${MVP_WINDOWS_HEADERS}
   -idirafter ${MVP_CRT_PREFIX}/include"
 
 for argument

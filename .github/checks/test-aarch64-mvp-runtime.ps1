@@ -72,6 +72,7 @@ $env:MVP_RUNTIME_SOURCE = $RuntimeSource.Replace('\', '/')
 $env:MVP_RUNTIME_BUILD = $RuntimeBuild.Replace('\', '/')
 $env:MVP_CRT_PREFIX = $CrtPrefix.Replace('\', '/')
 $env:MVP_CLANG_RESOURCE_DIR = (& $clang -print-resource-dir).Trim().Replace('\', '/')
+$env:MVP_WINDOWS_HEADERS = (Join-Path (Split-Path $RuntimeBuild) 'windows-header-overlay').Replace('\', '/')
 $smokeSource = Join-Path $RuntimeSource '.github\checks\aarch64-runtime-smoke.c'
 $wrapper = Join-Path $RuntimeSource '.github\checks\aarch64-cygwin-clang.sh'
 $smokeExe = Join-Path $RuntimeRoot 'usr\bin\runtime-smoke.exe'

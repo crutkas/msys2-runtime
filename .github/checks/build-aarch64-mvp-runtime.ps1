@@ -372,6 +372,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Bash source extraction failed' }
 $env:MVP_CLANG_PREFIX = $bin
 $env:MVP_CLANG_RESOURCE_DIR = To-Posix $resourceDir
 $env:MVP_CRT_PREFIX = $crt
+$env:MVP_WINDOWS_HEADERS = $windowsOverlayPosix
 $env:MVP_RUNTIME_SOURCE = $src
 $env:MVP_RUNTIME_BUILD = $build
 $wrapper = To-Posix (Join-Path $sourceRoot '.github\checks\aarch64-cygwin-clang.sh')
@@ -382,17 +383,7 @@ try {
         '--build=aarch64-pc-cygwin' '--host=aarch64-pc-cygwin' '--prefix=/usr' `
         '--without-bash-malloc' '--disable-nls' '--disable-rpath' '--enable-job-control'
     if ($LASTEXITCODE -ne 0) { throw 'Bash configure failed' }
-    try { & $makeCommand -j $Jobs bash.exe }
-    catch {
-        $generator = Join-Path $bashBuild 'builtins\mkbuiltins.exe'
-        if (-not (Test-Path -LiteralPath $generator)) { throw }
-        Get-ChildItem -LiteralPath (Join-Path $bashSource 'bash-5.3\builtins') `
-            -Filter '*.def' | Sort-Object Name | ForEach-Object {
-                & $generator -D (Join-Path $bashSource 'bash-5.3\builtins') $_.FullName
-                if ($LASTEXITCODE -ne 0) { throw "mkbuiltins failed for $($_.Name)" }
-            }
-        & $makeCommand -j $Jobs bash.exe
-    }
+    & $makeCommand -j $Jobs bash.exe
     if ($LASTEXITCODE -ne 0) { throw 'Bash build failed' }
 }
 finally { Pop-Location }
