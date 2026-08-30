@@ -132,6 +132,11 @@ hresult_to_errno (HRESULT wres)
 }
 
 /* Workaround incompatible definitions. */
+#if defined(__aarch64__) && defined(_WIN64)
+typedef unsigned long __ms_u_long;
+#else
+typedef unsigned int __ms_u_long;
+#endif
 #define u_long		__ms_u_long
 #define WS_FIONBIO	_IOW('f', 126, u_long)
 #define WS_POLLOUT	0x10

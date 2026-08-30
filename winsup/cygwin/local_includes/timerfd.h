@@ -97,7 +97,7 @@ class timerfd_tracker		/* cygheap! */
   HANDLE disarm_evt () const { return _disarm_evt; }
   HANDLE timer () const { return _timer; }
   HANDLE expired_evt () const { return _expired_evt; }
-  void timer_expired () { SetEvent (_expired_evt); }
+  void timer_expired () const { SetEvent (_expired_evt); }
   int arm_timer (int flags, const struct itimerspec *new_value);
   int disarm_timer ()
     {
@@ -107,8 +107,6 @@ class timerfd_tracker		/* cygheap! */
       SetEvent (_disarm_evt);
       return 0;
     }
-  void timer_expired () const { timer_expired (); }
-
   LONG64 expiration_count () const { return tfd_shared->_expiration_count; }
   void increment_expiration_count (LONG64 add) const
     { tfd_shared->increment_expiration_count (add); }

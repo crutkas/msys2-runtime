@@ -198,7 +198,11 @@ typedef	_CLOCKID_T_	__clockid_t;
 typedef	long		__daddr_t;
 #endif
 
+#if defined(__aarch64__) && defined(_WIN64)
+#define	_TIMER_T_	unsigned long long
+#else
 #define	_TIMER_T_	unsigned long
+#endif
 typedef	_TIMER_T_	__timer_t;
 
 #ifndef __machine_sa_family_t_defined

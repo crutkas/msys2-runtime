@@ -9,6 +9,8 @@ details. */
 #ifndef _IO_H_
 #define _IO_H_
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -16,7 +18,11 @@ extern "C" {
 /*
  * Function to return a Win32 HANDLE from a fd.
  */
+#if defined(__aarch64__) && defined(_WIN64)
+extern intptr_t _get_osfhandle(int);
+#else
 extern long _get_osfhandle(int);
+#endif
 #define get_osfhandle(i) _get_osfhandle(i)
 extern int _setmode (int __fd, int __mode);
 #define setmode(f,m) _setmode((f),(m))

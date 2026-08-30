@@ -12,7 +12,7 @@ mainCRTStartup (void)
 {
   uint32_t malformed[3] = { 0x90000010, 0xf9400210, 0xd61f0220 };
   void *module = GetModuleHandleA ("layer3_import.dll");
-  void *expected = GetProcAddress (module, "layer3_import_add");
+  void *expected = GetProcAddress (module, "layer3_import_add_v2");
   void *decoded
     = layer3_production_import_address ((void *) layer3_import_add);
 

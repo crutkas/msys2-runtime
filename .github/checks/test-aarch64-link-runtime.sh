@@ -13,6 +13,7 @@ objdump=${LAYER3_OBJDUMP:?LAYER3_OBJDUMP is required}
 perl=${NATIVE_PERL:?NATIVE_PERL is required}
 llvm_nm=${LLVM_NM:-llvm-nm}
 llvm_objcopy=${LLVM_OBJCOPY:-llvm-objcopy}
+llvm_ar=${LLVM_AR:-llvm-ar}
 clang_lib=${CLANGARM64_LIB:-/clangarm64/lib}
 
 cleanup()
@@ -34,7 +35,7 @@ aarch64-*-windows-* | aarch64-*-mingw*) ;;
   ;;
 esac
 
-for tool in "$ld" "$as" "$ar" "$objdump" "$perl" "$llvm_nm" "$llvm_objcopy"; do
+for tool in "$ld" "$as" "$ar" "$objdump" "$perl" "$llvm_nm" "$llvm_objcopy" "$llvm_ar"; do
   test -x "$tool"
 done
 test -f "$clang_lib/libkernel32.a"
@@ -100,8 +101,9 @@ compile "$repo_root/.github/checks/aarch64-layer3-import-dll.c" \
 
 mkwork="$work/mkimport path.[x]"
 "$perl" "$repo_root/winsup/cygwin/scripts/mkimport" \
-  --cpu=aarch64 --ar="$ar" --as="$as" --nm="$llvm_nm" \
+  --cpu=aarch64 --ar="$llvm_ar" --as="$cc" --nm="$llvm_nm" \
   --objcopy="$llvm_objcopy" \
+  --replace=layer3_import_add=layer3_import_add_v2 \
   "$mkwork/layer3 rewritten.a" "$import_lib"
 
 compile "$repo_root/.github/checks/aarch64-layer3-import-main.c" \
@@ -240,8 +242,10 @@ done
 grep -Eq '[[:space:]]adrp[[:space:]]+x16,' "$work/mkimport.dis"
 grep -Eq '[[:space:]]ldr[[:space:]]+x16, \[x16' "$work/mkimport.dis"
 grep -Eq '[[:space:]]br[[:space:]]+x16' "$work/mkimport.dis"
+"$llvm_nm" -g "$mkwork/layer3 rewritten.a" > "$work/mkimport.nm"
+grep -q '__imp_layer3_import_add_v2' "$work/mkimport.nm"
 
-compile "$repo_root/.github/checks/aarch64-layer3-import-main.c" \
+compile "$repo_root/.github/checks/aarch64-layer3-import-replaced-main.c" \
   "$work/objects/mkimport-main.o"
 link_executable "$work/programs/mkimport-main.exe" \
   "$work/objects/mkimport-main.o" "$mkwork/layer3 rewritten.a"

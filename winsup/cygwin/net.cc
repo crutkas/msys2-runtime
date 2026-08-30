@@ -15,6 +15,7 @@ details. */
 /* 2014-04-24: Current Mingw headers define sockaddr_in6 using u_long (8 byte)
    because a redefinition for LP64 systems is missing.  This leads to a wrong
    definition and size of sockaddr_in6 when building with winsock headers. */
+typedef unsigned int __ms_u_long;
 #undef u_long
 #define u_long __ms_u_long
 #include <w32api/ws2tcpip.h>

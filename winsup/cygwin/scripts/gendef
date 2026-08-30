@@ -31,6 +31,9 @@ while (<>) {
     push(@top, cleanup $_);
     last if /^\s*exports$/oi;
 }
+if ($is_aarch64) {
+    s/BASE=0x([0-9a-f]+)/'BASE=' . hex($1)/ei for @top;
+}
 my @in = cleanup <>;
 
 my %sigfe = ();
@@ -39,6 +42,7 @@ my @nosigfuncs = ();
 my @text = ();
 for (@in) {
     chomp;
+    s/\@0//g if $is_aarch64;
     s/\s+DATA$//o and do {
 	push @data, $_;
 	next;

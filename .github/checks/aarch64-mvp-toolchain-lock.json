@@ -1,0 +1,65 @@
+{
+  "schema": 1,
+  "setup_msys2_commit": "66cd2cce69caa17b53920067426061ca1de3a884",
+  "packages": [
+    "mingw-w64-clang-aarch64-clang=22.1.8-2",
+    "mingw-w64-clang-aarch64-compiler-rt=22.1.8-2",
+    "mingw-w64-clang-aarch64-crt=14.0.0.r302.gd7f3c5201-1",
+    "mingw-w64-clang-aarch64-headers=14.0.0.r302.gd7f3c5201-1",
+    "mingw-w64-clang-aarch64-lld=22.1.8-2",
+    "mingw-w64-clang-aarch64-libwinpthread=14.0.0.r302.gd7f3c5201-1",
+    "mingw-w64-clang-aarch64-llvm=22.1.8-2",
+    "mingw-w64-clang-aarch64-llvm-tools=22.1.8-2",
+    "mingw-w64-clang-aarch64-make=4.4.1-5",
+    "mingw-w64-clang-aarch64-ncurses=6.6-4",
+    "mingw-w64-clang-aarch64-perl=5.44.0-3",
+    "mingw-w64-clang-aarch64-winpthreads=14.0.0.r302.gd7f3c5201-1"
+  ],
+  "tools": [
+    {
+      "path": "clang.exe",
+      "sha256": "94767E93F79D013026F030DCA6164E3829B21CCA44DF2824EC98E03487790DDF"
+    },
+    {
+      "path": "clang++.exe",
+      "sha256": "94767E93F79D013026F030DCA6164E3829B21CCA44DF2824EC98E03487790DDF"
+    },
+    {
+      "path": "ld.lld.exe",
+      "sha256": "9A79C27895909FB51EFDB2CF702239A96AD78B0E4916C0F1932802CA6527593D"
+    },
+    {
+      "path": "llvm-ar.exe",
+      "sha256": "183020D9280BF74B1E35DB0BF2F9877B956DE539527F45E01274F833BAD0DAD9"
+    },
+    {
+      "path": "llvm-nm.exe",
+      "sha256": "C38F7F2631A1BFE9801640FF6A6F8C69F05539503E2E98CF9952F2E53B6DCD0C"
+    },
+    {
+      "path": "llvm-objcopy.exe",
+      "sha256": "8A38A450580C1325C8369C7D0A8EE2FB3D3AE22780AA61F02EC00F8CC2F15532"
+    },
+    {
+      "path": "llvm-readobj.exe",
+      "sha256": "DF6641B5CED51D1D9AE5B4E535CA822CD08C218AAB0DA650F831F69A093BEF3A"
+    },
+    {
+      "path": "mingw32-make.exe",
+      "sha256": "E388FDF451D2D715CAFBA6B6C3F392F4BD6334102433A49B4FF2EDD763072ED9"
+    },
+    {
+      "path": "libncursesw6.dll",
+      "sha256": "4F2D25C22D07DCB20696A20BB99379E701B0CA74AE015BD04F33521D85CBCB66"
+    },
+    {
+      "path": "perl.exe",
+      "sha256": "69B7021E3D5825208F5CD6D14DFB8ABD5DABBE008C9BA3AF0E978EC9529ACEC7"
+    }
+  ],
+  "ssh": {
+    "source": "Windows 11 ARM inbox OpenSSH client",
+    "sha256": "8C095B70018A0B525964B703824B66691AA431C1FCB721526582C1D13C7A0094",
+    "machine": "0xAA64"
+  }
+}

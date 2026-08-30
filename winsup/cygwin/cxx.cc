@@ -23,7 +23,7 @@ operator new (std::size_t s)
 }
 
 void
-operator delete (void *p)
+operator delete (void *p) noexcept
 {
   free (p);
 }
@@ -31,7 +31,7 @@ operator delete (void *p)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wc++14-compat"
 void
-operator delete (void *p, size_t)
+operator delete (void *p, size_t) noexcept
 {
   ::operator delete(p);
 }
@@ -44,7 +44,7 @@ operator new[] (std::size_t s)
 }
 
 void
-operator delete[] (void *p)
+operator delete[] (void *p) noexcept
 {
   ::operator delete (p);
 }
@@ -52,26 +52,26 @@ operator delete[] (void *p)
 /* Nothrow versions, provided only for completeness in the fallback array.  */
 
 void *
-operator new (std::size_t s, const std::nothrow_t &)
+operator new (std::size_t s, const std::nothrow_t &) noexcept
 {
   void *p = calloc (1, s);
   return p;
 }
 
 void
-operator delete (void *p, const std::nothrow_t &)
+operator delete (void *p, const std::nothrow_t &) noexcept
 {
   free (p);
 }
 
 void *
-operator new[] (std::size_t s, const std::nothrow_t &nt)
+operator new[] (std::size_t s, const std::nothrow_t &nt) noexcept
 {
   return ::operator new (s, nt);
 }
 
 void
-operator delete[] (void *p, const std::nothrow_t &nt)
+operator delete[] (void *p, const std::nothrow_t &nt) noexcept
 {
   ::operator delete (p, nt);
 }

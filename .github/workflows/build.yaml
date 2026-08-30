@@ -32,7 +32,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: setup-msys2
-        uses: msys2/setup-msys2@v2
+        uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884
         with:
           msystem: MSYS
           update: true
@@ -88,7 +88,7 @@ jobs:
       FC: ${{ matrix.fc }}
     steps:
       - id: msys2
-        uses: msys2/setup-msys2@v2
+        uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884
         with:
           msystem: ${{ matrix.msystem }}
           update: true
@@ -137,7 +137,7 @@ jobs:
             -EvidencePath "$env:RUNNER_TEMP\arm64-runner.txt"
 
       - name: Set up native CLANGARM64 tools
-        uses: msys2/setup-msys2@v2
+        uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884
         with:
           msystem: CLANGARM64
           update: true
@@ -184,7 +184,7 @@ jobs:
 
       - id: msys2
         name: Set up native CLANGARM64 tools
-        uses: msys2/setup-msys2@v2
+        uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884
         with:
           msystem: CLANGARM64
           update: true
@@ -204,6 +204,7 @@ jobs:
           $clangArm64 = '${{ steps.msys2.outputs.msys2-location }}\clangarm64'
           "CC=$clangArm64\bin\clang.exe" | Add-Content $env:GITHUB_ENV
           "NATIVE_PERL=$clangArm64\bin\perl.exe" | Add-Content $env:GITHUB_ENV
+          "LLVM_AR=$clangArm64\bin\llvm-ar.exe" | Add-Content $env:GITHUB_ENV
           "LLVM_NM=$clangArm64\bin\llvm-nm.exe" | Add-Content $env:GITHUB_ENV
           "LLVM_OBJCOPY=$clangArm64\bin\llvm-objcopy.exe" |
             Add-Content $env:GITHUB_ENV
@@ -253,7 +254,7 @@ jobs:
 
       - id: msys2
         name: Set up native Clang ARM64 tools
-        uses: msys2/setup-msys2@v2
+        uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884
         with:
           msystem: CLANGARM64
           update: true
@@ -311,7 +312,7 @@ jobs:
 
       - id: msys2
         name: Set up native Clang ARM64 tools
-        uses: msys2/setup-msys2@v2
+        uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884
         with:
           msystem: CLANGARM64
           update: true
@@ -352,7 +353,7 @@ jobs:
 
       - id: msys2
         name: Set up native Clang ARM64 tools
-        uses: msys2/setup-msys2@v2
+        uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884
         with:
           msystem: CLANGARM64
           update: true
@@ -375,6 +376,131 @@ jobs:
           LLVM_OBJDUMP: /clangarm64/bin/llvm-objdump.exe
           LLVM_READOBJ: /clangarm64/bin/llvm-readobj.exe
 
+  aarch64-git-bash-mvp:
+    name: native ARM64 Git Bash MVP runtime
+    runs-on: windows-11-arm
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout runtime source
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Verify native ARM64 runner
+        shell: pwsh
+        run: |
+          & .github/checks/assert-runner-architecture.ps1 `
+            -ExpectedNativeMachine ARM64 `
+            -ExpectedProcessArchitecture Arm64 `
+            -EvidencePath "$env:RUNNER_TEMP\arm64-mvp-runner.txt"
+
+      - id: msys2
+        name: Set up approved native ARM64 build tools
+        uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884
+        with:
+          msystem: CLANGARM64
+          update: true
+          install: >-
+            mingw-w64-clang-aarch64-clang=22.1.8-2
+            mingw-w64-clang-aarch64-compiler-rt=22.1.8-2
+            mingw-w64-clang-aarch64-crt=14.0.0.r302.gd7f3c5201-1
+            mingw-w64-clang-aarch64-headers=14.0.0.r302.gd7f3c5201-1
+            mingw-w64-clang-aarch64-lld=22.1.8-2
+            mingw-w64-clang-aarch64-libwinpthread=14.0.0.r302.gd7f3c5201-1
+            mingw-w64-clang-aarch64-llvm=22.1.8-2
+            mingw-w64-clang-aarch64-llvm-tools=22.1.8-2
+            mingw-w64-clang-aarch64-make=4.4.1-5
+            mingw-w64-clang-aarch64-ncurses=6.6-4
+            mingw-w64-clang-aarch64-perl=5.44.0-3
+            mingw-w64-clang-aarch64-winpthreads=14.0.0.r302.gd7f3c5201-1
+
+      - name: Download exact public MVP inputs
+        shell: pwsh
+        run: |
+          $workRoot = if (Test-Path -LiteralPath 'D:\') {
+            'D:\git-bash-mvp'
+          } else {
+            "$env:RUNNER_TEMP\git-bash-mvp"
+          }
+          "MVP_WORK_ROOT=$workRoot" | Out-File -FilePath $env:GITHUB_ENV -Append
+          $inputs = "$workRoot-inputs"
+          "MVP_INPUT_ROOT=$inputs" | Out-File -FilePath $env:GITHUB_ENV -Append
+          New-Item -ItemType Directory -Path $inputs -Force | Out-Null
+          Invoke-WebRequest `
+            -Uri 'https://github.com/crutkas/binutils-woarm64/releases/download/native-binutils-eb40c26f66fc/busybox-c26a88d7.tar.gz' `
+            -OutFile "$inputs\busybox-c26a88d7.tar.gz"
+          Invoke-WebRequest `
+            -Uri 'https://github.com/git-for-windows/git/releases/download/v2.55.0.windows.3/MinGit-2.55.0.3-arm64.zip' `
+            -OutFile "$inputs\MinGit-2.55.0.3-arm64.zip"
+          Invoke-WebRequest `
+            -Uri 'https://github.com/crutkas/msys2-runtime/releases/download/native-generators-layer6-20260829/native-generators-arm64.zip' `
+            -OutFile "$inputs\native-generators-arm64.zip"
+
+      - name: Build native runtime and Bash from exact source
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "$env:MVP_WORK_ROOT" -Force | Out-Null
+          Set-Content -LiteralPath "$env:MVP_WORK_ROOT\stale-sentinel" `
+            -Value 'must be removed before configuration'
+          & .github/checks/build-aarch64-mvp-runtime.ps1 `
+            -Source "$env:GITHUB_WORKSPACE" `
+            -Work "$env:MVP_WORK_ROOT" `
+            -ClangPrefix '${{ steps.msys2.outputs.msys2-location }}\clangarm64\bin' `
+            -BusyBoxArchive "$env:MVP_INPUT_ROOT\busybox-c26a88d7.tar.gz" `
+            -GeneratorArchive "$env:MVP_INPUT_ROOT\native-generators-arm64.zip" `
+            -MinGitArchive "$env:MVP_INPUT_ROOT\MinGit-2.55.0.3-arm64.zip" `
+            -Jobs 20
+
+      - name: Assemble deterministic MVP artifact
+        shell: pwsh
+        run: |
+          $work = "$env:MVP_WORK_ROOT"
+          $runtimeCommit = (& git rev-parse 'HEAD^{commit}').Trim()
+          & .github/checks/package-aarch64-mvp-runtime.ps1 `
+            -RuntimeDll "$work\build\aarch64-pc-cygwin\winsup\cygwin\new-msys-2.0.dll" `
+            -BashExe "$work\bash-build\bash.exe" `
+            -BusyBoxExe "$work\inputs\busybox-c26a88d7\bin\busybox.exe" `
+            -MinGitRoot "$work\mingit" `
+            -ClangPrefix '${{ steps.msys2.outputs.msys2-location }}\clangarm64\bin' `
+            -NativePerl '${{ steps.msys2.outputs.msys2-location }}\clangarm64\bin\perl.exe' `
+            -NativeSsh "$env:SystemRoot\System32\OpenSSH\ssh.exe" `
+            -Destination "$env:RUNNER_TEMP\git-bash-mvp-publish" `
+            -RuntimeCommit $runtimeCommit
+
+      - name: Exercise runtime, Bash, Git, and emulated x64 child
+        shell: pwsh
+        run: |
+          $work = "$env:MVP_WORK_ROOT"
+          $movedRoot = "$env:RUNNER_TEMP\git-bash-mvp-moved"
+          if (Test-Path -LiteralPath $movedRoot) {
+            Remove-Item -LiteralPath $movedRoot -Recurse -Force
+          }
+          Expand-Archive `
+            -LiteralPath "$env:RUNNER_TEMP\git-bash-mvp-publish\native-git-bash-mvp-arm64.zip" `
+            -DestinationPath $movedRoot
+          & .github/checks/test-aarch64-mvp-runtime.ps1 `
+            -RuntimeRoot $movedRoot `
+            -RuntimeSource "$env:GITHUB_WORKSPACE" `
+            -RuntimeBuild "$work\build" `
+            -ClangPrefix '${{ steps.msys2.outputs.msys2-location }}\clangarm64\bin' `
+            -CrtPrefix '${{ steps.msys2.outputs.msys2-location }}\clangarm64' `
+            -BusyBox "$work\inputs\busybox-c26a88d7\bin\busybox.exe" `
+            -MinGitRoot "$work\mingit" `
+            -EvidencePath "$env:RUNNER_TEMP\git-bash-mvp-publish\validation.json"
+
+      - name: Upload deterministic Git Bash MVP runtime
+        uses: actions/upload-artifact@v6
+        with:
+          name: native-git-bash-mvp-arm64
+          path: |
+            ${{ runner.temp }}\git-bash-mvp-publish\native-git-bash-mvp-arm64.zip
+            ${{ runner.temp }}\git-bash-mvp-publish\artifact.json
+            ${{ runner.temp }}\git-bash-mvp-publish\validation.json
+          if-no-files-found: error
+          compression-level: 0
+
   x86_64-expm1l:
     name: x86_64 production expm1l regression
     runs-on: windows-latest
@@ -384,7 +510,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up x86_64 MSYS tools
-        uses: msys2/setup-msys2@v2
+        uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884
         with:
           msystem: MSYS
           update: true

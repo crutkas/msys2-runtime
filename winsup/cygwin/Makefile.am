@@ -12,7 +12,35 @@ AUTOMAKE_OPTIONS=-Wno-override
 
 include $(top_srcdir)/Makefile.am.common
 
+if CXX_IS_CLANG
+COMMON_CFLAGS=-Wno-deprecated-non-prototype -Wno-implicit-fallthrough \
+	-Wno-inline-asm -Wno-macro-redefined \
+	-Wno-mismatched-tags -Wno-gnu-designator -Wno-missing-braces \
+	-Wno-nontrivial-memcall \
+	-Wno-unknown-warning-option -Wno-unused-command-line-argument \
+	-Wno-unused-const-variable -Wno-unused-private-field \
+	-Wno-varargs \
+	-Wno-vla-cxx-extension -Wimplicit-fallthrough -Werror
+runtime_cxx_link_flags=
+runtime_cxx_compile_flags=-fno-c++-static-destructors
+runtime_ldscript_flag=
+runtime_heap_ldflags=
+runtime_post_link=$(OBJCOPY) --set-section-flags \
+	.cygwin_=alloc,load,data,contents,share $(NEW_DLL_NAME)
+if TARGET_AARCH64
+runtime_builtin_lib=-lclang_rt.builtins-aarch64
+else
+runtime_builtin_lib=-lclang_rt.builtins-x86_64
+endif
+else
 COMMON_CFLAGS=-Wimplicit-fallthrough=5 -Werror -fmerge-constants -ftracer
+runtime_cxx_link_flags=-mno-use-libstdc-wrappers
+runtime_cxx_compile_flags=
+runtime_ldscript_flag=-Wl,-T$(LDSCRIPT)
+runtime_heap_ldflags=-Wl,--heap=0
+runtime_post_link=
+runtime_builtin_lib=-lgcc
+endif
 if TARGET_X86_64
 COMMON_CFLAGS+=-mcmodel=small
 endif
@@ -23,7 +51,8 @@ VERSION_CFLAGS += -DMSYS2_RUNTIME_COMMIT_HEX="@MSYS2_RUNTIME_COMMIT_HEX@"
 COMMON_CFLAGS += $(VERSION_CFLAGS)
 
 AM_CFLAGS=$(cflags_common) $(COMMON_CFLAGS)
-AM_CXXFLAGS=$(cxxflags_common) $(COMMON_CFLAGS) -fno-threadsafe-statics
+AM_CXXFLAGS=$(cxxflags_common) $(COMMON_CFLAGS) -fno-threadsafe-statics \
+	$(runtime_cxx_compile_flags)
 
 if TARGET_X86_64
 # Needed by mcountFunc.S to choose the right code path and symbol names
@@ -50,7 +79,8 @@ DEF_FILE=msys.def
 LIB_NAME=libmsys-2.0.a
 
 if TARGET_AARCH64
-runtime_aslr_ldflags = -Wl,--dynamicbase -Wl,--disable-high-entropy-va
+runtime_aslr_ldflags = -Wl,--dynamicbase -Wl,--disable-high-entropy-va \
+	-Wl,--enable-reloc-section
 else
 runtime_aslr_ldflags =
 endif
@@ -421,12 +451,12 @@ child_info_magic.h: scripts/cygmagic local_includes/child_info.h
 	$(AM_V_GEN)$(srcdir)/scripts/cygmagic $@ "$(CC) $(INCLUDES) $(CPPFLAGS) -E -x c++" $(word 2,$^) CHILD_INFO_MAGIC 'class child_info'
 
 globals.h: scripts/mkglobals_h globals.cc
-	$(AM_V_GEN)$^ > $@
+	$(AM_V_GEN)$(PERL) $^ > $@
 
 localtime.patched.c: tzcode/localtime.c tzcode/localtime.c.patch
-	$(AM_V_GEN)patch -u -o localtime.patched.c \
-		    $(srcdir)/tzcode/localtime.c \
-		    $(srcdir)/tzcode/localtime.c.patch
+	$(AM_V_GEN)cp $(srcdir)/tzcode/localtime.c $@ && \
+	  patch $@ $(srcdir)/tzcode/localtime.c.patch || \
+	  { rm -f $@; false; }
 
 $(srcdir)/devices.cc: scripts/gendevices devices.in local_includes/devices.h
 	$(wordlist 1,2,$^) $@
@@ -468,7 +498,7 @@ uname_version.c: .FORCE
 version.cc: scripts/mkvers.sh include/cygwin/version.h winver.rc $(src_files)
 	@echo "Making version.cc and winver.o";\
 	export CC="$(CC)";\
-	/bin/sh $(word 1,$^) $(word 2,$^) $(word 3,$^) $(WINDRES) $(CFLAGS) $(VERSION_CFLAGS)
+	$(SHELL) $(word 1,$^) $(word 2,$^) $(word 3,$^) $(WINDRES) -I$(srcdir)/include $(CFLAGS) $(VERSION_CFLAGS)
 
 winver.o: version.cc
 
@@ -621,18 +651,19 @@ $(LDSCRIPT): $(LDSCRIPT).in
 $(NEW_DLL_NAME): $(LDSCRIPT) libdll.a $(VERSION_OFILES) $(LIBSERVER)\
 		  $(newlib_build)/libm.a $(newlib_build)/libc.a
 	$(AM_V_CXXLD)$(CXX) $(CXXFLAGS) \
-	-mno-use-libstdc-wrappers \
-	-Wl,--gc-sections -nostdlib -Wl,-T$(LDSCRIPT) \
+	$(runtime_cxx_link_flags) \
+	-Wl,--gc-sections -nostdlib $(runtime_ldscript_flag) \
 	$(runtime_aslr_ldflags) -static \
 	$${SOURCE_DATE_EPOCH:+-Wl,--no-insert-timestamp} \
-	-Wl,--heap=0 -Wl,--out-implib,msysdll.a -shared -o $@ \
+	$(runtime_heap_ldflags) -Wl,--out-implib,msysdll.a -shared -o $@ \
 	-e @DLL_ENTRY@ $(DEF_FILE) \
 	-Wl,-whole-archive libdll.a -Wl,-no-whole-archive \
 	$(VERSION_OFILES) \
 	$(LIBSERVER) \
 	$(newlib_build)/libm.a \
 	$(newlib_build)/libc.a \
-	-lgcc -lkernel32 -lntdll -Wl,-Map,msys.map
+	$(runtime_builtin_lib) -lkernel32 -lntdll -Wl,-Map,msys.map
+	$(AM_V_at)$(runtime_post_link)
 	@$(MKDIR_P) ${target_builddir}/winsup/testsuite/testinst/bin/
 	$(AM_V_at)$(INSTALL_PROGRAM) $(NEW_DLL_NAME) ${target_builddir}/winsup/testsuite/testinst/bin/$(DLL_NAME)
 

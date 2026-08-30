@@ -45,12 +45,20 @@ struct flock {
 
 #ifndef __vm_offset_t_defined
 #define __vm_offset_t_defined
+#if defined(__aarch64__) && defined(_WIN64)
+typedef unsigned long long vm_offset_t;
+#else
 typedef unsigned long vm_offset_t;
+#endif
 #endif /*__vm_offset_t_defined*/
 
 #ifndef __vm_size_t_defined
 #define __vm_size_t_defined
+#if defined(__aarch64__) && defined(_WIN64)
+typedef unsigned long long vm_size_t;
+#else
 typedef unsigned long vm_size_t;
+#endif
 #endif /*__vm_size_t_defined*/
 
 #ifndef __vm_object_t_defined

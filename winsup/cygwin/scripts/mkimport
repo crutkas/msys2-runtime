@@ -2,6 +2,7 @@
 use strict;
 use File::Temp qw'tempdir';
 use File::Spec;
+use File::Copy qw'copy';
 use Getopt::Long;
 my $dir = tempdir(CLEANUP => 1);
 
@@ -17,6 +18,74 @@ $_ = File::Spec->rel2abs($_) for @ARGV;
 
 my $libdll = shift;
 my $inpdll = shift;
+
+# LLD gives every short-import member the DLL name, so extracting the archive
+# would overwrite all but one member.  Preserve those members in place, remove
+# obsolete imports by occurrence, and append ABI replacement stubs so the
+# archive index resolves legacy names to them.
+if ($cpu eq 'aarch64') {
+    open my $nm_fd, '-|', $nm, '-Apg', '--defined-only', $inpdll;
+    my (%member, %imports, %instances);
+    while (<$nm_fd>) {
+	chomp;
+	my ($fn, $sym) = /^\Q$inpdll\E:(.*?):\s*\S+\s+\S\s+(\S+)$/;
+	next unless $fn;
+	if ($sym =~ /^__imp_(.+)$/) {
+	    my $instance = ++$instances{$fn};
+	    $member{$1} = [$instance, $fn];
+	    $imports{$1} = 1;
+	} elsif ($sym =~ /^__IMPORT_DESCRIPTOR_/
+		 || $sym eq '__NULL_IMPORT_DESCRIPTOR'
+		 || $sym =~ /NULL_THUNK_DATA$/) {
+	    ++$instances{$fn};
+	}
+    }
+    close $nm_fd or exit 1;
+
+    my (@obsolete, @stubs);
+    for my $sym (sort keys %replace) {
+	my $replacement = $replace{$sym};
+	if (!defined $member{$sym}) {
+	    die "$0: missing ARM64 import $sym\n" if $replacement ne '';
+	    next;
+	}
+	push @obsolete, [$member{$sym}->[0], $member{$sym}->[1]];
+	next if $replacement eq '';
+	die "$0: missing ARM64 replacement import $replacement\n"
+	  unless $imports{$replacement};
+	(my $safe = $sym) =~ s/[^A-Za-z0-9_.-]/_/g;
+	my $stub = "$dir/replace-$safe.o";
+	my $imp_sym = "__imp_$replacement";
+	open my $as_fd, '|-', $as, '-target', 'aarch64-w64-windows-gnu',
+	  '-c', '-x', 'assembler', '-o', $stub, '-';
+	print $as_fd <<EOF;
+	.text
+	.extern	$imp_sym
+	.global	$sym
+$sym:
+	adrp	x16, $imp_sym
+	ldr	x16, [x16, #:lo12:$imp_sym]
+	br	x16
+EOF
+	close $as_fd or exit 1;
+	push @stubs, $stub;
+    }
+
+    unlink $libdll;
+    system $ar, 'qcLD', $libdll, $inpdll;
+    exit 1 if $?;
+    for my $entry (sort { $b->[0] <=> $a->[0] } @obsolete) {
+	system $ar, 'dN', $entry->[0], $libdll, $entry->[1];
+	exit 1 if $?;
+    }
+    system $ar, 'qD', $libdll, @stubs if @stubs;
+    exit 1 if $?;
+    system $ar, 'rD', $libdll, @ARGV if @ARGV;
+    exit 1 if $?;
+    system $ar, 'sD', $libdll;
+    exit 1 if $?;
+    exit 0;
+}
 
 open my $nm_fd, '-|', $nm, '-Apg', '--defined-only', $inpdll;
 my %text = ();

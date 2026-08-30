@@ -369,7 +369,11 @@ if test -z "${with_multisubdir}"; then
 else
   have_multisubdir=yes
 fi
-AM_CONDITIONAL(HAVE_DOC, test x$have_multisubdir = xno)
+AC_ARG_ENABLE(doc,
+  [AS_HELP_STRING([--disable-doc], [do not build documentation])],,
+  enable_doc=yes)
+AM_CONDITIONAL(HAVE_DOC,
+  [test x$have_multisubdir = xno && test x$enable_doc != xno])
 
 # Some run-time support libraries provided by GCC (e.g. libgomp) use configure
 # checks to detect certain features, e.g. availability of thread-local storage.

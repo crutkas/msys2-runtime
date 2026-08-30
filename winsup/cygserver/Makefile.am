@@ -14,7 +14,14 @@ else
 cygserver_aslr_ldflags =
 endif
 
-cygserver_flags=$(cxxflags_common) -Wimplicit-fallthrough=5 -Werror -DSYSCONFDIR="\"$(sysconfdir)\""
+if CXX_IS_CLANG
+cygserver_compiler_flags=-Wno-implicit-fallthrough -Wno-mismatched-tags \
+	-Wno-unused-command-line-argument
+else
+cygserver_compiler_flags=-Wimplicit-fallthrough=5
+endif
+
+cygserver_flags=$(cxxflags_common) $(cygserver_compiler_flags) -Werror -DSYSCONFDIR="\"$(sysconfdir)\""
 AM_CXXFLAGS = $(CFLAGS)
 
 noinst_LIBRARIES = libcygserver.a

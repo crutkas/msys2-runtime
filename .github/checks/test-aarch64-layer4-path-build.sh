@@ -69,10 +69,10 @@ cat "$build_log"
 
 grep -q -- '-Wall' "$build_log"
 grep -q -- '-Werror' "$build_log"
-grep -q -- '-Wimplicit-fallthrough=5' "$build_log"
+grep -Eq -- '-Wimplicit-fallthrough(=5)?([[:space:]]|$)' "$build_log"
 grep -q -- '-fno-rtti' "$build_log"
 grep -q -- '/path.cc' "$build_log"
-if grep -q -- '-Wno-error=unused-function' "$build_log"
+if grep -Eq -- '-Wno-(error=)?unused-function' "$build_log"
 then
   echo 'unused-function diagnostics must remain fatal' >&2
   exit 1

@@ -1,0 +1,243 @@
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory)] [string] $RuntimeRoot,
+    [Parameter(Mandatory)] [string] $RuntimeSource,
+    [Parameter(Mandatory)] [string] $RuntimeBuild,
+    [Parameter(Mandatory)] [string] $ClangPrefix,
+    [Parameter(Mandatory)] [string] $CrtPrefix,
+    [Parameter(Mandatory)] [string] $BusyBox,
+    [Parameter(Mandatory)] [string] $MinGitRoot,
+    [Parameter(Mandatory)] [string] $EvidencePath
+)
+
+$ErrorActionPreference = 'Stop'
+$PSNativeCommandUseErrorActionPreference = $true
+
+function Get-PeMachine([string] $Path) {
+    $stream = [IO.File]::OpenRead($Path)
+    try {
+        $reader = [IO.BinaryReader]::new($stream)
+        if ($reader.ReadUInt16() -ne 0x5A4D) { return $null }
+        $stream.Position = 0x3C
+        $stream.Position = $reader.ReadUInt32()
+        if ($reader.ReadUInt32() -ne 0x00004550) { return $null }
+        return $reader.ReadUInt16()
+    }
+    finally { $stream.Dispose() }
+}
+
+function Assert-Arm64([string] $Path, [string] $Class) {
+    if ((Get-PeMachine $Path) -ne 0xAA64) { throw "$Class is not native ARM64: $Path" }
+    $script:processes.Add([ordered]@{ class = $Class; path = $Path; machine = '0xAA64' })
+}
+
+function Invoke-Native([string] $Path, [string[]] $Arguments, [string] $Class) {
+    Assert-Arm64 $Path $Class
+    & $Path @Arguments
+    if ($LASTEXITCODE -ne 0) { throw "$Class failed with exit code $LASTEXITCODE" }
+}
+
+$processes = [Collections.Generic.List[object]]::new()
+$tests = [Collections.Generic.List[string]]::new()
+$packagedNonArm64 = Get-ChildItem -LiteralPath $RuntimeRoot -File -Recurse |
+    ForEach-Object {
+        $machine = Get-PeMachine $_.FullName
+        if ($null -ne $machine -and $machine -ne 0xAA64) { $_.FullName }
+    }
+if ($packagedNonArm64) {
+    throw "Artifact contains non-ARM64 PE files: $($packagedNonArm64 -join ', ')"
+}
+foreach ($unsupportedSshComponent in @('sshd.exe', 'ssh-agent.exe', 'ssh-pkcs11-helper.exe')) {
+    if (Get-ChildItem -LiteralPath $RuntimeRoot -Filter $unsupportedSshComponent -File -Recurse) {
+        throw "Supported SSH path contains unsupported server/helper: $unsupportedSshComponent"
+    }
+}
+$tests.Add('zero packaged x64 PE files')
+$tests.Add('supported SSH path excludes server and helper processes')
+$bash = Join-Path $RuntimeRoot 'usr\bin\bash.exe'
+$runtimeDll = Join-Path $RuntimeRoot 'usr\bin\msys-2.0.dll'
+$git = Join-Path $RuntimeRoot 'cmd\git.exe'
+$gitRemoteHttps = Join-Path $RuntimeRoot 'clangarm64\bin\git-remote-https.exe'
+$ssh = Join-Path $RuntimeRoot 'usr\bin\ssh.exe'
+$langProfile = Join-Path $RuntimeRoot 'etc\profile.d\lang.sh'
+if (Test-Path -LiteralPath $langProfile) {
+    throw 'NLS-disabled MVP artifact retained locale-dependent lang.sh'
+}
+$clang = Join-Path $ClangPrefix 'clang.exe'
+Assert-Arm64 $runtimeDll 'runtime DLL'
+Assert-Arm64 $bash 'Bash'
+Assert-Arm64 $git 'Git'
+Assert-Arm64 $gitRemoteHttps 'Git HTTPS transport'
+Assert-Arm64 $ssh 'native Windows OpenSSH client'
+Assert-Arm64 $clang 'Clang'
+Assert-Arm64 $BusyBox 'BusyBox shell'
+$readobj = Join-Path $ClangPrefix 'llvm-readobj.exe'
+Assert-Arm64 $readobj 'LLVM PE inspector'
+$peReport = (& $readobj --file-headers --sections --coff-imports --coff-exports $runtimeDll |
+    Out-String)
+foreach ($required in @(
+    'IMAGE_FILE_MACHINE_ARM64',
+    'IMAGE_DLL_CHARACTERISTICS_DYNAMIC_BASE',
+    'IMAGE_DLL_CHARACTERISTICS_NX_COMPAT',
+    'Name: .reloc',
+    'Name: KERNEL32.dll',
+    'Name: ntdll.dll'
+)) {
+    if (-not $peReport.Contains($required)) { throw "Runtime PE invariant missing: $required" }
+}
+$commonSection = @($peReport -split '\r?\n\s*Section \{' |
+    Where-Object { $_ -match 'Name: \.cygwin_' })
+if ($commonSection.Count -ne 1 -or
+    $commonSection[0] -notmatch 'IMAGE_SCN_MEM_SHARED') {
+    throw 'Runtime .cygwin_ section is not marked IMAGE_SCN_MEM_SHARED'
+}
+$exportCount = ([regex]::Matches($peReport, '(?m)^\s+Ordinal:')).Count
+if ($exportCount -lt 1700) { throw "Unexpectedly small runtime export table: $exportCount" }
+
+$env:MVP_CLANG_PREFIX = $ClangPrefix.Replace('\', '/')
+$env:MVP_RUNTIME_SOURCE = $RuntimeSource.Replace('\', '/')
+$env:MVP_RUNTIME_BUILD = $RuntimeBuild.Replace('\', '/')
+$env:MVP_CRT_PREFIX = $CrtPrefix.Replace('\', '/')
+$env:MVP_CLANG_RESOURCE_DIR = (& $clang -print-resource-dir).Trim().Replace('\', '/')
+$env:MVP_WINDOWS_HEADERS = (Join-Path (Split-Path $RuntimeBuild) 'windows-header-overlay').Replace('\', '/')
+$smokeSource = Join-Path $RuntimeSource '.github\checks\aarch64-runtime-smoke.c'
+$wrapper = Join-Path $RuntimeSource '.github\checks\aarch64-cygwin-clang.sh'
+$smokeExe = Join-Path $RuntimeRoot 'usr\bin\runtime-smoke.exe'
+Invoke-Native $BusyBox @('sh', $wrapper, $smokeSource, '-o', $smokeExe) 'runtime smoke compiler'
+Assert-Arm64 $smokeExe 'runtime-linked smoke executable'
+
+$tmp = Join-Path $RuntimeRoot 'tmp'
+New-Item -ItemType Directory -Path $tmp -Force | Out-Null
+$oldLocation = Get-Location
+$oldPath = $env:PATH
+$oldMsys2PathType = $env:MSYS2_PATH_TYPE
+$sealedPathDirectories = @(
+    (Join-Path $RuntimeRoot 'usr\bin'),
+    (Join-Path $RuntimeRoot 'cmd'),
+    (Join-Path $RuntimeRoot 'clangarm64\bin'),
+    $ClangPrefix,
+    (Split-Path $BusyBox)
+)
+foreach ($directory in $sealedPathDirectories) {
+    if (-not (Test-Path -LiteralPath $directory -PathType Container)) {
+        throw "Sealed validation PATH directory is missing: $directory"
+    }
+    Get-ChildItem -LiteralPath $directory -Filter *.exe -File | ForEach-Object {
+        $machine = Get-PeMachine $_.FullName
+        if ($null -ne $machine -and $machine -ne 0xAA64) {
+            throw "Sealed validation PATH contains non-ARM64 executable: $($_.FullName)"
+        }
+    }
+}
+$env:PATH = $sealedPathDirectories -join ';'
+$env:HOME = Join-Path $RuntimeRoot 'home'
+$env:MSYS2_PATH_TYPE = 'strict'
+$env:MSYS = 'winsymlinks:sys'
+$tests.Add('sealed native validation PATH excludes host and x64 tools')
+New-Item -ItemType Directory -Path $env:HOME -Force | Out-Null
+try {
+    Set-Location (Join-Path $RuntimeRoot 'usr\bin')
+    $windowsPath = Join-Path $tmp 'path-conversion'
+    Invoke-Native $smokeExe @($windowsPath) 'runtime behavior suite'
+    $tests.Add('startup/cwd/path conversion')
+    $tests.Add("PE load/import/export/relocation/ASLR ($exportCount exports)")
+    $tests.Add('pthread/TLS')
+    $tests.Add('fork/pipes')
+    $tests.Add('signals/SEH')
+    $tests.Add('AF_UNIX sockets')
+    $tests.Add('filesystem/hardlink/symlink')
+    $tests.Add('locale C baseline without catalogs')
+    $tests.Add('posix_spawn/exec')
+
+    $oldLang = $env:LANG
+    $oldLcAll = $env:LC_ALL
+    $oldLcCtype = $env:LC_CTYPE
+    $env:LANG = $null
+    $env:LC_ALL = $null
+    $env:LC_CTYPE = $null
+    $loginStderr = Join-Path $tmp 'bash-login.stderr'
+    Assert-Arm64 $bash 'Bash clean login workflow'
+    try {
+        & $bash '-lc' (
+        'set -eu; x=ARM64; test "$(printf "%s" "$x" | tr A-Z a-z)" = arm64; ' +
+        '(exit 7) || test $? = 7; printf "bash-smoke: %s %s\n" "$MACHTYPE" "$PWD"') `
+            2> $loginStderr
+        if ($LASTEXITCODE -ne 0) { throw "Bash clean login workflow failed with exit code $LASTEXITCODE" }
+        $loginError = Get-Content -LiteralPath $loginStderr -Raw -ErrorAction SilentlyContinue
+        if ($loginError) { throw "Bash login wrote stderr: $loginError" }
+    }
+    finally {
+        $env:LANG = $oldLang
+        $env:LC_ALL = $oldLcAll
+        $env:LC_CTYPE = $oldLcCtype
+    }
+    $tests.Add('Bash variables/command substitution/pipeline/subshell')
+    $tests.Add('Bash login has clean stderr without locale/NLS')
+
+    Invoke-Native $ssh @('-F', 'NUL', '-G', 'github.com') 'native SSH configuration workflow'
+    $tests.Add('native ARM64 Windows OpenSSH supported path')
+
+    $gitScript = @'
+set -eu
+export PATH=/cmd:/clangarm64/bin:/usr/bin
+export HOME=/home
+rm -rf /tmp/git-smoke
+mkdir -p /tmp/git-smoke/repo
+cd /tmp/git-smoke/repo
+git init -q
+git config user.name "Native ARM64"
+git config user.email native-arm64@example.invalid
+printf "native\n" > tracked.txt
+git add tracked.txt
+git commit -q -m native
+cd ..
+git clone -q repo clone
+test "$(git -C clone log -1 --format=%s)" = native
+https_head="$(git ls-remote https://github.com/git/git.git HEAD | awk '{print $1}')"
+test "${#https_head}" = 40
+ssh_log=/tmp/git-ssh.log
+if GIT_SSH_COMMAND="/usr/bin/ssh.exe -V" \
+    git ls-remote ssh://example.invalid/repo >/dev/null 2>"$ssh_log"
+then
+    echo "controlled SSH probe unexpectedly reached a repository" >&2
+    exit 1
+fi
+grep -q OpenSSH "$ssh_log"
+printf "git-smoke: version=%s commit=%s\n" "$(git --version)" "$(git -C repo rev-parse --short HEAD)"
+'@
+    $gitScriptPath = Join-Path $tmp 'git-smoke.sh'
+    Set-Content -LiteralPath $gitScriptPath -Value $gitScript -Encoding utf8NoBOM
+    Invoke-Native $bash @($gitScriptPath) 'native Bash and Git workflow'
+    $tests.Add('Git init/add/commit')
+    $tests.Add('Git local clone/log')
+    $tests.Add('Git HTTPS ls-remote')
+    $tests.Add('Git controlled native ARM64 SSH transport selection')
+
+    $x64Child = Join-Path $MinGitRoot 'usr\bin\true.exe'
+    if ((Get-PeMachine $x64Child) -ne 0x8664) {
+        throw "Expected MinGit usr/bin/true.exe to be the explicitly emulated x64 child"
+    }
+    $x64Unix = '/' + $x64Child.Replace('\', '/').Replace(':', '')
+    Invoke-Native $bash @('-lc', "'$x64Unix'") `
+        'Bash spawning explicitly emulated x64 child'
+    $processes.Add([ordered]@{
+        class = 'explicitly emulated x64 interoperability child'
+        path = $x64Child
+        machine = '0x8664'
+    })
+    $tests.Add('x64 child interoperability (explicitly emulated)')
+}
+finally {
+    Set-Location $oldLocation
+    $env:PATH = $oldPath
+    $env:MSYS2_PATH_TYPE = $oldMsys2PathType
+}
+
+[ordered]@{
+    schema = 1
+    process_attestation_count = $processes.Count
+    behavioral_test_count = $tests.Count
+    processes = $processes
+    tests = $tests
+} | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $EvidencePath -Encoding utf8NoBOM
+Write-Host "MVP validation passed: $($processes.Count) process attestations, $($tests.Count) behavioral tests"

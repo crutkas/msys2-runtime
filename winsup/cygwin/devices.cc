@@ -56,6 +56,7 @@ exists_ntdev (const device& dev)
       return false;
     case STATUS_SUCCESS:
       NtClose (h);
+      fallthrough;
     default:
       break;
     }
@@ -15149,5 +15150,3 @@ device::parsedisk (int drive, int part)
   *bp = '\0';
   name (buf, true);
 }
-
-

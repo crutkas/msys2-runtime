@@ -1279,8 +1279,10 @@ extern "C" int
 __wscollate_range_cmp (wint_t *c1, wint_t *c2,
 		       size_t c1len, size_t c2len)
 {
-  wchar_t s1[c1len * 2 + 1] = { 0 };	/* # of chars if all are surrogates */
-  wchar_t s2[c2len * 2 + 1] = { 0 };
+  wchar_t s1[c1len * 2 + 1];	/* # of chars if all are surrogates */
+  wchar_t s2[c2len * 2 + 1];
+  memset (s1, 0, sizeof s1);
+  memset (s2, 0, sizeof s2);
 
   /* wcscoll() ignores case in many locales. but we don't want that
      for filenames... */

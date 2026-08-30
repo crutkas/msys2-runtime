@@ -105,7 +105,7 @@ static int checkstate (waitq *);
 static __inline__ bool get_proc_lock (DWORD, DWORD);
 static int remove_proc (int);
 static bool stopped_or_terminated (waitq *, _pinfo *);
-static void wait_sig (VOID *arg);
+static void wait_sig (VOID *arg) __attribute__ ((noreturn));
 
 /* wait_sig bookkeeping */
 
@@ -1464,7 +1464,7 @@ pending_signals::add (sigpacket& pack)
 
 /* Process signals by waiting for signal data to arrive in a pipe.
    Set a completion event if one was specified. */
-static void
+static void __attribute__ ((noreturn))
 wait_sig (VOID *)
 {
   _sig_tls = &_my_tls;

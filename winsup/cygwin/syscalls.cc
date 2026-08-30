@@ -3242,14 +3242,22 @@ truncate (const char *pathname, off_t length)
   return res;
 }
 
+#if defined(__aarch64__) && defined(_WIN64)
+extern "C" intptr_t
+#else
 extern "C" long
+#endif
 _get_osfhandle (int fd)
 {
+#if defined(__aarch64__) && defined(_WIN64)
+  intptr_t res;
+#else
   long res;
+#endif
 
   cygheap_fdget cfd (fd);
   if (cfd >= 0)
-    res = (long) cfd->get_handle ();
+    res = (intptr_t) cfd->get_handle ();
   else
     res = -1;
 
@@ -5182,7 +5190,7 @@ pipe2 (int filedes[2], int mode)
 extern "C" FILE *
 tmpfile (void)
 {
-  char *dir = getenv ("TMPDIR");
+  const char *dir = getenv ("TMPDIR");
   if (!dir)
     dir = P_tmpdir;
   int fd = open (dir, O_RDWR | O_BINARY | O_TMPFILE, S_IRUSR | S_IWUSR);

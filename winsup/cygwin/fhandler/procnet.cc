@@ -13,6 +13,7 @@ details. */
    because a redefinition for LP64 systems is missing.  This leads to a wrong
    definition and size of sockaddr_in6 when building with winsock headers. */
 #undef u_long
+typedef unsigned int __ms_u_long;
 #define u_long __ms_u_long
 #include <w32api/ws2tcpip.h>
 #include <w32api/iphlpapi.h>

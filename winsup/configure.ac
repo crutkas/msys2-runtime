@@ -40,6 +40,18 @@ AM_PROG_AS
 AC_LANG(C)
 AC_LANG(C++)
 
+AC_CACHE_CHECK([whether the C++ compiler is Clang],
+	       [cygwin_cv_cxx_is_clang],
+	       [AC_COMPILE_IFELSE(
+		  [AC_LANG_PROGRAM([[
+#ifndef __clang__
+#error not clang
+#endif
+		  ]])],
+		  [cygwin_cv_cxx_is_clang=yes],
+		  [cygwin_cv_cxx_is_clang=no])])
+AM_CONDITIONAL(CXX_IS_CLANG, [test x$cygwin_cv_cxx_is_clang = xyes])
+
 AC_ARG_WITH([cross-bootstrap],[AS_HELP_STRING([--with-cross-bootstrap],[do not build programs using the MinGW toolchain or check for MinGW libraries (useful for bootstrapping a cross-compiler)])],[],[with_cross_bootstrap=no])
 
 AC_CYGWIN_INCLUDES
@@ -56,6 +68,8 @@ AC_CHECK_TOOL(OBJDUMP, objdump, objdump)
 AC_CHECK_TOOL(RANLIB, ranlib, ranlib)
 AC_CHECK_TOOL(STRIP, strip, strip)
 AC_CHECK_TOOL(WINDRES, windres, windres)
+AC_CHECK_PROGS(PERL, perl)
+test -n "$PERL" || AC_MSG_ERROR([perl is required to generate Cygwin sources])
 
 # Record msys2-runtime commit
 AC_ARG_WITH([msys2-runtime-commit],
@@ -158,11 +172,16 @@ AC_ARG_ENABLE([dumper],
 
 AM_CONDITIONAL(BUILD_DUMPER, [test "x$build_dumper" = "xyes"])
 
-# libbfd.a doesn't have a pkgconfig file, so we guess what it's dependencies
-# are, based on what's present in the build environment
-BFD_LIBS="-lintl -liconv -liberty -lz"
-AC_CHECK_LIB([sframe], [sframe_decode], [BFD_LIBS="${BFD_LIBS} -lsframe"])
-AC_CHECK_LIB([zstd], [ZSTD_isError], [BFD_LIBS="${BFD_LIBS} -lzstd"])
+# libbfd.a doesn't have a pkgconfig file, so we guess what its dependencies
+# are, based on what's present in the build environment.
+BFD_LIBS=
+if test "x$build_dumper" = "xyes"; then
+    BFD_LIBS="-lintl -liconv -liberty -lz"
+    AC_CHECK_LIB([sframe], [sframe_decode],
+		 [BFD_LIBS="${BFD_LIBS} -lsframe"])
+    AC_CHECK_LIB([zstd], [ZSTD_isError],
+		 [BFD_LIBS="${BFD_LIBS} -lzstd"])
+fi
 AC_SUBST([BFD_LIBS])
 
 AC_CONFIG_FILES([

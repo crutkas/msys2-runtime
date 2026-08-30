@@ -2,4 +2,5 @@ LIBRARY "layer3_import.dll"
 EXPORTS
 WSAStartup
 layer3_import_add
+layer3_import_add_v2
 layer3_import_data DATA

@@ -1872,6 +1872,7 @@ fhandler_disk_file::pread (void *buf, size_t count, off_t offset, void *aio)
 		  break;
 		case MMAP_RAISE_SIGBUS:
 		  raise (SIGBUS);
+		  break;
 		default:
 		  break;
 		}
