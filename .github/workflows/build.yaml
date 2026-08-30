@@ -452,6 +452,7 @@ jobs:
             -BashExe "$work\bash-build\bash.exe" `
             -BusyBoxExe "$work\inputs\busybox-c26a88d7\bin\busybox.exe" `
             -MinGitRoot "$work\mingit" `
+            -ClangPrefix '${{ steps.msys2.outputs.msys2-location }}\clangarm64\bin' `
             -Destination "$env:RUNNER_TEMP\git-bash-mvp-publish" `
             -RuntimeCommit $runtimeCommit
 
@@ -459,8 +460,15 @@ jobs:
         shell: pwsh
         run: |
           $work = "$env:MVP_WORK_ROOT"
+          $movedRoot = "$env:RUNNER_TEMP\git-bash-mvp-moved"
+          if (Test-Path -LiteralPath $movedRoot) {
+            Remove-Item -LiteralPath $movedRoot -Recurse -Force
+          }
+          Expand-Archive `
+            -LiteralPath "$env:RUNNER_TEMP\git-bash-mvp-publish\native-git-bash-mvp-arm64.zip" `
+            -DestinationPath $movedRoot
           & .github/checks/test-aarch64-mvp-runtime.ps1 `
-            -RuntimeRoot "$env:RUNNER_TEMP\git-bash-mvp-publish\native-git-bash-mvp-arm64" `
+            -RuntimeRoot $movedRoot `
             -RuntimeSource "$env:GITHUB_WORKSPACE" `
             -RuntimeBuild "$work\build" `
             -ClangPrefix '${{ steps.msys2.outputs.msys2-location }}\clangarm64\bin' `

@@ -42,10 +42,12 @@ $tests = [Collections.Generic.List[string]]::new()
 $bash = Join-Path $RuntimeRoot 'usr\bin\bash.exe'
 $runtimeDll = Join-Path $RuntimeRoot 'usr\bin\msys-2.0.dll'
 $git = Join-Path $RuntimeRoot 'cmd\git.exe'
+$gitRemoteHttps = Join-Path $RuntimeRoot 'clangarm64\bin\git-remote-https.exe'
 $clang = Join-Path $ClangPrefix 'clang.exe'
 Assert-Arm64 $runtimeDll 'runtime DLL'
 Assert-Arm64 $bash 'Bash'
 Assert-Arm64 $git 'Git'
+Assert-Arm64 $gitRemoteHttps 'Git HTTPS transport'
 Assert-Arm64 $clang 'Clang'
 Assert-Arm64 $BusyBox 'BusyBox shell'
 $readobj = Join-Path $ClangPrefix 'llvm-readobj.exe'
@@ -109,6 +111,11 @@ try {
         'Bash workflow'
     $tests.Add('Bash variables/command substitution/pipeline/subshell')
 
+    $x64Ssh = Join-Path $MinGitRoot 'usr\bin\ssh.exe'
+    if ((Get-PeMachine $x64Ssh) -ne 0x8664) {
+        throw "Expected MinGit usr/bin/ssh.exe to be the explicitly emulated x64 SSH child"
+    }
+    $env:MVP_X64_SSH = '/' + $x64Ssh.Replace('\', '/').Replace(':', '')
     $gitScript = @'
 set -eu
 export PATH=/cmd:/clangarm64/bin:/usr/bin
@@ -125,6 +132,16 @@ git commit -q -m native
 cd ..
 git clone -q repo clone
 test "$(git -C clone log -1 --format=%s)" = native
+https_head="$(git ls-remote https://github.com/git/git.git HEAD | awk '{print $1}')"
+test "${#https_head}" = 40
+ssh_log=/tmp/git-ssh.log
+if GIT_SSH_COMMAND="$MVP_X64_SSH -V" \
+    git ls-remote ssh://example.invalid/repo >/dev/null 2>"$ssh_log"
+then
+    echo "controlled SSH probe unexpectedly reached a repository" >&2
+    exit 1
+fi
+grep -q OpenSSH "$ssh_log"
 printf "git-smoke: version=%s commit=%s\n" "$(git --version)" "$(git -C repo rev-parse --short HEAD)"
 '@
     $gitScriptPath = Join-Path $tmp 'git-smoke.sh'
@@ -132,6 +149,13 @@ printf "git-smoke: version=%s commit=%s\n" "$(git --version)" "$(git -C repo rev
     Invoke-Native $bash @($gitScriptPath) 'native Bash and Git workflow'
     $tests.Add('Git init/add/commit')
     $tests.Add('Git local clone/log')
+    $tests.Add('Git HTTPS ls-remote')
+    $tests.Add('Git controlled SSH transport selection (explicitly emulated x64)')
+    $processes.Add([ordered]@{
+        class = 'explicitly emulated x64 SSH interoperability child'
+        path = $x64Ssh
+        machine = '0x8664'
+    })
 
     $x64Child = Join-Path $MinGitRoot 'usr\bin\true.exe'
     if ((Get-PeMachine $x64Child) -ne 0x8664) {

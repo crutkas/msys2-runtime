@@ -4,6 +4,7 @@ param(
     [Parameter(Mandatory)] [string] $BashExe,
     [Parameter(Mandatory)] [string] $BusyBoxExe,
     [Parameter(Mandatory)] [string] $MinGitRoot,
+    [Parameter(Mandatory)] [string] $ClangPrefix,
     [Parameter(Mandatory)] [string] $Destination,
     [Parameter(Mandatory)] [ValidatePattern('^[0-9a-f]{40}$')] [string] $RuntimeCommit,
     [long] $SourceDateEpoch = 1788034899
@@ -66,7 +67,12 @@ function Write-DeterministicZip([string] $Root, [string] $Path, [long] $Epoch) {
     finally { $stream.Dispose() }
 }
 
-foreach ($path in @($RuntimeDll, $BashExe, $BusyBoxExe)) {
+foreach ($path in @(
+    $RuntimeDll,
+    $BashExe,
+    $BusyBoxExe,
+    (Join-Path $ClangPrefix 'libncursesw6.dll')
+)) {
     if ((Get-PeMachine $path) -ne $arm64) {
         throw "$path is not a native ARM64 PE image"
     }
@@ -79,6 +85,8 @@ New-Item -ItemType Directory -Path "$root\usr\bin", "$root\cmd", "$root\clangarm
 Copy-Item -LiteralPath $RuntimeDll -Destination "$root\usr\bin\msys-2.0.dll"
 Copy-Item -LiteralPath $BashExe -Destination "$root\usr\bin\bash.exe"
 Copy-Item -LiteralPath $BusyBoxExe -Destination "$root\usr\bin\busybox.exe"
+Copy-Item -LiteralPath (Join-Path $ClangPrefix 'libncursesw6.dll') `
+    -Destination "$root\usr\bin\libncursesw6.dll"
 @(
     'awk', 'basename', 'cat', 'cp', 'cut', 'dirname', 'echo', 'env', 'false',
     'find', 'grep', 'head', 'ln', 'mkdir', 'mv', 'printf', 'pwd', 'readlink',
@@ -106,6 +114,9 @@ $provenance = [ordered]@{
         source_commit = $RuntimeCommit
         base_commit = 'f71b5d07c804433dfa06df122b22efd200e9ec2b'
         toolchain = 'prebuilt native ARM64 Clang/LLD from MSYS2 CLANGARM64'
+        copied_prebuilt_runtime = @(
+            'libncursesw6.dll from the pinned native MSYS2 CLANGARM64 prefix'
+        )
         generators = [ordered]@{
             source = 'https://github.com/crutkas/msys2-runtime/releases/download/native-generators-layer6-20260829/native-generators-arm64.zip'
             sha256 = 'B8223D2F3D66E536298BD2DE0EFD395F1C4CB55DC0840CFEF4E8E50C58AFC3E7'
