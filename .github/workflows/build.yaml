@@ -23,9 +23,10 @@ jobs:
       - name: Build
         shell: msys2 {0}
         run: |
+          ./winsup/tests/autogen-contract.sh
           (cd winsup && ./autogen.sh)
           ./configure --disable-dependency-tracking --with-msys2-runtime-commit="$GITHUB_SHA"
-          make -j8
+          make -j20
 
       - name: Install
         shell: msys2 {0}
