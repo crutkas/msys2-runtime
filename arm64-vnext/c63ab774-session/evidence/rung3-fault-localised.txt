@@ -1,0 +1,54 @@
+# ARM64 vNext -- RUNG 3 FAULT LOCALISED: RECURSION THROUGH calloc
+# 2026-09-03T16:28:09Z   session c63ab774
+
+## CAPTURED WITH THE WIN32 DEBUG API (DEBUG_ONLY_THIS_PROCESS)
+  EXCEPTION 0xC00000FD STACK_OVERFLOW  (first chance, then second chance)
+    PC = 0x00007FFDAF96FBA0   msys-2.0.dll base=0x7FFDAF8C0000 RVA=0xAFBA0
+    LR = 0x00007FFDAF96FBD8   msys-2.0.dll RVA=0xAFBD8
+    SP = 0x00000007FFE05030   16-BYTE ALIGNED: YES (sp & 15 = 0)
+  Module base resolved with VirtualQueryEx at fault time, not assumed.
+
+## ALIGNMENT HYPOTHESIS REFUTED
+  SP is correctly 16-byte aligned, so this is NOT an AArch64 stack-alignment
+  violation. Also refuted separately: sizeof(_cygtls) = 5016 vs
+  __CYGTLS_PADSIZE__ = 12800, so the TLS pad is not undersized.
+
+## THE FAULTING INSTRUCTION IS A STACK PROBE INSIDE calloc
+  00000001800efb9c <calloc>:
+     1800efb9c:  sub  x10, sp, #0x2, lsl #12     // x10 = sp - 0x2000
+     1800efba0:  str  xzr, [x10, #4032]          // <== FAULTED, probes sp-0x1040
+     1800efba4:  adrp x2, 180230000
+     1800efba8:  stp  x29, x30, [sp, #-64]!
+     ...
+     1800efbb0:  ldrb w2, [x2, #2352]            // dispatch flag
+     1800efbc8:  tbnz w2, #0, ...                // if set, take other path
+     1800efbcc:  adrp x2, 18021e000 <__data_start__>
+     1800efbd0:  ldr  x2, [x2, #2872]            // load a FUNCTION POINTER
+     1800efbd4:  blr  x2                         // call through it
+     1800efbd8:  <-- LR POINTS HERE
+
+## WHY THIS IS RECURSION, NOT A DEEP CALL CHAIN
+  PC is at calloc+0x4 (its prologue probe).
+  LR is at calloc+0x3C, i.e. the return address of the 'blr x2' INSIDE calloc.
+  So calloc dispatched through a function pointer and control came back
+  round into calloc's own prologue. calloc is calling itself indirectly.
+  The stack probe is simply the first instruction to notice the stack is
+  exhausted -- it is the symptom, not the cause.
+
+  This is the malloc-interposition path: a flag byte selects between the
+  internal allocator and an exported/overridden one, and the ARM64 build
+  appears to resolve the override back to itself. NOT YET PROVEN -- the flag
+  and the function pointer have not been read at runtime.
+
+## CONSISTENT WITH THE STACK-RESERVE EXPERIMENT
+  2 MB reserve  -> STACK_OVERFLOW (guard page hit sooner)
+  64 MB reserve -> ACCESS_VIOLATION (recursion runs longer, dies differently)
+  Unbounded recursion explains both, and explains why more stack does not help.
+
+## NEXT STEP (not done)
+  Read, at runtime, the dispatch flag at 0x180230000+2352 and the function
+  pointer at __data_start__+2872, and identify what the pointer resolves to.
+  If it points at calloc itself, the diagnosis is proven.
+
+## STATUS
+  main() still does not run. Exit 77 never observed. RUNG 3 NOT PASSED.

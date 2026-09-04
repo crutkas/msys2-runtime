@@ -1,0 +1,60 @@
+# THE exec DISAGREEMENT IS RESOLVED. "Win32 error 6 is gone" WAS AN ARTEFACT
+# OF THE argv BUG MASKING IT.  Measured, one variable at a time.
+# 2026-09-03T23:00:52Z  session c63ab774
+
+## THE DISAGREEMENT
+   Another party measured, on a FORK-FIX-ONLY DLL, that the exec symptom
+   "child_copy ... Win32 error 6" was GONE and that exec merely RETURNED.
+   I measured, on a FORK+ARGV DLL, that error 6 is PRESENT and exec does not
+   return.  The coordinator was about to declare the older exec
+   characterisation void on the strength of "error 6 is gone".
+
+## STEP 1 -- IS THE CALL FORM THE VARIABLE?  NO.
+   rung15 runs BOTH arms in ONE binary, ONE run, same target, same DLL:
+     execv: did NOT exit normally, raw status 0xb
+     execl: did NOT exit normally, raw status 0xb
+     IDENTICAL -- call form is NOT the variable.
+
+## STEP 2 -- IS THE DLL THE VARIABLE?  YES, AND HERE IS WHY.
+   Rebuilt a fork-only DLL by temporarily reverting ONLY the argv hunk
+   (sha 3a79a54e; a fresh build of that source state, NOT byte-identical to
+   the original 54e464d0 -- stated because I cannot claim identity).
+   Ran the SAME rung15 against both:
+
+     FORK-ONLY (argv fix ABSENT)
+       target=runng3.exe          <-- THE FILENAME IS CORRUPTED, "n" DOUBLED
+       execv: exited 99  (exec RETURNED)      errno=2 = ENOENT
+       execl: exited 99  (exec RETURNED)      errno=2 = ENOENT
+       "Win32 error 6" occurrences: 0     "Win32 error 5": 0
+
+     FORK+ARGV (argv fix PRESENT)
+       target=rung3.exe           <-- correct
+       execv/execl: did NOT exit normally, status 0xb
+       "Win32 error 6" occurrences: 2     "Win32 error 5": 2
+
+## THE EXPLANATION -- COMPLETE, AND IT REVIVES THE OLD ANALYSIS
+   Without the argv fix, the runtime corrupted the TARGET FILENAME passed to
+   exec: "rung3.exe" -> "runng3.exe".  Confirmed: no such file exists, and
+   the child reported errno=2 (ENOENT).  So exec failed IMMEDIATELY, returned
+   cleanly, and NEVER REACHED child_copy.
+   "Win32 error 6 is gone" was never a fix.  The program was dying earlier,
+   before the code that produces error 6 could run.
+   => The older exec characterisation is NOT superseded.  It is LIVE.
+
+## THIS IS THE THIRD INSTANCE OF ONE PATTERN IN THIS INVESTIGATION
+   1. cygheap relocation: chain came back "clean" -- because the process died
+      after 3 allocations instead of 39.
+   2. the vacuous inertness check: "byte-identical" -- because make never
+      regenerated the file.
+   3. this: "error 6 is gone" -- because exec failed at ENOENT before
+      reaching the code that emits it.
+   RULE, now earned three times over: WHEN A CHANGE MAKES A SYMPTOM
+   DISAPPEAR, FIRST PROVE THE PROGRAM STILL REACHES THE POINT WHERE THE
+   SYMPTOM WOULD APPEAR.
+
+## WHAT IS STILL TRUE ABOUT exec
+   On the current DLL, exec LOADS the new image (diagnostics are emitted by
+   the exec'd binary) and then fails in child_copy doing a cross-process read
+   of the cygheap 0x800000000..0x800025B30 with done 0 and
+   Win32 error 6 = ERROR_INVALID_HANDLE, followed by error 5 =
+   ERROR_ACCESS_DENIED creating the signal pipe.  NOT diagnosed.

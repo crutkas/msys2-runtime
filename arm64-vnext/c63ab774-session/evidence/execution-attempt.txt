@@ -1,0 +1,64 @@
+# ARM64 vNext -- EXECUTION ATTEMPT RESULTS (session c63ab774)
+# 2026-09-03T15:32:01Z  host: Windows 11 ARM64 (10.0.28000.0)
+
+## RUNG 1 -- PE identity verified NATIVELY on Windows (not via WSL tooling)
+  MZ 0x5A4D ok / PE 0x00004550 ok
+  MACHINE 0xAA64 = IMAGE_FILE_MACHINE_ARM64
+  23 sections, Characteristics 0x2026 (IMAGE_FILE_DLL set), opt magic 0x020B (PE32+)
+  PASSED.
+
+## RUNG 2 -- LoadLibrary
+  A. LOAD_LIBRARY_AS_IMAGE_RESOURCE (0x20)        : SUCCESS
+  B. DONT_RESOLVE_DLL_REFERENCES  (0x01)          : SUCCESS
+     GetProcAddress resolved real addresses:
+       cygwin_internal 0x7FFDB0DE5A30   msys_dll_init 0x7FFDB0DC6DA8
+       fork            0x7FFDB0ECA7E8   printf        0x7FFDB0ECBB20
+       dll_entry       0x7FFDB0E529B0
+     => image maps, sections lay out, export table is valid and resolvable.
+  C. FULL LOAD (flags 0), DllMain/dll_entry RUNS  : CHILD PROCESS DIES
+     child exit code -1073741819 = 0xC0000005 STATUS_ACCESS_VIOLATION
+     Reproduced in TWO independent harnesses, one with NO VEH and NO CLR
+     involvement at all (r02-loadlibrary.ps1).
+  => RUNG 2 IS PARTIAL: maps and binds, but initialisation faults.
+
+## BUG FOUND AND FIXED BY EXECUTING: Windows ARM64 TEB register
+  winsup/cygwin/include/cygwin/config.h __getreent() read the TEB with
+      mrs xN, tpidr_el0 ; ldr xN, [xN, #8]
+  under a comment asserting 'On Windows ARM64 the TEB pointer is held in
+  tpidr_el0 (and mirrored in the reserved platform register x18)'.
+  THAT IS BACKWARDS.
+
+  EMPIRICAL PROOF, measured on this machine by executing raw AArch64
+  instructions in allocated RWX memory (no compiler required):
+      mrs x0, tpidr_el0  -> 0x0000000000000000     <-- ZERO
+      mov x0, x18        -> 0x00000080002C8000
+      [x18+0x08] StackBase = 0x000000801B990000
+      GetCurrentThreadStackLimits high = 0x000000801B990000   MATCH
+  x18 IS the TEB; tpidr_el0 is zero. So 'ldr xN,[xN,#8]' reads address 0x8.
+  The first captured fault was AV READ of target 0x0000000000000008 -- exact match.
+
+  FIXED in two places (tpidr_el0 -> x18, read-only, never written):
+    - include/cygwin/config.h  __getreent()
+    - scripts/gendef           6 trampoline emission sites
+  newlib was ALSO rebuilt, because the preserved libc.a/libm.a carried
+  inlined __getreent copies compiled against the old header.
+  Result: tpidr_el0 occurrences in the linked DLL 520 -> 0; x18 sites 1850.
+
+## SECOND, DIFFERENT FAULT after the TEB fix
+  child exit still 0xC0000005, but the failure MOVED:
+      EXCEPTION 0xC0000005 ACCESS_VIOLATION EXEC target=0xFFFFFFFF00000000
+        at 0xFFFFFFFF00000000  (PC itself is the bad value)
+  A branch to 0xFFFFFFFF00000000 -- high 32 bits all ones, low 32 zero.
+  That is a corrupt/unpatched code pointer, not a null dereference.
+  Consistent with the autoload thunk mechanism, which rewrites function
+  pointers at first call and is the next thing dll_entry exercises.
+  NOT YET DIAGNOSED. Reported as-is.
+
+## ARTEFACTS
+  msys-2.0.dll               30858972  3f15aae4759938225d8d93eeda91f08d6122f550313eff33194ed2f1dcff1591
+  msys-2.0-teb.dll           30895324  3cf8d39b8509b81382beca1890a1576c2e538c5be8635fdfc82c5ddfb0ae80ca
+
+## STATUS
+  A native ARM64 msys-2.0.dll MAPS and BINDS on Windows ARM64.
+  It does NOT yet complete DllMain. It has NOT run any user code.
+  Not a working runtime. Not a product pass. No authority.

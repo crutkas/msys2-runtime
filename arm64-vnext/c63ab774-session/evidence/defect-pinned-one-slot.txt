@@ -1,0 +1,58 @@
+# THE DEFECT IS PINNED TO ONE 8-BYTE SLOT. EVERYTHING ELSE IS INTACT.
+# 2026-09-03T10:42:02Z   session c63ab774
+
+## MEASURED ON ARM64 (targeted reads in a live rung9 process)
+   entry 0x8000048A0  b=12  prev=0x0000000000000000   <- proper NULL terminator
+   entry 0x8000050B0  b=15  prev=0x00000008000048A0   <- correct
+   entry 0x8000068C0  b=0   prev=0x00000008000050B0   <- correct (username entry)
+   entry 0x8000068F0  b=6   prev=0x0000008DCA825000   <- WILD
+
+   IT SHOULD HOLD 0x8000068C0. THAT IS THE WHOLE DEFECT: ONE 8-BYTE SLOT AT
+   0x8000068F8.
+
+## THE BUCKET FORMULA -- SETTLED FROM SOURCE, AND IT MATTERED
+  A parallel session computed extents as size = 1 << b. THAT IS WRONG.
+  mm/cygheap.cc:281 defines an explicit table:
+     static const uint32_t bucket_val[NBUCKETS] = {
+       32, 48, 64, 96, 128, 192, 256, 384,
+       512, 768, 1024, 1536, 2048, 3072, 4096, 6144, ... };
+  bucket_val[0]=32   (1<<0  = 1)
+  bucket_val[6]=256  (1<<6  = 64)
+  bucket_val[15]=6144 (1<<15 = 32768)
+  So b=15 is 6144 bytes, not 32768. The wrong formula inflated one entry's
+  data extent from 6144 to 32768 bytes and manufactured an apparent
+  SELF-OVERLAPPING CHAIN spanning 0x8000050C0..0x80000D0C0, which would have
+  been a far more alarming and entirely fictitious defect.
+
+## WITH THE CORRECT TABLE THE HEAP IS PERFECTLY CONTIGUOUS
+   0x48A0 + 16 + bucket_val[12]=2048  = 0x50B0   exact
+   0x50B0 + 16 + bucket_val[15]=6144  = 0x68C0   exact
+   0x68C0 + 16 + bucket_val[0]=32     = 0x68F0   exact
+  EVERY ENTRY ABUTS THE NEXT TO THE BYTE. There is no overlap, no gap, and no
+  size-computation defect. The allocator's layout is exactly right.
+
+## AND IT CROSS-CONFIRMS THE x86_64 MEASUREMENT
+  A separate session measured entry 0x8000050B0 with b=15 on x86_64, before
+  any ARM64 address was known. ARM64 reads b=15 at the same address. So the
+  early allocation sequence is byte-for-byte identical across architectures
+  through at least the first three entries, INCLUDING the username entry.
+  THE ONLY DIVERGENCE IS THE ONE PREV SLOT.
+
+## WHAT THIS ELIMINATES
+  - Self-overlapping chain: DEAD (was an artefact of the 1<<b formula).
+  - Size computation differing by architecture: DEAD (b=15 on both, and all
+    extents abut exactly).
+  - Corruption predating 0x8000068F0: DEAD. 0x8000048A0 still carries a
+    proper NULL terminator and 0x50B0 and 0x68C0 still carry correct prevs,
+    so the sub-chain 0x68C0 -> 0x50B0 -> 0x48A0 -> NULL is fully intact and
+    merely ORPHANED.
+
+## WHAT REMAINS, STATED AS THE TWO REMAINING POSSIBILITIES
+  0x8000068F0's prev should be 0x8000068C0. Either
+   (a) cygheap->chain was already wild when 0x8000068F0 was born, so _cmalloc
+       faithfully copied a clobbered head; or
+   (b) 0x8000068F0's prev slot was overwritten after birth.
+  I have not distinguished these. My head watchpoint saw only valid values but
+  has PROVEN GAPS, and my entry-slot watchpoint never fired on a write I can
+  prove occurs, so BOTH instruments are inconclusive here and neither negative
+  may be used as evidence.

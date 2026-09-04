@@ -1,0 +1,42 @@
+# ImageBase question RESOLVED -- not a defect; the question's premise was wrong.
+# 2026-09-03T12:37:22Z  session c63ab774
+
+CLAIM AS RECORDED (now refuted): "ImageBase reads 0x180040000, not the
+0x180000000 requested via -Wl,--image-base; cygwin.sc places .text at
+__image_base__ + __section_alignment__ and appears to override."
+
+BOTH HALVES ARE WRONG. Measured:
+
+1. THE BASELINE NEVER REQUESTS 0x180000000.
+   sF7-relink-import.sh (the real relink) passes NO --image-base; it passes
+   -Wl,-Tcygwin.sc -shared and nothing else base-related.
+   -Wl,--image-base,0x180000000 appears ONLY in sA9-fixedbase.sh, a one-off
+   ASLR experiment. There was no request to override.
+
+2. THE SCRIPT ACCOUNTS FOR NONE OF THE DELTA.
+   msys-2.0.dll header: SectionAlignment = 0x1000, .text RVA = 0x1000.
+   .text sits at exactly __section_alignment__ above the base -- consistent
+   with the script and contributing 0x1000, not 0x40000.
+   grep: cygwin.sc / cygwin.sc.in do NOT define __image_base__ at all.
+
+3. ld HONOURS --image-base EXACTLY ON THIS TARGET (trivial aarch64pe DLL):
+     -Wl,--image-base,0x180000000  -> ImageBase = 0x180000000   EXACT
+     no flag                       -> ImageBase = 0x59b530000   auto/hash
+     --enable-auto-image-base      -> ImageBase = 0x558870000   auto/hash
+   The suspicion that the flag was silently ignored is REFUTED.
+
+4. SO 0x180040000 IS SIMPLY ld's DEFAULT FOR THIS LINK, AND IT IS BENIGN.
+   424/424 base relocations verified present and correct (this was the same
+   area where an earlier "414 missing relocations" claim was self-retracted
+   after re-reading the real ImageBase from the header). The DLL loads;
+   rungs 3, 4, 5a pass. Windows-on-Arm mandates ASLR, so the image is
+   rebased per-boot regardless of the static value.
+
+NOT PURSUED: ld's exact auto-base formula. It bears on no open question.
+Stopped deliberately rather than rabbit-holing.
+
+NOTE THE PATTERN: this is the THIRD time in this investigation that a
+recorded suspicion turned out to rest on a premise nobody had re-checked.
+The others were the "414 missing base relocations" claim and the cygheap
+relocation "fix". In all three the mechanism reasoning was fine and the
+INPUT was wrong.

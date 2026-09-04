@@ -1,0 +1,106 @@
+# THIRD DEFECT FIXED: exec.  Root of the SYMPTOM found and repaired; the
+# ROOT CAUSE is NOT explained.  Read the caveats before citing this.
+# 2026-09-03T23:08:40Z  session c63ab774
+# Lead: verifier via coordinator -- get_parent_handle() unreachable by
+# short-circuit.  Verified in the LIVE tree, then instrumented, then fixed.
+
+## THE DEFECT
+   dcrt0.cc child_info_spawn::handle_spawn():
+       if (!dynamically_loaded || get_parent_handle ())
+         { cygheap_fixup_in_child (true); memory_init (); }
+   On a normal exec dynamically_loaded is FALSE, so !dynamically_loaded is
+   TRUE and C short-circuit evaluation means get_parent_handle() IS NEVER
+   CALLED.  cygheap_fixup_in_child then uses the INHERITED parent handle.
+
+## MEASURED WITH INSTRUMENTATION (not inferred)
+   Built a DLL that reports the state at that exact point:
+     EXP: dynamically_loaded=0 parent=0x19C usable=0 err=6
+          parent_winpid=22704 short_circuits=1
+     EXP: reopen=1 newparent=0x114 usable=0 err=5
+   Reading, line by line:
+     - dynamically_loaded=0 and short_circuits=1  -> get_parent_handle() is
+       indeed never reached on the exec path.  The verifier's static reading
+       is confirmed dynamically.
+     - the INHERITED parent handle is UNUSABLE: err=6 ERROR_INVALID_HANDLE.
+       That is the same error child_copy reports.
+     - reopen=1: OpenProcess(PROCESS_VM_READ, FALSE, parent_winpid) SUCCEEDS.
+     - "usable=0 err=5" on the REOPENED handle is MY INSTRUMENT BEING WRONG,
+       not a bad handle: I probed with GetExitCodeProcess, which needs
+       PROCESS_QUERY_INFORMATION, and the handle was opened with only
+       PROCESS_VM_READ.  ReadProcessMemory needs exactly PROCESS_VM_READ,
+       which is why child_copy then succeeds.  Recorded because a reader
+       would otherwise take err=5 as evidence against the fix.
+
+## THE FIX (minimal): call get_parent_handle() unconditionally
+       get_parent_handle ();
+       if (!dynamically_loaded || parent)
+   This is UPSTREAM'S OWN RECOVERY CODE, merely made reachable.
+   parent_winpid is set unconditionally at spawn.cc:602, outside the
+   if (!iscygwin ()) block -- precondition verified in the live tree.
+
+## MEASURED RESULT (DLL 8ffe979b4185de5f)
+   BEFORE (canonical 9fcc134e): rung14 status 0xb, error6=1, error5=1
+   AFTER  (8ffe979b):           rung14 "child exit = 77  RESULT EXEC WORKS"
+                                error6=0  error5=0  exit=66
+                                rung15: execv=77 execl=77 BOTH WORK
+   FULL REGRESSION, same run: rung3 77 / rung4 42 / rung5a 55 / rung6 66 /
+   rung7 44 / rung12 ALL PASS (0 failures).  tlsoffsets INTACT throughout.
+   Source-to-object consistency checked before linking (the control learned
+   from tonight's stale-object hazard): source memmove=3, object
+   bl <memmove>=2, get_parent_handle referenced=1.
+
+## THREE CAVEATS -- THIS IS NOT A ROOT-CAUSE FIX
+   1. WHY the inherited parent handle is invalid on AArch64 is NOT explained.
+      This repairs the symptom by taking a recovery path that already exists.
+      The upstream assumption "the inherited handle is usable on the normal
+      exec path" is false here, and nobody has said why.
+   2. BEHAVIOUR CHANGE ON OTHER TARGETS: every exec now performs an extra
+      OpenProcess.  Where the inherited handle was already good this replaces
+      it with an equivalent one.  Cheap, but not zero.
+   3. HANDLE LEAK, PRE-EXISTING BUT NOW ON EVERY EXEC: get_parent_handle()
+      overwrites 'parent' without CloseHandle on the old value.  That leak
+      already existed on the dynamically_loaded path; this change makes it
+      happen on every exec.  Short-lived (process transition), but real, and
+      a proper fix should close the old handle first.
+
+## NOT DONE
+   No threads, no job control, no signals across fork.  NO REAL MSYS2
+   PROGRAM HAS EVER RUN.  This fix is a LOCAL UNCOMMITTED EDIT.
+
+## APPENDED -- HANDLE LEAK CLOSED (coordinator item 1)
+   The minimal fix left get_parent_handle() overwriting 'parent' without
+   CloseHandle -- a leak that pre-existed on the dynamically_loaded path and
+   which the fix moved onto EVERY exec.  Now closed inside the function, so
+   BOTH call sites benefit:
+
+     HANDLE prev = parent;
+     parent = OpenProcess (PROCESS_VM_READ, FALSE, parent_winpid);
+     if (parent && prev && prev != parent)
+       CloseHandle (prev);
+     return !!parent;
+
+   Deliberately closes ONLY on success, so the failure path keeps upstream's
+   exact behaviour (parent NULL, return false) rather than inventing new
+   semantics in a fix that is already going around a root cause.
+
+   RE-VERIFIED, DLL 7be56027565d15e9:
+     rung14  exit 66  RESULT EXEC WORKS      error6 = 0
+     rung15  exit 66  execv=77 execl=77      error6 = 0
+     rung3 77 / rung4 42 / rung5a 55 / rung6 66 / rung7 44 /
+     rung12 ALL PASS (0 failures) / rung13 ALL ARGS INTACT
+     8 consecutive fork+exec runs: 8/8 -- a per-exec handle leak would show
+     here first, and does not.
+   Source-to-object consistency checked before linking: source memmove 3,
+   object bl <memmove> 2, object bl <CloseHandle> 7.  tlsoffsets INTACT.
+
+   STILL NOT A ROOT-CAUSE FIX.  Why the INHERITED parent handle is invalid
+   in an exec'd child on AArch64 -- when it is made inheritable at
+   sigproc.cc:929-940 and CreateProcessW passes bInheritHandles=TRUE -- is
+   UNEXPLAINED.  Session 57224227 independently reached the same site
+   statically, and rejected the one syntactic trap (spawn.cc:594-598 clears
+   HANDLE_FLAG_INHERIT on parent, but only under if (!iscygwin ()), so it
+   does not fire Cygwin->Cygwin).  NOTE: that clear IS the exact mechanism
+   that would break exec of a NON-Cygwin program -- a separate, untested,
+   unfiled defect, since every exec test here has been Cygwin->Cygwin.
+   The live thread, now with 57224227: who writes child_proc_info for
+   _CH_EXEC, and is 'parent' re-duplicated per-exec or carried stale?

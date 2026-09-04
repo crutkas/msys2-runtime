@@ -1,0 +1,74 @@
+# ARM64 vNext -- THE CTOR-FIX RETRACTION IS REFUTED (session c63ab774)
+# 2026-09-03T16:25:18Z
+
+## CLAIM AGAINST ME
+  'cygwin.sc.in ALREADY read #if defined(__x86_64__) || defined(__aarch64__),
+   the generated cygwin.sc ALREADY had paired LONG(-1); LONG(-1), therefore
+   the root cause was wrong and the fix a no-op.'
+
+## 1. THE PRE-EDIT LINE, from trees I never modified
+  /root/xc/runtime            cygwin.sc.in md5 ceef1c49ee20a4340b47576305d66def
+  /root/xc/w-autoload/runtime cygwin.sc.in md5 ceef1c49ee20a4340b47576305d66def
+  BOTH read, verbatim, at line 27:
+        #ifdef __x86_64__
+  My tree /root/xc/w-link is md5 d444a1e77c8e6c7bbc4304b9701cc8bc and reads:
+        #if defined(__x86_64__) || defined(__aarch64__)
+  And git HEAD of the repo confirms the #else branch:
+        LONG (-1); *(SORT(.ctors.*)); *(.ctors); *(.ctor); LONG (0);
+
+  THE RETRACTION READ MY TREE AFTER I FIXED IT.
+
+  THE SUBTLETY IT MISSED: the x86_64 branch ALWAYS had paired LONGs. Seeing
+  'LONG(-1); LONG(-1)' in the file proves nothing -- the question is whether
+  AARCH64 REACHES THAT BRANCH. Before the fix it did not; it fell through to
+  the #else with single 4-byte markers and no ALIGN(8).
+
+## 2. THE A/B DIFFERED ONLY IN THE LINKER SCRIPT
+  pre-fix  msys-2.0-teb.dll     3cf8d39b8509b81382beca1890a1576c2e538c5be8635fdfc82c5ddfb0ae80ca
+  post-fix msys-2.0-ctorfix.dll 3d305115caccc50935b24e583826444159856d87833b815bf0f7eced4f62a782
+  Between them: edit cygwin.sc.in, regenerate cygwin.sc, relink. NO object
+  was recompiled -- libdll.a (31,457,284), msys.def (40,626), sigfe.o
+  (158,129), version.o, libc.a, libm.a all reused byte-identical.
+
+## 3. THE GENERATED-SCRIPT DIFF, which ends the argument
+  pre-fix  script 3729 bytes md5 212e74b5fe339d7366dc140aadf75910
+  post-fix script 3825 bytes md5 7d533f0d48b2c9c51190aec3bd555fc4
+
+    12a13
+    >     . = ALIGN(8);
+    14c15
+    <    LONG (-1); *(SORT(.ctors.*)); *(.ctors); *(.ctor); LONG (0);
+    ---
+    >    LONG (-1); LONG (-1); *(...); LONG (0); LONG (0);
+
+## 4. THE MEASUREMENT NOBODY HAD MADE: x19/x20 vs the list bounds
+  captured at fault: x19=0x00007FFDB1287EF0  x20=0x00007FFDB1287E60
+  module base 0x00007FFDB10B0000 (VirtualQuery, not assumed)
+    x20 -> file VA 0x180217E60
+    x19 -> file VA 0x180217EF0
+
+  symbols in the PRE-FIX image:
+    __CTOR_LIST__ = 0x180217E60   <== EXACTLY x20. The walk bound IS the list.
+    __DTOR_LIST__ = 0x180217EFC   <== 0xEFC is 4 MOD 8. MISALIGNED.
+  symbols in the POST-FIX image:
+    __CTOR_LIST__ = 0x180217E60
+    __DTOR_LIST__ = 0x180217F00   <== 8-byte aligned. Moved by exactly +4.
+
+  So in the pre-fix image the ctor terminator LONG(0) sits at 0x..EF8-EFB and
+  the dtor head marker LONG(-1) at 0x..EFC-EFF. An 8-byte read at 0x..EF8
+  returns [00 00 00 00][FF FF FF FF] = 0xFFFFFFFF00000000 -- the captured
+  EXECUTE target -- and the captured x19=0x..EF0 is that address after the
+  post-decrement of 'ldr x0, [x19], #-8'. Every number agrees.
+
+## VERDICT
+  The retraction inspected post-fix state and concluded the fix was
+  unnecessary. x20 == __CTOR_LIST__ exactly, and __DTOR_LIST__ moved from a
+  4-mod-8 address to an 8-aligned one. The fix is real and the diagnosis
+  is confirmed by symbol arithmetic, not just by the A/B.
+
+## HAZARD RELAYED, NOT MINE
+  A defective DLL exists at /root/xc/w-ctorfix/msys-2.0.dll, sha256
+  e5ac75234c6131a2dd97f4a17717fcf745f2b3fb1b605766493cd9673ae30f9c, built
+  with THREE markers (12 bytes) by a sed that matched the already-correct
+  paired form. It linked cleanly. DO NOT USE OR COMPARE AGAINST IT.
+  I have never read or written anything in w-ctorfix.

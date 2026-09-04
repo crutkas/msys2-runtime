@@ -1,0 +1,47 @@
+# ARM64 vNext -- DLL ASLR IS PER-BOOT, NOT PER-PROCESS (session c63ab774)
+# 2026-09-03T15:58:10Z   host: Windows 11 ARM64 10.0.28000.0
+
+## THE EXPERIMENT
+  Load msys-2.0-teb.dll (DYNAMIC_BASE set, preferred base 0x180040000) with
+  DONT_RESOLVE_DLL_REFERENCES -- which maps AND RELOCATES the image without
+  running DllMain -- and report the load base.
+    phase 1: two CONCURRENT processes, both holding the image loaded
+    phase 2: two more processes AFTER both had exited (image fully unloaded)
+
+  concurrentA   PID=30496   base=0x7FFDAF010000
+  concurrentB   PID=39904   base=0x7FFDAF010000
+  afterUnload   PID=69436   base=0x7FFDAF010000
+  afterUnload2  PID=91552   base=0x7FFDAF010000
+
+  FOUR PROCESSES, ONE BASE. Identical across concurrent loads AND across a
+  full unload/reload cycle. The randomised base is assigned PER IMAGE PER
+  BOOT, not per process -- which is what makes cross-process page sharing
+  work in the first place.
+
+## THIS SOFTENS MY OWN ARCHITECTURAL CLAIM -- SIGNIFICANTLY
+  I said: 'Cygwin's fork() requires a fixed base, Windows on Arm forbids
+  fixed bases, therefore the two are in DIRECT CONFLICT and fork() needs a
+  different strategy.' THAT WAS TOO STRONG.
+
+  fork()'s REAL requirement is not 'a FIXED base'. It is 'the SAME base in
+  parent and child'. Per-boot ASLR SATISFIES that requirement: the parent
+  already has the image loaded, and the child maps it at the same address.
+
+  CORRECTED POSITION:
+    - Cygwin's fork model is NOT architecturally incompatible with Windows
+      on Arm.
+    - What is lost is the GUARANTEE BY CONSTRUCTION. Upstream got the
+      invariant for free from a fixed image base; on this platform the port
+      must VERIFY the invariant rather than assume it.
+    - That is a real porting task, but it is ordinary work, not a design-
+      level blocker.
+
+## WHAT IS UNCHANGED AND STILL MUST-FIX
+  The image IS relocated: observed 0x7FFDAF010000 vs preferred 0x180040000.
+  So every absolute quad in the autoload thunks needs a base relocation, and
+  414 of 424 do not have one. That remains FATAL and is the single most
+  important open item. The mandatory-ASLR platform rule (4/4 control DLLs
+  rejected with err 193 when DYNAMIC_BASE is cleared) also stands unchanged.
+
+## STATUS
+  Nothing has executed beyond the loader. No user code has run.

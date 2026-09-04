@@ -1,0 +1,81 @@
+#!/bin/bash
+E=/mnt/c/Users/crutkasLocal/.copilot/session-state/c63ab774-a023-4e57-9bc4-53f727507ada/files/evidence
+{
+echo "# DIFFERENTIAL SETTLES IT: THE CYGHEAP CHAIN DEFECT IS ARM64-SPECIFIC."
+echo "# I asked for this measurement to avoid over-claiming. It went against my"
+echo "# own stated caution, and that caution is now RETRACTED."
+echo "# $(date -u +%Y-%m-%dT%H:%M:%SZ)   session c63ab774"
+echo
+echo "## WHAT I HAD SAID, AND WHY IT WAS RIGHT TO SAY IT"
+echo "  I refused to let 'ARM64 defect' enter the record, because I had not"
+echo "  shown x86_64 differs and every mechanism in the path is arch-neutral."
+echo "  I flagged the alternative -- an upstream defect x86_64 also carries and"
+echo "  never trips -- as the LARGER finding, and unevidenced either way."
+echo "  THE MEASUREMENT NOW SETTLES IT AGAINST MY OWN CAUTION."
+echo
+echo "## THE INSTRUMENT"
+echo "  An x86-64 MSYS2 runtime is installed on this machine: Git for Windows,"
+echo "  C:\\Program Files\\Git\\usr\\bin\\msys-2.0.dll, 3,368,543 bytes,"
+echo "  version 3.6.9-b4195d69..., PE machine 0x8664 read from the raw COFF"
+echo "  header. It runs under emulation on this ARM64 host. Cross-architecture"
+echo "  ReadProcessMemory works from an ARM64 process, so its cygheap chain can"
+echo "  be walked with exactly the instrument used on ARM64."
+echo
+echo "## OFFSETS ESTABLISHED FOR THAT BINARY, NOT ASSUMED FROM OURS"
+echo "  The harness refuses to report a result unless the layout validates:"
+echo "   - cygheap must be COMMITTED at 0x800000000  -> it is, size 0x300000,"
+echo "     identical to ours, so that build uses the same memory_layout.h"
+echo "     constants."
+echo "   - the value at +8 must be an in-heap pointer, and the walk must be a"
+echo "     long descending run. A wrong offset would produce garbage on the"
+echo "     first read. It produced 125-128 clean entries. Offset structurally"
+echo "     confirmed for that build."
+echo
+echo "## RESULT -- x86-64, FOUR INDEPENDENT PROCESSES"
+echo "   bash #1   CHAIN TERMINATED CLEANLY WITH NULL after 128 entries   lowest 0x8000048A0"
+echo "   bash #2   CHAIN TERMINATED CLEANLY WITH NULL after 125 entries   lowest 0x8000048A0"
+echo "   bash #3   CHAIN TERMINATED CLEANLY WITH NULL after 125 entries   lowest 0x8000048A0"
+echo "   git       CHAIN TERMINATED CLEANLY WITH NULL after 127 entries   lowest 0x8000048A0"
+echo
+echo "## THE DECISIVE NUMBER"
+echo "  sizeof(init_cygheap) = 0x48A0, measured by compiling a probe against"
+echo "  the real headers. The layout is LP64-identical on both architectures."
+echo
+echo "   x86-64 : lowest chain entry = 0x8000048A0 = cygheap + 0x48A0"
+echo "            EXACTLY THE FIRST BYTE AFTER THE HEADER, in 4 of 4 processes,"
+echo "            including two different programs. Its prev is NULL."
+echo "            That is textbook-correct: the first allocation sits at the"
+echo "            header boundary and terminates the chain."
+echo
+echo "   ARM64  : lowest chain entry = 0x8000068F0 = cygheap + 0x68F0"
+echo "            0x2050 BYTES HIGHER. Its prev is a wild mmap-arena pointer."
+echo "            Everything allocated in [0x48A0, 0x68F0) -- which includes the"
+echo "            username string from cygheap->user.init() -- IS ORPHANED,"
+echo "            never having been linked into the chain that survives."
+echo
+echo "## CONCLUSION"
+echo "  On x86-64 the chain begins where it must and ends with NULL."
+echo "  On ARM64 the first ~8 KB of cygheap allocations are missing from the"
+echo "  chain and the surviving chain is terminated by a wild pointer."
+echo "  THE DEFECT IS ARM64-SPECIFIC. It is not an upstream defect that x86-64"
+echo "  merely fails to notice."
+echo
+echo "## WHAT THIS DOES NOT ESTABLISH -- STATED PLAINLY"
+echo "  The comparison binary is a DIFFERENT VERSION (3.6.9) and NOT OUR BUILD."
+echo "  A version difference could in principle explain a behavioural"
+echo "  difference. What makes that unlikely rather than merely unaddressed:"
+echo "  the cygheap base, the region size, the header size and the chain offset"
+echo "  all match exactly, and the x86-64 result is not marginal -- the first"
+echo "  entry lands on the header boundary to the byte, in every process."
+echo "  A DEFINITIVE ANSWER STILL REQUIRES OUR OWN TREE BUILT FOR x86-64."
+echo "  I have not done that, and I am not claiming it."
+echo "  I also have NOT identified the writer. Knowing the defect is"
+echo "  arch-specific narrows the search; it does not end it."
+echo
+echo "## ENTRY COUNTS ARE NOT EVIDENCE HERE"
+echo "  x86-64 walked 125-128 entries and ARM64 walked 39. THAT COMPARISON IS"
+echo "  MEANINGLESS: bash and git allocate far more than my trivial rung8 test"
+echo "  program. Only the LOWEST ENTRY ADDRESS and the TERMINATION are"
+echo "  comparable, and those are what the conclusion rests on."
+} > $E/differential-arm64-specific.txt
+wc -l $E/differential-arm64-specific.txt

@@ -1,0 +1,40 @@
+# ARM64 vNext -- HONEST LINK RESULT (session c63ab774)
+# 2026-09-03T15:18:18Z   tree: /root/xc/w-link
+# ZERO exports removed. ZERO symbols stubbed. ZERO linker diagnostics.
+
+## PRECONDITIONS
+_cygwin.h aarch64 _WIN64 : PRESENT
+w32api                   : v12.0.0 (819a6ec2ea87c19814b287e21d65e0dc7f05abba)
+mbstate_t in corecrt.h   : 0
+autoload.cc md5          : 45fd56e736709e712ee202b7ed3c9c4f
+gendef md5 (orphan, LF)  : b4e4739b9876b9360853ebf1f740a692
+cygwin.din md5           : 5c3ee2553751b86146ff5f61ba22f0d7 (1783 lines)
+flavour                  : msys_dll_init
+
+## INPUT ARTEFACTS
+sigfe.s              294545  8df387e99728900dc6e6782c2d31bc74978009b9da33b9a21375b03ea9c4c09c
+sigfe.o              158129  cf5dc196cb71c14a8fca700e5465c966d3cd491522d72015940ae4b28ba9d591
+msys.def              40626  80cd55e2cef019c79bbf5b699a217680e58f52695e6a4cd4be7b7616fa2b6d6b
+autoload.o            78262  1c27dac473591d841a237e2d60f6c6643f88cde9f6739900152a7389ee86afe0
+fenv_aarch64.o         4747  17e99194c68bddae36171de88d91aee4c033de4af34e9dfb4828adfe7c771128
+cygwin.sc              3765  7c75b20ebde7318de3f1e8b153ca15c1787bdaf61d465e99f1eade6d11da6b7e
+libdll.a           31457284  92ff64f7a2aa0c31c57a2b7beb3d48b0ff9ff3f4c05b31e979454fa9d39300a8
+
+## THE DLL
+size            : 30858972 bytes
+sha256          : 3f15aae4759938225d8d93eeda91f08d6122f550313eff33194ed2f1dcff1591
+stripped size   : 3216977 bytes
+stripped sha256 : 5b4dfe3ded69fb67561cad0294b903833390b701458c34efe287f30897285f2a
+file            : PE32+ executable (DLL) (console) Aarch64, for MS Windows, 23 sections
+PE machine      :  64 aa = 0xAA64 (IMAGE_FILE_MACHINE_ARM64)
+bfd format      : pei-aarch64-little
+entry point     : 0x00000001800d29b0
+sections        : 23
+exports (EAT)   : 1762
+imported DLLs   : KERNEL32.dll ntdll.dll
+shared id       : msys-2.0S5
+
+## STATUS
+UNEXECUTED AND UNVALIDATED. Linking is not running.
+Nothing in this programme has ever been executed on ARM64.
+Not a product pass. Not a working runtime. Creates no authority.

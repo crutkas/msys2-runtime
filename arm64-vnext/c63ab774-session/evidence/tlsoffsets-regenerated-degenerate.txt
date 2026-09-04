@@ -1,0 +1,2 @@
+.equ _cygtls.local_clib, 0
+.equ _cygtls.local_clib_p, 0

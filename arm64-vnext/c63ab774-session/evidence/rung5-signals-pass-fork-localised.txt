@@ -1,0 +1,101 @@
+# ARM64 vNext -- RUNG 5: SIGNALS PASS, fork() LOCALISED
+# 2026-09-03T16:38:48Z   session c63ab774
+
+## RUNG 5a -- SIGNALS -- PASSED
+  signal(SIGUSR1,h); raise(SIGUSR1); handler observed to run.
+    handler installed
+    raise returned
+    handler RAN, signal=30      (30 = SIGUSR1 on Cygwin)
+  exit 55 as designed.
+  THIS IS THE FIRST EXECUTION OF THE sigfe TRAMPOLINES. Three sessions
+  reproduced that artefact byte-identically; none had ever run it.
+
+## RUNG 5b -- fork() -- FAILS, BUT FAILS HONESTLY AND FAR IN
+  parent pid=1727, about to fork
+  dofork: child -1 - forked process 75656 died unexpectedly,
+          retry 0, exit code 0xC0000005, errno 11
+  FAIL: fork() returned -1
+
+  WHAT ALREADY WORKS, MEASURED:
+   - getpid() returns a real Cygwin pid
+   - fork() reaches dofork and CREATES the child Windows process
+   - the child loads the DLL and executes Cygwin initialisation
+   - the PARENT's own diagnostic machinery formats a correct Cygwin
+     error message and returns -1/EAGAIN, which is correct behaviour
+     on fork failure. The failure path itself is working.
+
+## THE CHILD'S FAULT, CAPTURED WITH A FORK-AWARE DEBUGGER
+  Harness rewritten to DEBUG_PROCESS (was DEBUG_ONLY_THIS_PROCESS) so it
+  follows the child, with a process handle per pid so VirtualQueryEx
+  resolves modules IN THE FAULTING PROCESS, not the parent.
+
+   CHILD pid=85840  EXCEPTION 0xC0000005 (first chance)
+   ACCESS_VIOLATION READ target=0x000000BD102AE000   NOT COMMITTED
+   PC = msys-2.0.dll RVA 0xAA7B8      SP 16-aligned: YES
+   LR = msys-2.0.dll RVA 0xAA784
+   x19 = 0x000000BD102AE000  (the faulting pointer)
+   x22 = 0x0000000800300000  = CYGHEAP_STORAGE_INITIAL
+
+  ImageBase read from the header (0x180040000), never assumed:
+   RVA 0xAA7B8 -> VA 0x1800EA7B8
+   addr2line: cygheap_fixup_in_child(bool)  mm/cygheap.cc:116
+   LR  0xAA784 -> cygheap.cc:106, same function
+
+  The source at that line:
+    113  for (_cmalloc_entry *rvc = cygheap->chain; rvc; rvc = rvc->prev)
+    115    cygheap_entry *ce = (cygheap_entry *) rvc->data;
+    116    if (!rvc->ptr || rvc->b >= NBUCKETS || ce->type <= HEAP_1_START)
+
+  Disassembly confirms the walk and shows it had already iterated
+  successfully at least once (x0 = 3, a plausible bucket index) before
+  a prev-pointer led to unmapped memory:
+    1800ea790  ldr x19, [x0, #8]        ; rvc = cygheap->chain
+    1800ea7b0  ldr x19, [x19, #8]       ; rvc = rvc->prev
+    1800ea7b8  ldr x0,  [x19]           ; <== FAULTED, rvc unmapped
+    1800ea7c4  cmp w0, #0x1f            ; rvc->b >= NBUCKETS (32)
+
+  So: after child_copy() and cygheap_init(), the cygheap allocation chain
+  in the child contains a pointer to memory that is not mapped in the
+  child. The chain is partially valid and then goes bad.
+
+## WHAT I CHECKED AND RULED OUT
+  memory_layout.h CYGHEAP_STORAGE_LOW/INITIAL/HIGH are NOT arch-conditional
+  (0x800000000 / 0x800300000 / 0xa00000000, no #ifdef). x22 holding
+  0x800300000 confirms the child is using the correct constants. So this
+  is NOT another instance of the x86-fallthrough pattern.
+
+## STRONGEST REMAINING LEAD, WITH ITS CAVEAT STATED
+  x18 = 0x0000000000000000 IN THE FAULTING CHILD THREAD.
+  On Windows on Arm x18 IS the TEB and is platform-reserved; this runtime
+  depends on it (the __getreent fix earlier this programme changed
+  'mrs tpidr_el0' to x18 precisely because x18 is the TEB here). A child
+  thread resumed with x18 = 0 would have no TEB.
+  CAVEAT, NOT YET ELIMINATED: x18 is platform-reserved, and it is not
+  established that GetThreadContext reports it faithfully rather than
+  returning zero for a register Windows manages itself. I have ONE sample
+  and no control. DO NOT TREAT THIS AS A FINDING. The control needed is
+  a captured context from a thread known to be healthy in the same
+  process, compared against this one.
+
+## FROZEN ARTEFACT PAIR (coordinator policy: freeze before diagnosing)
+464c1610701a7a92fc36c29c543ea00393ba11b16ff8be5072d7be5288e7f063  rung5.exe
+d7c4af09839510d614456aeedbdffa18c500a20ec258e4cd3d4fbbb71e2e0dba  rung6.exe
+490dfe093a6dd2b76723715e85dfb779a85bd6add9b03795f61826ee0a9215cf  msys-2.0.dll
+
+## HARDENING APPLIED THIS SESSION (sibling 57224227 findings, both latent)
+  cygwin.sc.in:82  .xdata placement now '#if defined(__x86_64__) ||
+    defined(__aarch64__)' so exception-unwind placement is EXPLICIT rather
+    than relying on the linker's orphan-section heuristic. Verified: .xdata
+    present, Exception Directory RVA 0x2d5000 size 0xbab8 matches .pdata.
+  pseudo-reloc.cc  3 guards now name __aarch64__ directly instead of
+    depending on _WIN64 arriving from the w32api header fix.
+  REGRESSION CHECKED: rung3 3/3 exit 77, rung4 exit 42 with correct stdout,
+  after relinking with both changes. No regression.
+
+## HONEST STATUS
+  PASS: process start, runtime init, main(), malloc/free, printf/stdout,
+        signal handlers via the sigfe trampolines.
+  FAIL: fork().
+  UNTESTED: pthreads, exec, pipes, any real MSYS2 program (bash, coreutils).
+  This is NOT a product pass and creates NO authority. No commits, pushes,
+  PRs, CI or upstream contact.

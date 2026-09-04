@@ -1,0 +1,13 @@
+/root/xc/inst/lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/bin/ld: cannot export __alloca: symbol not defined
+/root/xc/inst/lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/bin/ld: cannot export _ctype_: symbol not defined
+/root/xc/inst/lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/bin/ld: cannot export _fe_nomask_env: symbol not defined
+/root/xc/inst/lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/bin/ld: cannot export fedisableexcept: symbol not defined
+/root/xc/inst/lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/bin/ld: cannot export fegetexcept: symbol not defined
+/root/xc/inst/lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/bin/ld: cannot export fegetprec: symbol not defined
+/root/xc/inst/lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/bin/ld: cannot export fesetprec: symbol not defined
+/root/xc/inst/lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/bin/ld: cannot export msys_dll_init: symbol not defined
+/root/xc/inst/lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/bin/ld: libdll.a(sigfe.o):/root/xc/w-link/bld/winsup/cygwin/sigfe.s:4117:(.text+0x1960): undefined reference to `feenableexcept'
+/root/xc/inst/lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/bin/ld: libdll.a(sigfe.o):/root/xc/w-link/bld/winsup/cygwin/sigfe.s:4118:(.text+0x1964): undefined reference to `feenableexcept'
+/root/xc/inst/lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/bin/ld: libdll.a(sigfe.o):/root/xc/w-link/bld/winsup/cygwin/sigfe.s:7281:(.text+0x2b08): undefined reference to `msys_detach_dll'
+/root/xc/inst/lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/bin/ld: libdll.a(sigfe.o):/root/xc/w-link/bld/winsup/cygwin/sigfe.s:7282:(.text+0x2b0c): undefined reference to `msys_detach_dll'
+collect2: error: ld returned 1 exit status

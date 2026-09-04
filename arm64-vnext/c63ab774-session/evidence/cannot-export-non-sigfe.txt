@@ -1,0 +1,10 @@
+__alloca
+_ctype_
+_fe_nomask_env
+fedisableexcept
+fegetexcept
+fegetprec
+fesetprec
+msys_dll_init
+siglongjmp
+sigsetjmp

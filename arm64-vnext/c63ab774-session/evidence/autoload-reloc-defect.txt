@@ -1,0 +1,39 @@
+# ARM64 vNext -- AUTOLOAD THUNK BASE-RELOCATION DEFECT (session c63ab774)
+# 2026-09-03T15:38:06Z   measured on the linked DLL
+
+## MEASUREMENT
+  section .autoload_text : RVA 0x218000, size 0x5060
+  thunk entry points     : 212
+  absolute 8-byte quads  : 424   (2 per thunk: info ptr @+0x30, resolved addr @+0x40)
+  DIR64 fixups in image  : 17837
+  DIR64 fixups in section: 48
+  quads WITH  relocation : 10
+  quads WITHOUT          : 414    <<<
+
+  examples missing: CheckTokenMembership @0x218030 / @0x218040,
+                    CreateProcessAsUserW @0x218090 / @0x2180A0,
+                    DeregisterEventSource, DecryptFileW, ...
+
+## WHY IT MATTERS
+  The aarch64 thunk (autoload.cc LoadDLLfuncEx3) is:
+      ldr x16, 3f      // load the resolved-address slot
+      br  x16          // branch to it
+    1: <loader stub>
+    2: .quad .<dll>_info      // info block pointer
+    3: .quad 1b               // initially points at the loader stub
+
+  Both quads are ABSOLUTE addresses. The image is ASLR-relocated at load
+  time -- observed base 0x00007FFDAD3D0000 vs preferred 0x180000000 -- so
+  without a DIR64 base relocation each slot still holds a PREFERRED-BASE
+  address after loading. The very first call to any affected autoloaded
+  function therefore branches into unmapped memory.
+
+  This is consistent with the observed post-TEB-fix fault:
+      0xC0000005 ACCESS_VIOLATION EXEC, PC itself invalid
+  i.e. a branch to a bad code pointer rather than a null dereference.
+
+## STATUS
+  MEASURED, NOT YET FIXED. Root cause of the missing relocations (assembler
+  emission in a custom "wx" section vs linker .reloc generation) is NOT yet
+  established, and the exact fault value 0xFFFFFFFF00000000 is NOT yet
+  fully explained by this alone. Reported as measured.

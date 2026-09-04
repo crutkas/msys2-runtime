@@ -1,0 +1,61 @@
+# EXPERIMENT: MOVE THE CYGHEAP AWAY FROM StackBase. APPARENT SUCCESS, CAUGHT
+# AS AN ARTEFACT. NOT A FIX. RECORDED IN FULL BECAUSE THE NEAR-MISS IS THE
+# POINT.
+# 2026-09-03T12:25:20Z   session c63ab774
+
+## THE REASONING (a sibling's, and it is sound)
+  The bug is only OBSERVABLE because CYGHEAP_STORAGE_LOW == THREAD_STORAGE_HIGH
+  == 0x800000000, which makes the main thread's StackBase identical to the
+  cygheap base, so a store to StackBase+8 lands on cygheap->chain. If that
+  aliasing is the precondition, moving the cygheap should make the corruption
+  disappear -- which is both a diagnostic and a candidate fix.
+
+## WHAT I DID
+  CYGHEAP_STORAGE_LOW     0x800000000 -> 0x900000000
+  CYGHEAP_STORAGE_INITIAL 0x800300000 -> 0x900300000
+  (HIGH left at 0xa00000000, so the heap stays inside its reserved range.)
+  Rebuilt the four objects that include memory_layout.h -- wincap.cc,
+  mm/heap.cc, mm/shared.cc, mm/cygheap.cc -- and relinked.
+
+## THE APPARENT RESULT
+     cygheap region: allocBase=0x900000000 size=0x300000
+     cygheap->chain = 0x9000068C0
+     >>> CHAIN TERMINATED CLEANLY with NULL after 3 entries
+  THE CORRUPTION WAS GONE. A clean NULL-terminated chain at the new base.
+  Taken at face value this reads as: hypothesis confirmed, and a fix in hand.
+
+## WHY IT IS NOT A RESULT
+  THREE ENTRIES. The baseline walks THIRTY-NINE. I flagged that discrepancy as
+  suspicious instead of reporting the clean chain, and tested the runtime:
+     rung3 (return 77)     exit = -2147483647  (0x80000001)
+     rung4 (printf/malloc) exit = -2147483647
+     rung5 (signals)       exit = -2147483647
+     rung6 (fork)          exit = -2147483647
+  EVERYTHING BROKE. The relocated runtime aborts fatally during early startup.
+  THE CHAIN WAS 'CLEAN' BECAUSE THE PROCESS DIED AFTER THREE ALLOCATIONS,
+  BEFORE REACHING THE POINT WHERE THE CORRUPTION OCCURS. The experiment says
+  nothing whatever about the hypothesis.
+
+## THE NEAR-MISS, WHICH IS THE REASON THIS FILE EXISTS
+  I was one report away from claiming 'moving the cygheap fixes the fork
+  corruption' -- a fix claim, on a green-looking measurement, for a runtime
+  that could not start. The only thing that caught it was an entry count that
+  did not match the baseline.
+  THIS IS THE SAME SHAPE AS EVERY OTHER FALSE POSITIVE TODAY: a real
+  measurement, correctly taken, whose SCOPE was wrong. And it is the shape I
+  have been warning others about all day -- an absence of corruption is not
+  evidence of correctness if the code that produces the corruption never ran.
+  RULE: WHEN A CHANGE MAKES A SYMPTOM DISAPPEAR, FIRST PROVE THE PROGRAM STILL
+  REACHES THE POINT WHERE THE SYMPTOM WOULD HAVE APPEARED.
+
+## THE ONE GENUINE DATUM
+  MOVING CYGHEAP_STORAGE_LOW OFF 0x800000000 BREAKS THE RUNTIME OUTRIGHT.
+  So the fixed base is load-bearing somewhere beyond the layout header -- the
+  value is evidently assumed elsewhere. That is worth knowing before anyone
+  proposes relocation as a real fix: it is not a one-constant change.
+
+## REVERTED AND VERIFIED
+  Constants restored; the four objects rebuilt; relinked.
+     rung3 exit = 77
+     rung5 exit = 55, 'handler RAN, signal=30'
+  Baseline behaviour confirmed restored, not assumed.

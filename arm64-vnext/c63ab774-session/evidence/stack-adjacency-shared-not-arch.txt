@@ -1,0 +1,54 @@
+# THE STACK/CYGHEAP ADJACENCY IS REAL, MEASURED, AND SHARED BY BOTH
+# ARCHITECTURES -- SO IT IS NOT THE ARCH DIFFERENCE.
+# 2026-09-03T10:45:41Z   session c63ab774
+
+## THE STRUCTURAL PRIOR (from a sibling, re-derived by me from my own tree)
+   #define THREAD_STORAGE_LOW    0x600000000UL
+   #define THREAD_STORAGE_HIGH   0x800000000UL
+   #define CYGHEAP_STORAGE_LOW   0x800000000UL
+  THREAD_STORAGE_HIGH == CYGHEAP_STORAGE_LOW. The arenas are deliberately
+  contiguous, so cygheap->chain at 0x800000008 is EXACTLY 8 BYTES ABOVE the
+  top of the thread-stack arena. The prediction was that a boundary-adjacent
+  or stack-derived base with a small positive offset could reach it.
+
+## MEASURED IN A LIVE ARM64 PROCESS -- THE PREDICTION'S PRECONDITION HOLDS
+   0x7FFE00000..0x7FFFD8000  RESERVED   size=0x1D8000
+   0x7FFFD8000..0x7FFFDB000  COMMITTED  size=0x3000     (guard)
+   0x7FFFDB000..0x800000000  COMMITTED  size=0x25000    (live stack)
+   highest end address in the arena = 0x800000000
+  A classic Windows thread stack -- reserve, guard pages, committed region --
+  placed FLUSH AGAINST THE CYGHEAP. StackBase is exactly 0x800000000, so
+  cygheap+8 IS StackBase+8. A store just past the stack top lands precisely
+  on cygheap->chain.
+
+## MEASURED IN A LIVE x86-64 PROCESS -- IDENTICAL, WHICH KILLS IT AS THE CAUSE
+  Git for Windows MSYS2 3.6.9 bash, same scan:
+   0x7FFE00000..0x7FFFDD000  RESERVED   size=0x1DD000
+   0x7FFFDD000..0x7FFFE0000  COMMITTED  size=0x3000     (guard)
+   0x7FFFE0000..0x800000000  COMMITTED  size=0x20000    (live stack)
+   highest end address in the arena = 0x800000000
+  SAME SHAPE, SAME BOUNDARY, TO THE BYTE. And that process's chain terminates
+  cleanly with NULL after 128 entries.
+
+## CONCLUSION
+  The stack/cygheap adjacency is a DELIBERATE SHARED DESIGN PROPERTY of the
+  memory layout, present identically on both architectures. It is therefore
+  NOT the architectural difference, and 'the stack is placed differently on
+  ARM64' is ELIMINATED.
+  The commit sizes differ slightly (0x25000 vs 0x20000) and the reserve
+  boundaries differ by 0x5000, but BOTH END AT EXACTLY 0x800000000, which is
+  the only property the hypothesis depended on.
+
+## WHAT IT REFINES RATHER THAN KILLS
+  The adjacency makes a mis-based store MECHANICALLY POSSIBLE on both
+  architectures. Since only ARM64 exhibits the corruption, the difference
+  cannot be WHERE THE STACK IS. It must be in WHAT WRITES near StackBase --
+  an offset, structure size, or alignment that differs on ARM64, or an
+  ARM64-only code path. So the prior is still useful for RANKING candidates
+  when a faulting PC arrives; it is just not itself the cause.
+
+## METHOD NOTE
+  This is the fourth time today the differential has been the decisive
+  instrument, and the second time it has KILLED a hypothesis I found
+  attractive. A property that looks like a smoking gun on one architecture
+  means nothing until the other architecture has been checked for it.

@@ -1,0 +1,76 @@
+# DIFFERENTIAL SETTLES IT: THE CYGHEAP CHAIN DEFECT IS ARM64-SPECIFIC.
+# I asked for this measurement to avoid over-claiming. It went against my
+# own stated caution, and that caution is now RETRACTED.
+# 2026-09-03T17:05:28Z   session c63ab774
+
+## WHAT I HAD SAID, AND WHY IT WAS RIGHT TO SAY IT
+  I refused to let 'ARM64 defect' enter the record, because I had not
+  shown x86_64 differs and every mechanism in the path is arch-neutral.
+  I flagged the alternative -- an upstream defect x86_64 also carries and
+  never trips -- as the LARGER finding, and unevidenced either way.
+  THE MEASUREMENT NOW SETTLES IT AGAINST MY OWN CAUTION.
+
+## THE INSTRUMENT
+  An x86-64 MSYS2 runtime is installed on this machine: Git for Windows,
+  C:\Program Files\Git\usr\bin\msys-2.0.dll, 3,368,543 bytes,
+  version 3.6.9-b4195d69..., PE machine 0x8664 read from the raw COFF
+  header. It runs under emulation on this ARM64 host. Cross-architecture
+  ReadProcessMemory works from an ARM64 process, so its cygheap chain can
+  be walked with exactly the instrument used on ARM64.
+
+## OFFSETS ESTABLISHED FOR THAT BINARY, NOT ASSUMED FROM OURS
+  The harness refuses to report a result unless the layout validates:
+   - cygheap must be COMMITTED at 0x800000000  -> it is, size 0x300000,
+     identical to ours, so that build uses the same memory_layout.h
+     constants.
+   - the value at +8 must be an in-heap pointer, and the walk must be a
+     long descending run. A wrong offset would produce garbage on the
+     first read. It produced 125-128 clean entries. Offset structurally
+     confirmed for that build.
+
+## RESULT -- x86-64, FOUR INDEPENDENT PROCESSES
+   bash #1   CHAIN TERMINATED CLEANLY WITH NULL after 128 entries   lowest 0x8000048A0
+   bash #2   CHAIN TERMINATED CLEANLY WITH NULL after 125 entries   lowest 0x8000048A0
+   bash #3   CHAIN TERMINATED CLEANLY WITH NULL after 125 entries   lowest 0x8000048A0
+   git       CHAIN TERMINATED CLEANLY WITH NULL after 127 entries   lowest 0x8000048A0
+
+## THE DECISIVE NUMBER
+  sizeof(init_cygheap) = 0x48A0, measured by compiling a probe against
+  the real headers. The layout is LP64-identical on both architectures.
+
+   x86-64 : lowest chain entry = 0x8000048A0 = cygheap + 0x48A0
+            EXACTLY THE FIRST BYTE AFTER THE HEADER, in 4 of 4 processes,
+            including two different programs. Its prev is NULL.
+            That is textbook-correct: the first allocation sits at the
+            header boundary and terminates the chain.
+
+   ARM64  : lowest chain entry = 0x8000068F0 = cygheap + 0x68F0
+            0x2050 BYTES HIGHER. Its prev is a wild mmap-arena pointer.
+            Everything allocated in [0x48A0, 0x68F0) -- which includes the
+            username string from cygheap->user.init() -- IS ORPHANED,
+            never having been linked into the chain that survives.
+
+## CONCLUSION
+  On x86-64 the chain begins where it must and ends with NULL.
+  On ARM64 the first ~8 KB of cygheap allocations are missing from the
+  chain and the surviving chain is terminated by a wild pointer.
+  THE DEFECT IS ARM64-SPECIFIC. It is not an upstream defect that x86-64
+  merely fails to notice.
+
+## WHAT THIS DOES NOT ESTABLISH -- STATED PLAINLY
+  The comparison binary is a DIFFERENT VERSION (3.6.9) and NOT OUR BUILD.
+  A version difference could in principle explain a behavioural
+  difference. What makes that unlikely rather than merely unaddressed:
+  the cygheap base, the region size, the header size and the chain offset
+  all match exactly, and the x86-64 result is not marginal -- the first
+  entry lands on the header boundary to the byte, in every process.
+  A DEFINITIVE ANSWER STILL REQUIRES OUR OWN TREE BUILT FOR x86-64.
+  I have not done that, and I am not claiming it.
+  I also have NOT identified the writer. Knowing the defect is
+  arch-specific narrows the search; it does not end it.
+
+## ENTRY COUNTS ARE NOT EVIDENCE HERE
+  x86-64 walked 125-128 entries and ARM64 walked 39. THAT COMPARISON IS
+  MEANINGLESS: bash and git allocate far more than my trivial rung8 test
+  program. Only the LOWEST ENTRY ADDRESS and the TERMINATION are
+  comparable, and those are what the conclusion rests on.

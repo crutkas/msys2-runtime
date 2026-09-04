@@ -1,0 +1,55 @@
+# tlsoffsets GENERATOR DEFECT -- DEMONSTRATED, NOT JUST DIAGNOSED.
+# 2026-09-03T22:50:39Z  session c63ab774
+# Original claim: supervisor 290c9aaf.  I first CORRECTED it wrongly, then
+# measured properly and the original claim was right in every particular.
+
+## THE DEFECT
+   winsup/cygwin/scripts/gentls_offsets emits, at lines 22 and 44:
+       extern "C" const uint32_t __CYGTLS__<member> = offsetof (...);
+   and then greps the generated assembly with  /\s*\.long\s+/  at lines 65
+   and 88 to recover the values.
+   MEASURED, direct compile with the cross compiler:
+       const uint32_t x = 42;   ->  aarch64 emits  ".word  42"
+       long          y = 42;    ->  aarch64 emits  ".xword 42"
+   For the 4-byte type the script actually generates, aarch64 emits .word.
+   The .long pattern NEVER matches, for any member.
+
+## DEMONSTRATED (run in /tmp; the real tlsoffsets was never touched)
+   Reproduced the exact make rule invocation:
+       CXXCOMPILE="..." gentls_offsets local_includes/cygtls.h tlsoffsets
+   RESULT:
+       generated : 56 bytes, 2 lines, EVERY OFFSET ZERO
+                     .equ _cygtls.local_clib, 0
+                     .equ _cygtls.local_clib_p, 0
+       real file : 1822 bytes, 59 lines, correct values
+                     .equ _cygtls.in_singlestep_handler, -7787
+                     .equ _cygtls.in_singlestep_handler_p, 5013
+       GENERATOR EXIT CODE: 0     <-- FAILS OPEN, SILENTLY
+   Real file verified byte-identical before and after: INTACT.
+
+   The supervisor's original figure -- "56 bytes of zeros against your good
+   1,822 B" -- is EXACTLY right, including the byte count.
+
+## TWO OF MY OWN ERRORS, RECORDED
+   1. I "corrected" the original ".word" claim to ".xword".  I WAS WRONG:
+      I probed with an 8-byte long instead of the 4-byte uint32_t the script
+      actually emits.  A correction is a claim, and this one was not measured
+      against the right type.  The original claim was right.
+   2. Earlier I reported the hazard as "confirmed" on the strength of the
+      grep mismatch alone, without ever running a regeneration.  The
+      mechanism was right but the destructive result was UNTESTED until now.
+
+## A REFUTED COUNTER-ARGUMENT, RECORDED BECAUSE IT WAS REASONABLE
+   It was argued that a 1822-byte tlsoffsets with good content is positive
+   evidence that .long DID match -- otherwise the file would be degenerate.
+   REFUTED by measurement: regeneration yields exactly the predicted
+   degenerate 56-byte file.  The good file is hand-generated, so its content
+   says nothing about whether the generator works.
+
+## WHY IT MATTERS
+   sigfe.s cannot assemble against zeroed offsets, so a build that
+   regenerates this file fails -- or worse, silently produces a runtime whose
+   hand-written assembly addresses the wrong _cygtls members.  Exit 0 means
+   no build system will notice.  ANY aarch64 build must back this file up
+   before running make.  It is load-bearing for the fork and argv fixes
+   verified today: both were built with this file guarded.

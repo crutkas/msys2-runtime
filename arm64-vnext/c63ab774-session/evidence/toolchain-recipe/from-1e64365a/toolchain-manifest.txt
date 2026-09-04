@@ -1,0 +1,35 @@
+=== aarch64-pc-cygwin toolchain manifest (2026-09-02) ===
+--- gcc -v ---
+Configured with: ../gcc-src/configure --target=aarch64-pc-cygwin --prefix=/root/xc/inst --enable-languages=c,c++ --without-headers --with-newlib --disable-multilib --disable-nls --disable-shared --disable-threads --disable-libssp --disable-libgomp --disable-libatomic --disable-libquadmath --disable-libstdcxx --disable-bootstrap --disable-werror
+Thread model: single
+Supported LTO compression algorithms: zlib
+gcc version 15.0.1 20250131 (experimental) (GCC) 
+--- g++ present ---
+aarch64-pc-cygwin-g++ (GCC) 15.0.1 20250131 (experimental)
+--- ld -V ---
+GNU ld (GNU Binutils) 2.44.50.20250131
+  Supported emulations:
+   aarch64pe
+   arm64pe
+--- objdump -i (first targets) ---
+BFD header file version (GNU Binutils) 2.44.50.20250131
+pe-aarch64-little
+ (header little endian, data little endian)
+  aarch64
+pei-aarch64-little
+ (header little endian, data little endian)
+  aarch64
+pe-aarch64-bigobj
+--- w32api version ---
+#define __MINGW64_VERSION_STR	\
+--- w32api header count ---
+1635
+--- source HEADs ---
+gcc-woarm64: 5688a17320e775944bbe795010ebe7e89fc7a628
+msys2-runtime: d890a845e992638a6f09560efacc26d15b3ffe6a
+mingw-w64: v12.0.0
+--- object counts ---
+intended .o targets: 310
+built .o (final run): 265
+--- LP64 probe (empty output below == PASS) ---
+(end probe)

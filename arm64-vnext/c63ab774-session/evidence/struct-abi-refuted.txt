@@ -1,0 +1,63 @@
+# ARM64 vNext -- STRUCT/ABI LEAD TESTED AND REFUTED (session c63ab774)
+# 2026-09-03T16:05:31Z
+
+## HYPOTHESIS: a C++/assembly struct-offset mismatch makes a consumer read
+## a function pointer at +0x0C and branch to 0xFFFFFFFF00000000.
+## REFUTED. The layouts match exactly.
+
+  struct dll_info          LP64 off   LoadDLLprime emits          off
+  UINT_PTR load_state;         0      .quad _std_dll_init          0
+  HANDLE   handle;             8      .quad no_resolve_on_fork     8
+  LONG     here;              16      .long -1                    16
+    (pad 20..23)                      .balign 8 -> pads 20..23
+  void   (*init)();           24      .quad init_also             24
+  WCHAR    name[];            32      UTF-16 name                 32
+  => IDENTICAL, no 4-byte shift.
+
+  struct func_info         LP64 off   aarch64 thunk payload       off
+  struct dll_info *dll;        0      2: .quad .<dll>_info         0
+  LONG decoration;             8      .hword notimp / .hword err   8
+    (pad 12..15)                      .hword 0 / .hword 0         12
+  UINT_PTR func_addr;         16      3: .quad 1b                 16
+  char name[];                24      4: .asciz "<name>"          24
+  => IDENTICAL, and the source carries static_asserts for 0/8/16/24.
+
+## WHY THE +0x0C OBSERVATION IS NOT DIAGNOSTIC
+  +0x08 handle = 0            -> 00 00 00 00 00 00 00 00
+  +0x10 here   = .long -1     -> FF FF FF FF
+  ANY 8-byte window starting at +0x0C therefore reads 0xFFFFFFFF00000000.
+  That is a property of the DATA, not evidence that a consumer reads there.
+  The reporter's own disclosure that this byte pattern occurs 13 times in
+  .data points the same way: the value is common, not diagnostic.
+  (Independence check per the new rule: that observation was taken by
+  reading bytes at a virtual address with no RVA arithmetic, so it does NOT
+  share the ImageBase input that invalidated my relocation work. Its
+  MEASUREMENT is sound; its INTERPRETATION is unsupported.)
+
+## SECOND HYPOTHESIS I RAISED AND ALSO REFUTED: the 128-bit return ABI
+  dll_chain assumes a two_addr_t (__uint128_t) comes back in x0/x1:
+        dll_chain:  mov x30, x0 ; br x1
+  AAPCS64 returns 128-bit integers in x0:x1, but the MICROSOFT ARM64 ABI
+  returns anything over 8 bytes INDIRECTLY via a hidden pointer in x8. If
+  GCC followed the MS rule, x0 would be a buffer pointer and x1 garbage --
+  and 'br x1' would be an EXECUTE fault to a structured-looking value,
+  which is exactly the observed signature.
+
+  TESTED by compiling a 128-bit-returning function with the real cross:
+      caller:  mov x0, 0x1111111111111111
+               mov x1, 0x2222222222222222
+               b   use
+  x0/x1, no x8 anywhere. GCC uses AAPCS here, so dll_chain's assumption is
+  CORRECT. std_dll_init sets ret.high=func (-> x0) and ret.low=dll->init
+  (-> x1); dll_chain sets x30=func and branches to dll->init. Sound.
+
+## RUNNING TALLY OF ELIMINATED CAUSES FOR THE dll_entry CRASH
+  1. stale autoload thunk pointers    -- REFUTED (all 424 quads relocated)
+  2. struct dll_info layout mismatch  -- REFUTED (exact match)
+  3. struct func_info layout mismatch -- REFUTED (exact match + asserts)
+  4. 128-bit return ABI mismatch      -- REFUTED (x0/x1 confirmed)
+  5. TEB register (tpidr_el0 vs x18)  -- WAS REAL, FIXED, crash persisted
+  The cause remains UNKNOWN. These are eliminations, not a diagnosis.
+
+## STATUS
+  Nothing has executed beyond the loader. No user code has run.

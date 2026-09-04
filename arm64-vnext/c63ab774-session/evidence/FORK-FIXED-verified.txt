@@ -1,0 +1,344 @@
+# fork() FIXED AND VERIFIED ON HARDWARE.  Root cause named, fix applied,
+# negative control passed, A/B measured, regression clean.
+# 2026-09-03T22:26:56Z  session c63ab774
+
+## 0. HAZARD VERIFIED AND GUARDED FIRST (tlsoffsets)
+   CONFIRMED REAL: scripts/gentls_offsets matches /\s*\.long\s+/ at lines
+   65 and 88.  aarch64-pc-cygwin-gcc emits '.xword' for a 64-bit long
+   (verified by compiling a probe), never '.long'.  So a regeneration would
+   silently produce a degenerate file.
+   GUARDED: tlsoffsets copied to tlsoffsets.SAFE before any make, and its
+   sha verified before AND after every build step:
+     49ac682b8f5e -> 49ac682b8f5e  (1822 bytes)  INTACT throughout.
+   Had this not been guarded, a corrupt build would have failed 5b and the
+   root cause would have been wrongly discarded.
+
+## 1. THE FIX (dcrt0.cc, aarch64 arm of the stack switch)
+   was:  mov sp, %[ADDR] ; mov x29, sp
+   now:  mov sp, %[ADDR] ; sub sp, sp, #64 ; mov x29, sp
+   The false rationale in the comment ("no shadow space, so nothing has to
+   be subtracted") was replaced with the measured reason.
+
+## 2. SUBTRACTION SIZE MEASURED, NOT ASSUMED
+   Every sp-relative access in _dll_crt0 (67 lines disassembled):
+     [sp]  [sp,#24]  [sp,#-32]
+   Max POSITIVE offset = 24; the store is 8 bytes wide => reach = 32 bytes.
+   Headroom above sp before StackBase was 16.  Overrun = 16 bytes.
+   Chosen subtraction 64 > 32 required, and 64 keeps sp 16-byte aligned
+   (AArch64 requires it).  x86's 32 was NOT copied blindly.
+
+## 3. NEGATIVE CONTROL -- RUN BEFORE ANY RUNG TEST
+   BEFORE:  sp = StackBase-16    = 0x7fffffff0
+            str x4,[sp,#24]     -> 0x800000008  == cygheap->chain   HIT
+   AFTER :  sp = StackBase-16-64 = 0x7ffffffb0
+            str x4,[sp,#24]     -> 0x7ffffffc8  == StackBase-56     MISS
+   The store is still present and still spills the TEB; it now lands 56
+   bytes BELOW StackBase, inside the stack where it belongs.
+
+## 4. A/B ON HARDWARE -- SAME EXES, ONLY THE DLL DIFFERS
+   pre-fix DLL sha 20ad86ba...   post-fix DLL sha 54e464d0...
+     rung3   77          -> 77          unchanged (pass)
+     rung4   42 +stdout  -> 42 +stdout  unchanged (pass)
+     rung5a  55 +handler -> 55 +handler unchanged (pass)
+     rung7   44 ALL OK   -> 44 ALL OK   unchanged (pass)
+     rung6   71 "FAIL: fork() returned -1"
+                         -> 66 "PARENT continues, child pid=NNN,
+                                CHILD running, child exited with 33"   FIXED
+     rung9   0xC0000005  -> 0x0B00 (= 11<<8, SIGSEGV status; rung9's body is
+                            a DELIBERATE null store, so being reported as
+                            signal 11 instead of dying raw is correct)
+     rung8   0xC0000005  -> 0xC0000005  UNCHANGED, STILL FAILING
+     rung10  0xC0000005  -> 0xC0000005  UNCHANGED, STILL FAILING
+
+## 5. FORK STABILITY
+   5 consecutive runs, 5/5 exit 66 with a real child pid, child running and
+   exiting 33.  Parent and child pids differ by 1 each run.
+
+## 6. WHAT I DID **NOT** VERIFY -- READ THIS BEFORE CITING THE ABOVE
+   - rung8 and rung10 STILL CRASH with 0xC0000005, exactly as before the
+     fix.  This fix did not touch them.  There is at least one more defect.
+   - No real MSYS2 program (bash, coreutils) has been run.  Ever.
+   - fork() is exercised by ONE small test.  No fork/exec, no pipes, no
+     job control, no multi-generation forking.
+   - The fix is a local uncommitted edit; it is not committed anywhere.
+
+## 7. REPRODUCIBLE FROM THIS FILE ALONE (durability)
+   The fix is sealed beside this file as 'forkfix-dcrt0.patch' (LF-only, 31
+   lines, self-contained -- it carries the whole aarch64 arm because upstream
+   has "#error unimplemented for this target" there).
+   To reproduce from a clean tree:
+     1. apply forkfix-dcrt0.patch to winsup/cygwin/dcrt0.cc
+     2. BACK UP winsup/cygwin/tlsoffsets FIRST (section 0) -- 1822 bytes,
+        sha 49ac682b8f5e.  Never let "make" regenerate it.
+     3. put /root/xc/inst/bin on PATH; set CPLUS_INCLUDE_PATH to
+        /root/xc/sysroot-cxx/include/c++/15.0.1
+     4. in /root/xc/w-link/bld/winsup/cygwin, extract INC from the generated
+        Makefile (the AM_CPPFLAGS line) because Makefile.am uses the obsolete
+        $(INCLUDES); then build dcrt0.o passing INCLUDES=$INC and
+        CXXFLAGS="-g -O2 -Wno-error -D__MSYS__".
+        -D__MSYS__ IS REQUIRED: without it dcrt0.cc silently compiles the
+        cygwin_dll_init branch instead of msys_dll_init.
+     5. relink via files/sF7-relink-import.sh.  libdll.a must be assembled by
+        hand from the objects that EXIST plus fenv_aarch64.o, because "make"
+        dies on the absent aarch64/*.S.  -e dll_entry AND msys.def both needed.
+   post-fix DLL sha256 54e464d029e9ec22ced77dffb9ce55b573df3f0abc50d4e71d06dfcb1819a6d7
+   pre-fix  DLL sha256 20ad86ba16f32ebb2dcb37262b7a8045fae2899e4b6d28839393b2ceb381940e
+
+## 8. LATER ADDITION -- DYNAMIC_BASE SCOPE GAP CLOSED BY A ONE-BIT A/B
+   The original DYNAMIC_BASE experiment used six Microsoft SYSTEM DLLs.
+   msys-2.0.dll is NOT a system DLL, so that evidence did not cover the case
+   the Makefile.am note actually governs.  Closed here, on our own image:
+     take the WORKING post-fix msys-2.0.dll, clear ONLY bit 0x40:
+       DllCharacteristics 0x0160 -> 0x0120 ; exactly 2 bytes differ
+     ARM A  one bit cleared        : rung3 exit 0xC000007B
+                                     (STATUS_INVALID_IMAGE_FORMAT) -- NO LOAD
+     ARM B  byte-identical rewrite : rung3 exit 77 -- loads and runs
+   So the mandate holds for a NON-system ARM64 DLL, demonstrated on the very
+   image the note governs, with a genuine one-bit difference and a rewrite
+   control excluding copy/checksum effects.
+   A WEAKER EARLIER ATTEMPT, recorded so it is not mistaken for the evidence:
+   comparing msys-2.0-fixedbase.dll with msys-2.0-importfix.dll looked
+   confirmatory (0xC000007B vs 77) but was NOT clean -- different builds
+   (30895324 vs 30897105 bytes) differing in TWO bits (0x0100 vs 0x0160,
+   i.e. DYNAMIC_BASE and HIGH_ENTROPY_VA).  Suggestive only.
+
+## 9. CORRECTION TO SECTION 4 AND 6 -- rung8/rung10 ARE NOT FAILING TESTS.
+   Sections 4 and 6 above record rung8 and rung10 as "UNCHANGED, STILL
+   FAILING" and conclude "there is at least one more defect".  THAT IS WRONG
+   AND IS WITHDRAWN.
+
+   rung8, rung9 and rung10 are DELIBERATE-FAULT DEBUGGER HARNESSES.  From
+   the generator sG7-rung8.sh, its own comment:
+       /* Deliberate fault: gives the debugger a context late in process
+          life.  NOT a defect under test -- it is the capture mechanism. */
+       * (volatile int *) 0 = 1;
+   Verified by disassembly rather than by trusting one script -- all three
+   main() bodies end identically:
+       mov x0, #0x0 ; mov w1, #1 ; str w1,[x0]
+   A 0xC0000005 from these three is the DESIGNED outcome.  They are the
+   instruments used earlier in this investigation to capture a live context
+   and walk cygheap->chain.
+
+   CORRECTED RESULT: every rung that tests functionality -- 3, 4, 5a, 6, 7 --
+   passes post-fix.  The three that "fail" are crash-capture tools working
+   as built.
+
+   ONE GENUINE RESIDUE, AT ITS ACTUAL SIZE (a question, not a defect):
+   post-fix, rung9 reports 0x0B00 (11<<8, SIGSEGV wait-status) while rung8
+   and rung10 still report raw 0xC0000005, despite all three performing the
+   same null store.  The difference between them is that rung8/rung10 call
+   malloc/free first (rung8 also printf) and rung9 does not.  So a deliberate
+   fault becomes a POSIX signal in one case and not the others.  Worth
+   understanding; it is a fault-REPORTING difference inside a deliberately
+   faulting program, NOT a crash during normal work.
+
+   WHY THE ERROR HAPPENED: having just confirmed a real fix, I enumerated
+   what did not change and filed a non-zero exit code as "still broken"
+   WITHOUT ASKING WHAT THE PROGRAM WAS SUPPOSED TO DO.  Companion rule to
+   the one in section 0: before calling a non-zero exit a failure, establish
+   what a pass looks like.
+
+## 10. HARDER FORK VALIDATION (rung12) -- ADDRESSES "ONE SMALL TEST"
+   Section 6 flagged that fork() was exercised by exactly one trivial test.
+   rung12 exercises it properly.  12 checks, same exes, only the DLL differs.
+
+   POST-FIX (54e464d0)                        PRE-FIX (20ad86ba)
+     T1 fork + waitpid + exit status            fork returned -1
+        ok fork returned a pid                  FAIL
+        ok waitpid reaped the child             (ok, vacuous: p was -1)
+        ok child exit status is 7               FAIL
+     T2 second fork after first reaped
+        ok second fork returned a pid           FAIL
+        ok second child status 9                FAIL
+     T3 pipe: child writes, parent reads
+        ok pipe created                         ok
+        ok parent read 16 bytes                 FAIL
+        ok pipe payload intact                  FAIL
+     T4 nested fork (child forks a grandchild)
+        ok reaped the child that forked         (ok, vacuous)
+        ok grandchild ran and was reaped        FAIL
+     T5 heap work in the child
+        ok child malloc/memset/free clean       FAIL
+     RESULT ALL PASS (0 failures) exit 88     RESULT FAIL (8 failures) exit 1
+
+   Post-fix stability: 4/4 runs "ALL PASS (0 failures)".
+
+   So the fix survives: sequential forks, a fork whose child forks again
+   (two generations), pipe data integrity across fork, and a 4096-byte
+   malloc/memset/verify/free performed IN THE CHILD -- which is the cygheap
+   path that the original defect corrupted.
+
+   NOTE ON TWO VACUOUS "ok"s IN THE PRE-FIX COLUMN: "waitpid reaped the
+   child" passes even when fork returned -1, because the test checks
+   waitpid's return against p without first requiring p > 0.  Recorded so
+   nobody reads 10/12 vs 12/12 as the delta; the real delta is 8 genuine
+   failures to 0.
+
+## 11. IS THERE A SECOND INSTANCE?  SOURCE-LEVEL SWEEP -- NO.
+   Grepped all of winsup/cygwin for inline asm that WRITES sp (reads are
+   harmless: cygtls.h:363 and fork.cc:671 only read it).  Exactly three
+   sites write sp, including the one fixed here.
+
+   (a) exceptions.cc:1991-2010  signal alternate-stack switch -- CORRECT.
+         sub x9, x9, #32      // room for old sp and fp  <-- EXPLICIT HEADROOM
+         str x15, [x9] ; str x29, [x9,#8] ; mov sp, x9 ; blr x14
+         ldr x29,[sp,#8] ; ldr x15,[sp]   // restores inside the 32 reserved
+       The SAME port author DID reserve headroom here.  So the dcrt0.cc
+       omission was SITE-SPECIFIC, not a systematic misunderstanding of the
+       AArch64 ABI.  Recorded because it changes the character of the defect.
+
+   (b) create_posix_thread.cc:103-118  pthread_wrapper -- LATENT ONLY.
+       Carries the IDENTICAL false rationale ("Windows ARM64 has no shadow
+       space, so nothing to reserve"), but is safe by arithmetic rather than
+       by design: sp lands at stackbase - __CYGTLS_PADSIZE__ (12800 bytes
+       below), so any positive-offset spill would land in _cygtls, NOT the
+       cygheap, and the only compiler code after the block is an unreachable
+       api_fatal().  Not a bug; flagged because the misconception is the same
+       and the safety is accidental.
+
+   (c) dcrt0.cc  -- the one fixed in this file.
+
+   CONCLUSION: the dangerous shape -- a hand-written sp write with
+   insufficient headroom FOLLOWED BY compiler-generated code using positive
+   sp offsets -- occurs exactly ONCE in the runtime, and it is fixed.
+
+   FALSIFIER, stated so it can be tested against the binary rather than
+   trusted: session 57224227's corrected detector finds 18 TEB-spill
+   carriers.  The prediction is that 17 are ordinary spills inside functions
+   with a normal compiler prologue (sp properly lowered, so [sp,#k] is inside
+   the frame).  ANY carrier whose enclosing function contains a hand-written
+   sp assignment other than the two named above would mean this source grep
+   missed a site.
+
+## 12. SECOND DEFECT FIXED -- argv CORRUPTION (overlapping strcpy)
+   Reported by supervisor 290c9aaf, who also validated the fork fix at 7/7 on
+   their P3 fixture (first from-source validation; their prior confirmations
+   were binary patches).  Verified independently here before applying.
+
+   THE DEFECT: dcrt0.cc quoted() lines 165/167 do
+       strcpy (cmd, cmd + 1);          and     strcpy (p, p + 1);
+   Destination and source OVERLAP (dst = src-1), which is undefined behaviour.
+   x86_64's byte-forward strcpy happens to produce the intended left-shift;
+   AArch64's reads 16-byte NEON blocks from a down-aligned source and re-reads
+   bytes its own stores already overwrote.  Tree-wide sweep: EXACTLY these two
+   sites.  Upstream Cygwin latent bug that the ARM64 port merely exposes.
+
+   REPRODUCED INDEPENDENTLY BEFORE FIXING (DLL 54e464d0, rung13):
+     sent  "abcdefghijklmnopqrstuvwx"
+     got   "abcdefghijmnopqrstuuvvwx"   <- "kl" dropped, "u" and "v" doubled
+   Note the length is still 24, so a length check alone would NOT catch it.
+
+   FIX: memmove, which is defined for overlapping regions.
+     memmove (cmd, cmd + 1, strlen (cmd + 1) + 1);
+     memmove (p, p + 1, strlen (p + 1) + 1);
+   Verified 2 bl <memmove> in the rebuilt dcrt0.o.  tlsoffsets guarded and
+   INTACT (49ac682b8f5e both sides).
+
+   AFTER (DLL 90bfb483ae44aea20f3f9491bd42d92b1c3233cdf1b35fac580f9791d4dea310):
+     all three probe strings round-trip exactly; VERDICT ALL ARGS INTACT.
+   LENGTH SWEEP, because the corruption position tracks command-line length:
+     quoted argument of EVERY length 1..40, round-tripped and compared
+     byte-for-byte -> 40 tested, 0 mismatches.
+   REGRESSION, same run: rung3 77 / rung4 42 / rung5a 55 / rung6 66 /
+     rung7 44 / rung12 88 "ALL PASS (0 failures)".  No regression.
+
+   Combined patch for both dcrt0.cc fixes: evidence/dcrt0-both-fixes.patch
+
+## 13. STILL NOT DONE (updated)
+   - exec: supervisor reports the OLD failure ("child_copy ... Win32 error 6")
+     is GONE on the fork-fixed DLL and execl() now returns instead.  The
+     symptom MOVED; exec is still broken.  NOT investigated by me.
+   - No threads, no job control, no signals across fork.
+   - NO REAL MSYS2 PROGRAM HAS EVER RUN.
+   - Both fixes remain LOCAL UNCOMMITTED EDITS.
+
+## 14. NEON MECHANISM: DERIVED WHEN COMMITTED, MEASURED AFTERWARDS -- A LAPSE.
+   Commit 6397acaa5 states as fact: "AArch64's strcpy aligns the source down
+   to a 16-byte boundary and loads NEON blocks."  At the time I wrote that I
+   had NOT disassembled aarch64 strcpy.  I took it from a report.  The
+   verifier had explicitly labelled it "DERIVED, NOT MEASURED -- I have not
+   disassembled the aarch64 strcpy" and asked that it not be recorded as
+   established.  I recorded it as established, in a permanent commit message.
+
+   IT WAS SUBSEQUENTLY MEASURED and is true.  Session 57224227 disassembled
+   the strcpy the DLL links:
+       ld1  {v0.16b}, [x2]        ; 16-byte block load
+       cmeq v1.16b, v0.16b, #0    ; NUL scan
+       shrn v2.8b,  v1.8h, #4
+       ldr  q0, [x2, #16]!        ; next 16-byte block
+   That is exactly an implementation that re-reads source bytes its own
+   stores have overwritten when the regions overlap.
+
+   RECORDED AS A LAPSE ANYWAY, because the order was wrong: verification
+   arrived after the durable claim.  The fix never depended on the mechanism
+   -- the UB is sufficient justification and memmove is correct regardless of
+   why strcpy misbehaves -- which is the only reason this is a lapse and not
+   a retraction.
+
+   BEHAVIOUR PRESERVATION (from 57224227, worth foregrounding for upstream):
+   memmove (dst, dst+1, strlen (dst+1) + 1) is semantically identical to what
+   the buggy strcpy was intended to do, so x86_64 behaviour is provably
+   unchanged.  A UB fix that cannot regress already-shipped platforms is the
+   first thing an upstream maintainer will ask about.
+
+   OPEN, DELEGATED TO 57224227: sweep for adjacent overlapping-copy idioms --
+   memcpy on self-overlap; strcat/stpcpy/strncpy writing into their own
+   source; and the shape MY grep would have missed, a left-shift through a
+   VARIABLE offset (strcpy (p, p + n)) rather than the literal "+ 1" I
+   pattern-matched on.  Scoped deliberately to SYNTACTIC self-reference:
+   overlap through distinct pointers into one buffer needs aliasing analysis
+   and is out of scope, so the result must be recorded as a BOUNDED negative.
+
+## 15. ADJACENT-IDIOM SWEEP CLOSED (delegated to 57224227) -- BOUNDED NEGATIVE.
+   Syntactic self-overlap f(X, X +/- N) for strcpy / stpcpy / strcat / memcpy:
+   ONLY the two quoted() strcpy sites.  Zero memcpy, stpcpy or strcat
+   self-overlaps tree-wide.
+
+   Three additional "+1-source" candidates had a DIFFERENT destination name,
+   so a syntactic non-match would not have proved safety.  They were opened
+   by hand and cleared as provably distinct buffers:
+     mount.cc:910           strcpy (dst+2, p+1)          dst = output path buf,
+                                                         p = separate input
+     fhandler/dev_disk.cc:724  strcpy (key.name, path+dirlen+1)
+                                                         key = fresh local struct
+     fhandler/dev_disk.cc:836  strcpy (de->d_name, by_dir_names[..]+1)
+                                                         dst = caller dirent,
+                                                         src = static table
+   All correct as strcpy; no change needed.
+
+   CAVEAT CARRIED WITH THE RESULT: a syntactic sweep cannot catch two
+   unrelated pointers that alias only at runtime.  The bound is: the only
+   sites where dst = src-1 BY CONSTRUCTION are the two now fixed, plus the
+   three different-buffer cases cleared by inspection.
+
+   ONE AMBIGUITY FLAGGED, NOT RESOLVED: the sweep was reported as
+   "f(X, X +/- N)" alongside a separate "+1-source" pass.  Whether N covered
+   VARIABLE offsets (strcpy (p, p + n)) as well as literals is not stated
+   unambiguously.  That was the specific shape my own literal-"+ 1" grep
+   would have missed.  Asked for the record to say "literal and variable"
+   explicitly.  Probably covered; the BOUND should not be ambiguous.
+
+## 16. ADJACENT SWEEP COMPLETED -- VARIABLE-OFFSET GAP CLOSED.
+   Supersedes the ambiguity flagged in section 15.  Session 57224227 widened
+   the pattern to f(X, X + <any expression>) across strcpy/stpcpy/strcat/
+   strncpy -- i.e. VARIABLE offsets, not just the literal "+ 1" my own grep
+   matched.  RESULT: still only the two quoted() sites.  No variable-offset
+   left-shift exists anywhere in the tree.  That was the one shape my sweep
+   provably could not have found, and it is now closed.
+   Also swept and empty: right-shift f(X+n, X); memcpy self-overlap.
+   Also cleared by hand: five strcpy (de->d_name, ...) member/arrow forms
+   (registry.cc:607/622, dev.cc:209/247, dev_disk.cc:836) -- all write a
+   dirent output buffer from a separate source.  Distinct objects.
+
+   SCOPE BOUND, to be quoted with the result: "no other SYNTACTIC
+   self-overlap exists", NOT "no other overlap exists".  Overlap through
+   distinct pointers aliasing one buffer only at runtime is out of scope and
+   was not attempted.
+
+## 17. REFINEMENT TO THE SECTION 14 LAPSE, ADOPTED FROM 57224227.
+   I had written the lapse as "verification arrived after the durable claim".
+   Their sharper statement: the disassembly establishes the mechanism NOW; it
+   does not make the commit-time claim have been measured.  THE CONTENT BEING
+   TRUE DOES NOT RELOCATE WHEN IT WAS KNOWN.  Adopted as the better wording.
+   Survivable only because the fix rested on the UB, not on the mechanism --
+   a wrong mechanism would have cost an explanation, not the fix.

@@ -1,0 +1,86 @@
+#!/bin/bash
+E=/mnt/c/Users/crutkasLocal/.copilot/session-state/c63ab774-a023-4e57-9bc4-53f727507ada/files/evidence
+D=/mnt/c/Users/crutkasLocal/.copilot/session-state/c63ab774-a023-4e57-9bc4-53f727507ada/files/runtest
+{
+echo "# ARM64 vNext -- RUNGS 3 AND 4 PASSED. USER CODE EXECUTES ON ARM64."
+echo "# $(date -u +%Y-%m-%dT%H:%M:%SZ)   session c63ab774"
+echo "# host: Windows 11 ARM64 10.0.28000.0"
+echo
+echo "## RUNG 3 -- PASSED"
+echo "  int main (void) { return 77; }"
+echo "  exit code 77, observed 5 times out of 5 in fresh processes."
+echo "  A/B, same executable, only the runtime DLL swapped:"
+echo "    pre-import-fix  runtime -> exit -1073741571 (0xC00000FD STACK_OVERFLOW)"
+echo "    post-import-fix runtime -> exit 77"
+echo
+echo "## RUNG 4 -- PASSED"
+echo "  malloc + strcpy + printf + free + fflush"
+echo "  stdout:"
+echo "     hello from ARM64 msys2-runtime"
+echo "     sizeof(void*)=8"
+echo "  exit code 42 as designed."
+echo "  rung4.exe sha256 0d760315a54adca89173b6f5a769345d496fa7ca1532b8040b584aa92f2b4de5"
+echo
+echo "## THE BUG THAT BLOCKED THEM: import_address() DECODES x86 MACHINE CODE"
+echo "  mm/malloc_wrapper.cc:49"
+echo "      if (*((uint16_t *) imp) == 0x25ff)     /* x86 FF 25 = jmp *disp32(%rip) */"
+echo "        { ...decode a RIP-relative displacement... }"
+echo
+echo "  THERE IS NO ARCHITECTURE GUARD AT ALL. It is a bare magic number, which is"
+echo "  why every #ifdef and \$cpu sweep missed it -- there is nothing to grep for."
+echo "  This is the FIFTH instance of an x86 assumption in the port and the first"
+echo "  that is invisible to a conditional-compilation search."
+echo
+echo "  On AArch64 mkimport emits"
+echo "      adrp x16, __imp_sym ; ldr x16, [x16, #:lo12:__imp_sym] ; br x16"
+echo "  so the first two bytes are never 0x25ff and import_address always returns"
+echo "  NULL. Then in malloc_init:"
+echo "      use_internal = user_data->malloc == malloc"
+echo "                     || import_address ((void *) user_data->malloc) == &_sigfe_malloc;"
+echo "  user_data->malloc is the APP'S IMPORT THUNK, not the DLL's malloc, so the"
+echo "  first test fails; import_address returns NULL, so the second fails;"
+echo "  use_internal stays FALSE. Every malloc/calloc/free then does"
+echo "  user_data->malloc(...) -> the app's thunk -> back into the DLL's malloc ->"
+echo "  !use_internal -> user_data->malloc(...) -> ... UNBOUNDED RECURSION."
+echo
+echo "## HOW IT WAS PROVEN, NOT GUESSED"
+echo "  Win32 debug API capture (DEBUG_ONLY_THIS_PROCESS + WaitForDebugEvent +"
+echo "  GetThreadContext), modules resolved with VirtualQueryEx at fault time:"
+echo "     0xC00000FD STACK_OVERFLOW"
+echo "     PC = msys-2.0.dll RVA 0xAFBA0     SP 16-byte aligned: YES"
+echo "     LR = msys-2.0.dll RVA 0xAFBD8"
+echo "  RVA 0xAFBA0 is calloc+0x4, a stack-clash probe:"
+echo "     1800efb9c <calloc>:  sub x10, sp, #0x2, lsl #12"
+echo "     1800efba0:           str xzr, [x10, #4032]   <== FAULTED"
+echo "  LR at calloc+0x3C is the return address of the 'blr x2' INSIDE calloc, so"
+echo "  control came back round into calloc's own prologue -- self-recursion, with"
+echo "  the stack probe merely the first instruction to notice."
+echo "  Then measured statically: the pointer calloc branches through, at"
+echo "  __cygwin_user_data+0x78 (VA 0x18021EB38), holds 0x1800EFB9C == calloc."
+echo
+echo "## THE FIX"
+echo "  Teach import_address to decode the AArch64 thunk:"
+echo "     adrp x16,X    (insn & 0x9f00001f) == 0x90000010, imm21 = immhi:immlo << 12"
+echo "     ldr x16,[x16] (insn & 0xffc003ff) == 0xf9400210, offset = imm12 * 8"
+echo "     br  x16       == 0xd61f0200"
+echo "  recover the IAT slot address and read the target. x86 path left untouched"
+echo "  under #else, so no x86_64 behaviour changes."
+echo
+echo "## ARTEFACTS"
+printf '  msys-2.0-importfix.dll  %s  %s\n' "$(stat -c%s $D/msys-2.0-importfix.dll)" "$(sha256sum $D/msys-2.0-importfix.dll | cut -c1-64)"
+printf '  rung3.exe               %s  %s\n' "$(stat -c%s $D/rung3.exe)" "$(sha256sum $D/rung3.exe | cut -c1-64)"
+printf '  rung4.exe               %s  %s\n' "$(stat -c%s $D/rung4.exe)" "$(sha256sum $D/rung4.exe | cut -c1-64)"
+echo
+echo "## WHAT THIS MEANS"
+echo "  USER CODE NOW EXECUTES ON ARM64. A process starts, the runtime initialises,"
+echo "  main() runs, the C library allocates memory and writes to stdout, and the"
+echo "  process exits with the value main() returned. That is a working minimal"
+echo "  MSYS2 runtime for single-threaded, non-signalling, non-forking programs."
+echo
+echo "## WHAT IT DOES NOT MEAN"
+echo "  fork() IS UNTESTED. Signals are UNTESTED -- the 989 sigfe trampolines have"
+echo "  still never been exercised. pthreads untested. No real MSYS2 program (bash,"
+echo "  coreutils) has been run. NOT a product pass, NOT a complete runtime, and it"
+echo "  creates no authority. Rung 5 (signals, then fork) is the next step."
+} > $E/rungs-3-and-4-passed.txt
+head -18 $E/rungs-3-and-4-passed.txt

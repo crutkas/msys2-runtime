@@ -1,0 +1,61 @@
+# ARM64 vNext -- BASE-RELOCATION INVESTIGATION, CORRECTED (session c63ab774)
+# 2026-09-03T15:48:05Z
+
+## METHOD CORRECTION (mine)
+  My first count assumed every thunk's two quads sat at +0x30/+0x40. That is
+  unsound: each thunk embeds .asciz "<name>", so thunk size varies with name
+  length. I re-measured WITHOUT any layout assumption -- scanning the section
+  for 8-byte-aligned qwords whose value falls inside the image VA range, then
+  checking each against the .reloc directory.
+  The corrected method returns THE SAME NUMBERS:
+      absolute image-range qwords in .autoload_text : 424
+      WITH DIR64 base relocation                    :  10
+      WITHOUT                                       : 414
+  So the figure stands, but it now rests on a sound derivation.
+
+## HYPOTHESIS TESTED AND REFUTED: '10 == number of distinct DLLs'
+  distinct autoloaded DLLs in autoload.cc : 21
+  distinct ..._info symbols in the image  : 21
+  (kernel32 ntdll advapi32 user32 secur32 netapi32 ws2_32 wldap32 shell32
+   ole32 psapi pdh mpr iphlpapi gdi32 dnsapi authz userenv winmm KernelBase)
+  21 != 10, so 'one base relocation per unique target symbol' is WRONG.
+
+## WHAT THE SURVIVORS ACTUALLY ARE
+  At least one survivor is a genuine thunk slot: RVA 0x21bdd0 belongs to
+  _win32_waveOutClose (thunk at 0x18021bd90) and holds 0x18021bd98, the
+  address of its 1b loader stub -- i.e. exactly the same construct as the
+  414 that were dropped. So the linker emits a base relocation for SOME
+  instances of a construct and drops it for others. The discriminator is
+  STILL NOT IDENTIFIED. Reported as an open question, not guessed at.
+
+## BUT THE PRIMARY DEFECT IS UPSTREAM OF ALL OF THIS
+  x86_64 and aarch64 emit the SAME two absolute quads per thunk, and a
+  sibling confirmed both targets emit ADDR64 object relocations for them.
+  The construct is upstream Cygwin design, not an ARM64 port artefact.
+  It is safe upstream because the Cygwin runtime DLL is NEVER RELOCATED:
+  fork() copies the address space and requires the DLL at the same address
+  in parent and child.
+
+  OUR LINK ENABLED ASLR:  DllCharacteristics 0x0160
+      HIGH_ENTROPY_VA SET / DYNAMIC_BASE SET / NX_COMPAT SET
+  and the image was duly relocated to 0x00007FFDAD3D0000.
+  Makefile.am passes no --disable-dynamicbase; modern binutils defaults it on.
+
+  Relinking with -Wl,--disable-dynamicbase -Wl,--disable-high-entropy-va:
+      DllCharacteristics 0x0100 (DYNAMIC_BASE cleared)
+      sha256 5914644f37789006c104c91205b755d66e07cf81c8e6283dbd645fdc1380ae9e
+      LOAD BEHAVIOUR CHANGED: the 0xC0000005 crash is GONE; LoadLibrary now
+      returns cleanly with GetLastError 193 ERROR_BAD_EXE_FORMAT.
+
+## NEXT STEP, NOT DONE
+  ImageBase reads 0x180040000, not the 0x180000000 requested via
+  -Wl,--image-base; cygwin.sc places .text at __image_base__ +
+  __section_alignment__ and appears to win. With ASLR off the loader must
+  place the image at exactly that base, and 193 is consistent with it being
+  unable to. This is a link/script question, not a source one.
+
+## STILL OPEN, STILL SEPARATE
+  0xFFFFFFFF00000000 remains unexplained and is NOT merged into the above.
+
+## STATUS
+  Nothing has executed beyond the loader. No user code has run.

@@ -1,0 +1,209 @@
+# THE WILD VALUE IS EXACTLY THE MAIN THREAD'S TEB. MEASURED, DIFFERENCE ZERO.
+# 2026-09-03T12:01:32Z   session c63ab774
+
+## THE MEASUREMENT
+  CREATE_PROCESS_DEBUG_INFO carries the main thread's TEB at event offset 56
+  (lpThreadLocalBase). Captured it, then sampled cygheap+8 across the window:
+
+     [MAIN THREAD] tid=125808  TEB = 0x8000274000
+     [THREAD CREATE] tid=83896  start=msys-2.0.dll+0x50DC  TLB=0x800027A000
+     [sample] after that event  cygheap+8 = 0x8000274000   *** WILD ***
+
+     main thread TEB = 0x8000274000
+     wild value      = 0x8000274000
+     difference      = 0
+     WILD VALUE == MAIN THREAD TEB ?  YES
+
+## WHY THIS IS THE ANSWER TO 'WHAT IS BEING STORED'
+  Every previous description of the value was negative or approximate: 'an
+  OS-chosen address', 'per-run randomised', 'page-aligned', 'in the 512-898
+  GiB band', 'not a DLL image base', 'not a dlmalloc segment'. IT IS THE TEB.
+  That explains every one of those properties at once -- TEBs are ASLR-placed,
+  page-aligned, allocated in that band, and vary per run.
+  It also retrospectively explains an observation from another session that
+  the value was 'within ~50 MB of the TEB' and 'same magnitude as the TEB'.
+  It was not near the TEB. IT WAS THE TEB.
+
+## AND THE GEOMETRY MAKES THE MECHANISM ALMOST SELF-EVIDENT
+     cygheap+8  ==  StackBase+8      (measured: main StackBase == 0x800000000
+                                      == CYGHEAP_STORAGE_LOW)
+     TEB+8      ==  NT_TIB.StackBase
+  The correct operation everywhere in this runtime is
+     ldr x0, [x18, #8]        ; load StackBase FROM TEB+8
+  The corrupting operation has the same two operands with the roles swapped:
+     str <teb>, [<stackbase>, #8]   ; store TEB INTO StackBase+8
+  So the defect is a TEB/StackBase confusion: something uses StackBase where a
+  TEB pointer belongs, and writes the TEB into what it believes is
+  NT_TIB.StackBase of a TEB. The victim just happens to be cygheap->chain.
+
+## TWO CONSTRAINTS ON THE WRITER, BOTH MEASURED
+  1. THERE IS NOT A SINGLE 'str x18, ...' INSTRUCTION IN THE ENTIRE IMAGE.
+     Count is zero. So the TEB is not stored directly from x18 by msys code;
+     it must travel via a copy (mov xN, x18 then str xN) or be stored by code
+     outside msys-2.0.dll.
+  2. cygthread::stub IS NOT THE WRITER. Its prologue is correct:
+        1800450e8  mov x1, #-12800
+        1800450fc  mov x0, x18
+        180045100  ldr x0, [x0, #8]        ; StackBase
+        180045108  add x0, x0, x1          ; StackBase - 12800  == _my_tls
+        18004510c  str x19, [x0, #4880]    ; _my_tls._ctinfo = info
+     x1 is set immediately, so the subtraction is right and the store lands
+     inside _cygtls. I checked this specifically because a thread start
+     routine receives only x0 -- x1 would be undefined if the compiler had
+     assumed it -- and it does not.
+
+## THREAD IDENTITY: IT IS A CYGWIN THREAD, NOT AN OS WORKER
+  The thread created inside the bracket starts at msys-2.0.dll+0x50DC =
+  cygthread::stub, cygthread.cc:139. Two OTHER threads in the process start at
+  ntdll.dll+0xB63B0 and are created BEFORE the bracket.
+  This contradicts a static inference that nothing in setup_cygheap dispatches
+  a cygthread; something evidently does.
+
+## WHAT IS STILL NOT KNOWN
+  The instruction. I know WHAT is stored (the TEB), WHERE (cygheap+8 ==
+  StackBase+8), WHEN (bracketed at the creation of the cygthread), and that it
+  is not a direct x18 store from this image. I do not have the PC.
+
+## A STATIC INFERENCE ABOUT THE THREAD'S ORIGIN WAS CONTRADICTED BY THE EVENT
+## RECORD -- WORTH KEEPING AS A PATTERN
+  Two sessions independently reasoned from source that the thread created
+  inside the bracket must be OS-internal: sigproc_init() (which creates the
+  signal thread) runs at dcrt0.cc:779, AFTER setup_cygheap() at 753;
+  cygthread::init() (cygthread.cc:223) only does
+  main_thread_id = GetCurrentThreadId() and creates nothing; and nothing in
+  setup_cygheap's tail visibly dispatches a cygthread. The conclusion was
+  'ntdll worker, thread pool, or ETW'.
+  THE CREATE_THREAD_DEBUG_EVENT RECORD SAYS OTHERWISE:
+     lpStartAddress = msys-2.0.dll+0x50DC = cygthread::stub(void*)
+                                            cygthread.cc:139
+  And in the same run TWO OTHER threads DO start at ntdll.dll+0xB63B0 -- real
+  OS workers -- but both are created BEFORE the bracket. So the OS-worker
+  threads exist; this simply is not one of them.
+  THE REASONING WAS SOUND AND THE CONCLUSION WAS WRONG. Call-order analysis
+  establishes what the source SAYS happens; it cannot establish what DID
+  happen, because a dispatch can be reached by a path the reader did not
+  trace. lpStartAddress is one field in a record the debugger is already
+  being handed -- the measurement cost nothing and overturned two independent
+  static derivations.
+
+## AND IT ONLY GOT ASKED BECAUSE SOMEONE ASKED THE RIGHT QUESTION
+  The instruction to read lpStartAddress came from the session that had
+  reasoned to the wrong answer. It proposed the exact measurement that would
+  falsify its own conclusion, and that measurement is what produced the TEB
+  finding, because capturing the thread record put lpThreadLocalBase and
+  CREATE_PROCESS_DEBUG_INFO+56 in front of me at the same time.
+  A WRONG CONCLUSION ACCOMPANIED BY THE TEST THAT KILLS IT IS WORTH MORE THAN
+  A CAUTIOUS ONE WITH NO TEST ATTACHED.
+
+## _cygtls OVERFLOW HYPOTHESIS: REFUTED, AND THIS TIME I MEASURED IT MYSELF
+  The hypothesis: if sizeof(_cygtls) > __CYGTLS_PADSIZE__ then _my_tls writes
+  overrun into the cygheap, and a field at offset 12808 would hit
+  cygheap->chain exactly. Argued to be ARM64-specific because _cygtls embeds
+  ucontext_t -> __mcontext, which is target-defined (signal.h carries
+  '#error unimplemented for this target' for unported targets).
+
+  TWO SESSIONS HAD ALREADY REPORTED sizeof(_cygtls) = 5016, AND I HAD CITED
+  THAT NUMBER WITHOUT EVER MEASURING IT. After being caught earlier today
+  propagating a constant I had not re-derived, I compiled my own probe:
+     sizeof(_cygtls)     =  5016
+     __CYGTLS_PADSIZE__  = 12800
+     sizeof(ucontext_t)  =   976
+     sizeof(__mcontext)  =   928
+     headroom            =  7784 bytes
+  The mechanism needs sizeof > 12808. It is 5016 -- not marginal, not close.
+  REFUTED. And __mcontext at 928 bytes is unremarkable next to the 912-byte
+  ARM64 CONTEXT, so the 'ARM64 struct is bigger' premise does not hold either.
+
+## BUT THE HYPOTHESIS CAME WITH A TRUE AND VALUABLE OBSERVATION, AND I ACTED
+## ON IT: THERE WAS NO static_assert GUARDING THIS ANYWHERE IN THE TREE.
+  That is a real latent gap independent of whether the overflow exists today.
+  The consequence of a future violation is unusually nasty on this target:
+  THREAD_STORAGE_HIGH and CYGHEAP_STORAGE_LOW are BOTH 0x800000000, so a
+  _cygtls that overran StackBase would land on cygheap->chain -- silent heap
+  chain corruption, discoverable only at fork() time, which is precisely the
+  defect this session has spent hours localising by other means.
+
+  ADDED to local_includes/cygtls.h, immediately after the struct:
+     static_assert (sizeof (_cygtls) <= __CYGTLS_PADSIZE__,
+                    "_cygtls exceeds __CYGTLS_PADSIZE__: it would overrun "
+                    "StackBase and corrupt the cygheap");
+  with a comment recording why it matters on this layout and the measured
+  numbers as of today.
+
+## VERIFIED IN BOTH DIRECTIONS -- AN ASSERT THAT CANNOT FIRE IS WORTHLESS
+  POSITIVE: cygtls.o rebuilds cleanly, so the assert holds for the real struct.
+  NEGATIVE CONTROL: a deliberately violating instance of the same assert DOES
+  fail to compile --
+     error: static assertion failed: _cygtls exceeds __CYGTLS_PADSIZE__
+     note: the comparison reduces to '(5016 <= 4096)'
+  So the guard is live rather than decorative. Checking only that it compiles
+  would have proven nothing.
+  Local edit, comment plus one assertion. No commits, pushes, PRs, CI or
+  upstream contact.
+
+## STATIC SEARCH FOR THE WRITER: RAN IT, FOUND NOTHING, AND THE SCAN ITSELF
+## HAS A DEFECT I AM RECORDING RATHER THAN GLOSSING.
+  The TEB finding enabled a search nobody could do before: since the stored
+  value IS the TEB, and there are ZERO 'str x18' instructions in the image,
+  the TEB must reach memory via 'mov xN, x18' followed by a store of xN.
+  Disassembled the whole image (608,901 lines) and scanned:
+     'mov xN, x18' sites                                    1850
+     sites where that register is subsequently stored          57
+     of those, stores with offset #8                            0
+
+  TWO SITES STORED AT OFFSET 0, which would still hit cygheap+8 if the base
+  register already held StackBase+8. Both were checked and BOTH ARE FALSE
+  POSITIVES OF MY OWN SCAN:
+     1800c4bb0  str x0, [x1]     -- x0 reloaded with #-1 at 1800c4ba8
+     1800c64f8  str x0, [x19]    -- x0 reloaded with #-1 at 1800c64f4
+  In both cases the register had been OVERWRITTEN between the 'mov xN,x18'
+  and the store, so the value stored is -1, not the TEB.
+
+  MY SCAN'S OVERWRITE DETECTION IS BROKEN. I wrote a check intended to stop
+  scanning when the register is redefined; it does not work, so an unknown
+  fraction of the 57 'hits' are the same false positive. THE SCAN THEREFORE
+  ESTABLISHES NOTHING -- neither the absence of a #8 store nor the presence
+  of the 57.
+  THIS IS THE SAME FAILURE AS THE v2 NAMING ATTEMPT: a capture whose FILTER
+  was wrong rather than whose mechanism was wrong. Both times the output
+  looked like a result. Both times the defect was in what I chose to exclude.
+  I caught it here only by opening the two most interesting hits and reading
+  the surrounding instructions -- which is what I should have done to all 57.
+
+## SO THE WRITER IS STILL NOT NAMED, AND I AM NOT CLAIMING THE SEARCH WAS
+## CONCLUSIVE. A correct version would track register liveness properly, or
+## simply disassemble every one of the 57 windows by hand.
+
+## THE MECHANISM IS SINGLE-THREADED. A CROSS-THREAD READING WAS PROPOSED AND
+## IS REFUTED BY THE ARITHMETIC.
+  Proposed: 'a thread storing ANOTHER thread's TEB at StackBase+8 implies code
+  that computes some thread's StackBase and some thread's TEB and crosses
+  them' -- suggesting a loader walking a thread list.
+  THE OPERANDS BOTH BELONG TO THE MAIN THREAD:
+     value stored   = the MAIN thread's TEB   (measured, difference zero)
+     address stored = cygheap+8 == StackBase+8, and that StackBase is the
+                      MAIN thread's           (measured: 0x800000000)
+  And the two are directly related, because NT_TIB.StackBase lives at TEB+8:
+     main_TEB + 8  ==  main_StackBase
+  So the correct operation is the LOAD
+     main_StackBase = *(main_TEB + 8)
+  and what occurred is the STORE
+     *(main_StackBase + 8) = main_TEB
+  A PURE DIRECTION INVERSION ON ONE THREAD'S OWN DATA. Nothing is crossed and
+  no second thread is required.
+
+  WHY THE CORRECTION MATTERS: it changes what to search for. The cross-thread
+  reading sends you looking for loader code pairing fields across a thread
+  list. The actual shape is ordinary -- one thread, two related quantities,
+  a load written as a store -- which is what a hand-written or hand-ported
+  sequence produces.
+
+  IT ALSO DISSOLVES THE PUZZLE IT WAS BUILT TO EXPLAIN. The cross-thread idea
+  was motivated by my own observation that the wild value appeared at an event
+  on the sig thread in one run and the main thread in another. THAT IS MY
+  SAMPLING BRACKETING IN TIME, NOT THREAD -- which I had already flagged as
+  non-attributable. No cross-thread mechanism is needed to account for it.
+  A DATUM I EXPLICITLY LABELLED NON-ATTRIBUTABLE WAS USED AS THE BASIS FOR A
+  MECHANISM. Worth recording: labelling a limitation does not prevent the
+  datum from being used as though the limitation were absent, so the
+  limitation has to be restated wherever the datum travels.

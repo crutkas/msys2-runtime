@@ -1,0 +1,30 @@
+# ARM64 vNext -- built-artifact hash manifest
+# Captured 2026-09-03T07:02:17Z by supervisor heartbeat (session 290c9aaf).
+# Source: live WSL state /root/xc. READ-ONLY capture; nothing modified.
+# Reason: s36-hashes.sh computed these but the values reached only the session
+#         transcript, never disk. RESULT.md records sizes but zero sha256 values.
+
+PATH                                                              BYTES  SHA256
+bld/newlib/libc.a                                               7208392  e720439d7fe31eb630cf64bec01089c99c9408abaec983a08d6afbe575be404e
+bld/newlib/libm.a                                               1632850  5189c3608da3dcc3820ca79e62e943b16fc66a43af20cecca6da18b9445d5901
+build-gcc2/aarch64-pc-cygwin/libgcc/libgcc.a                    6677214  03dbeb8c726145f109b5a25e77941c53b7dc3ea60fb9c21c616a6d49166dfe95
+implibs/lib/libkernel32.a                                       1385232  6c21335a03272eb7bfde879e7b7a2b58d9402bf14bbdc4dcf8392b67d92fc6ea
+implibs/lib/libntdll.a                                          1898462  857a2e5d3f5f077e225bf3b87ccd4b4207abfd7373e9c11de388341f250db3cd
+implibs/lib/libadvapi32.a                                        745316  b0332e8c9f7c2d46499fc8873929f671f695f2a1fa5ece3b44f141c6967b4c8d
+implibs/lib/libuser32.a                                          795740  7906b1837e4b1dc4dd88ee88b7a2d9c639d5bcf6bcadd0383e318fa7f2048c73
+bld/winsup/cygwin/cygwin.sc                                        3729  3ce771ca6a757534258e159bfa5f949b8b317bf845357407dbdbdedbffeab668
+bld/winsup/cygwin/msys.def                                        40698  b4baa26b7b5d7044222d68be0e9dcc3d20ad7e865d4aa4fa5d61d8325444f966
+bld/winsup/cygwin/sigfe.s                                             0  e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+bld/winsup/cygwin/libdll.a                                     31160252  5a693f5be5e8afb60b235da20db4d84d564fb40df03fcb8d44242b2d953fb58d
+bld/winsup/cygwin/msysdll.a                                     1114462  2c1e2d560c6f8d87e4b6bfe890e518c0cc9a30ef6543c922c2af691701621fde
+
+# --- toolchain driver binaries (identity of the compiler that built the above) ---
+inst/bin/aarch64-pc-cygwin-g++                                 17261408  18d0b4487d00a6935a5fe03fd6984548841f47bec7759f996b3fb388abd9ebd7
+inst/bin/aarch64-pc-cygwin-gcc                                 17241008  dd4d9346c9cc48ecb104732619ea4a722dedc4e0d483e7c1848828b4be8a9036
+inst/bin/aarch64-pc-cygwin-ld                                  10927080  c142f1f70e4d9a5107ef5228c27c4e9a3ab0defb2e90f2241d7a78b6daf5c5dc
+inst/bin/aarch64-pc-cygwin-as                                  11684704  f649ae3258ef7fdb0f11ade129e245d507f5397a9e655892dbf83e86c106e708
+
+# --- confirmations ---
+# no msys-2.0.dll anywhere: CONFIRMED (none)
+# g++ : aarch64-pc-cygwin-g++ (GCC) 15.0.1 20250131 (experimental)
+# ld  : GNU ld (GNU Binutils) 2.44.50.20250131

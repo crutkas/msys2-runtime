@@ -1,0 +1,269 @@
+# WATCHPOINT ATTEMPT: PARTIAL RESULT, HONESTLY BOUNDED.
+# Plus a reusable capability finding for the programme.
+# 2026-09-03T17:10:33Z   session c63ab774
+# artefact under test, hash re-read at report time:
+#   msys-2.0.dll 490dfe093a6dd2b76723715e85dfb779a85bd6add9b03795f61826ee0a9215cf
+#   rung8.exe    0078cd0fa92813915dbd2e6d22df7448964b7b18c41d7e89ec6daa1a8645d204
+
+## CAPABILITY FINDING: HARDWARE WATCHPOINTS WORK ON WINDOWS ON ARM
+  This is reusable and nobody in the programme had established it.
+  ARM64 CONTEXT is 912 bytes; the debug registers sit at:
+     Bcr[8] @0x318   Bvr[8] @0x338   Wcr[2] @0x378   Wvr[2] @0x380
+  ContextFlags = CONTEXT_ARM64|CONTROL|INTEGER|FP|DEBUG_REGISTERS
+               = 0x0040000F
+  DBGWCR encoding for an 8-byte user-mode WRITE watchpoint:
+     E bit0 =1 | PAC bits2:1 =0b10 (EL0) | LSC bits4:3 =0b10 (store)
+     | BAS bits12:5 =0xFF        ==>  0x1FF5
+  SetThreadContext ACCEPTED it and a GetThreadContext READBACK CONFIRMED
+  it was kept:  Wcr[0]=0x1FF5  Wvr[0]=0x800000008.  It then FIRED.
+  I verified the readback rather than trusting the set to have worked,
+  because a platform may silently ignore registers it does not honour.
+
+## WHAT THE WATCHPOINT ESTABLISHED
+  Every hit reported PC = msys-2.0.dll RVA 0xA9000, which addr2line maps
+  to _cmalloc at mm/cygheap.cc:398. Disassembly of the sequence:
+     1800e8ff0  ldr x0, [x2, #8]    ; x0 = cygheap->chain
+     1800e8ff4  str w6, [x5]        ; rvc->b = b        (4-byte store)
+     1800e8ff8  str x0, [x5, #8]    ; rvc->prev = cygheap->chain
+     1800e9000  str x5, [x2, #8]    ; cygheap->chain = rvc   <== WATCHED
+
+  THIS IS THE IMPORTANT INFERENCE: at 0x1800e8ff8 the value written into
+  rvc->prev is whatever cygheap->chain ALREADY HELD. _cmalloc:398 always
+  stores a valid rvc. SO _cmalloc IS NOT THE CORRUPTER -- IT FAITHFULLY
+  PROPAGATES A VALUE THAT WAS ALREADY WRONG. The corrupting write to
+  cygheap+8 comes from somewhere else, and it is that write the
+  watchpoint was meant to catch.
+
+## WHY IT DID NOT CATCH IT -- STATED PLAINLY, NOT GLOSSED
+  The watchpoint RE-FIRES ON THE SAME INSTRUCTION. Every one of the 38
+  recorded hits reports the identical PC and LR, and the watched location
+  reads 0 each time, so NO FORWARD PROGRESS WAS MADE. Resuming with
+  DBG_CONTINUE re-executes the same store and re-triggers.
+  To advance, the handler must disarm, single-step one instruction, and
+  re-arm -- which on AArch64 means driving the Cpsr SS bit or an
+  equivalent, and I did not implement it.
+  THEREFORE THE RUN NAMES A KNOWN-LEGITIMATE WRITER AND DOES NOT NAME THE
+  CORRUPTER. I am recording it as a partial result. The 38 identical
+  lines are ONE observation repeated, not 38 observations, and they must
+  not be read as a sequence of distinct writes.
+
+## NEXT INSTRUMENT
+  Either finish the watchpoint (disarm / single-step / re-arm), or run
+  the polling bisect: sample cygheap->chain at points between
+  cygheap_init() and the first surviving allocation and halve the window.
+  The target window is already narrow: between cygheap->user.init() and
+  the next _cmalloc.
+
+## UPDATE: SINGLE-STEP ADVANCE IMPLEMENTED. FORWARD PROGRESS ACHIEVED.
+  Fixed the re-fire by disarming the watchpoint, setting the AArch64 software
+  single-step bit (Cpsr bit 21, CONTEXT offset 0x004), and re-arming on the
+  resulting step exception. State is kept PER THREAD -- a single global flag
+  was wrong because the process runs five threads and their step exceptions
+  interleave.
+
+  The watchpoint now advances and the first three chain updates were observed:
+
+     [ 1] chain = 0x0000000000000000   _cmalloc  (initial, correct)
+     [ 2] chain = 0x00000008000048A0   _cmalloc
+     [ 3] chain = 0x00000008000050B0   _cmalloc
+
+## THE NEW DATUM, AND IT IS A REAL RESULT
+  0x8000048A0 IS EXACTLY cygheap + sizeof(init_cygheap) = the first byte after
+  the header -- THE SAME ADDRESS x86-64 SHOWS AS ITS LOWEST CHAIN ENTRY IN
+  4 OF 4 PROCESSES.
+
+  SO THE ARM64 CHAIN STARTS CORRECTLY. The first allocation is at the header
+  boundary and IS properly chained. This directly confirms, by observation
+  rather than inference, the timing refinement supplied statically: everything
+  in [0x48A0, 0x68F0) WAS correctly chained when allocated, and only became
+  orphaned later when the head was overwritten. The corruption is NOT at the
+  start of process life.
+
+  It also independently corroborates that the mmap arena cannot have been the
+  source during setup_cygheap, since at that point the chain head still holds
+  proper in-cygheap values.
+
+## WHAT STILL DOES NOT WORK -- STATED PLAINLY
+  The run stops after three hits. Four further threads are created and armed
+  (readback verified on each), and then no further watchpoint exceptions
+  arrive and WaitForDebugEvent times out. The chain reaches 39 entries in a
+  normal run, so roughly 36 hits are missing.
+  I have NOT diagnosed why. Candidates not yet distinguished: the step
+  exception failing to arrive on some thread leaving the watchpoint disarmed;
+  interaction between per-thread debug registers and thread creation; or my
+  handling of the deliberate null write at the end of rung8.
+  THE INSTRUMENT IS THEREFORE STILL INCOMPLETE AND HAS NOT NAMED THE WRITER.
+  What it has produced is the datum above, which stands on its own.
+
+## SECOND PLACEMENT: WATCHPOINT ON THE ENTRY'S prev SLOT -- AN UNRESOLVED
+## CONTRADICTION, RECORDED AS SUCH RATHER THAN INTERPRETED.
+  A sibling's static audit raised a distinction my first placement could not
+  discriminate: the stray store might go DIRECTLY INTO THE ENTRY'S +8 SLOT
+  after allocation, rather than into cygheap+8 before it. That is testable,
+  and it also avoids the advance problem, because an entry's prev slot is
+  written only ONCE legitimately, so there should be almost no hits.
+
+  Armed a write watchpoint on 0x8000068F8 (entry 0x8000068F0, +8).
+  Readback verified on all 4 threads: Wcr[0]=0x1FF5 Wvr[0]=0x8000068F8.
+  IT NEVER FIRED.
+
+  FIRST I CHECKED THE ASSUMPTION THE TEST DEPENDS ON: is the entry address
+  stable across runs? MEASURED, 3 fresh runs of the same binary:
+     run 1  lowest entry 0x8000068F0   prev = 0x0000008000351000
+     run 2  lowest entry 0x8000068F0   prev = 0x000000E0A3FDF000
+  STABLE ADDRESS, VARYING VALUE. So the watch address was correct.
+
+  THE CONTRADICTION: _cmalloc demonstrably writes rvc->prev at entry+8 when
+  it creates an entry -- I have the instruction, 1800e8ff8 str x0,[x5,#8] --
+  and the entry at 0x8000068F0 certainly exists by the end of the run, since
+  the chain walk finds it every time. So a verified write watchpoint on that
+  exact address SHOULD have fired at least once. It did not.
+
+  I HAVE NOT RESOLVED THIS, AND I THEREFORE DRAW NO CONCLUSION FROM THE
+  NEGATIVE RESULT. It would be easy and wrong to read 'never fired' as
+  'nothing writes that slot, so the value was pre-existing' -- that is a
+  strong claim resting on an instrument that has just behaved inconsistently
+  with a known fact. The candidate explanations I have not distinguished:
+    - the watchpoint run terminates earlier than a normal run (there is no
+      'process exited' line in that run, so the debug loop timed out);
+    - only one hardware watchpoint slot is honoured and per-thread arming
+      interacts badly with the 5 threads;
+    - the entry is created on a thread whose arming did not take effect.
+
+  A NEGATIVE RESULT FROM AN INSTRUMENT THAT CONTRADICTS A KNOWN FACT IS NOT
+  EVIDENCE. It is a reason to distrust the instrument until reconciled.
+
+## THIRD ITERATION: SELF-HEALING ARM. THE HEAD TRACE NOW WORKS; THE ENTRY-SLOT
+## WATCH STILL DOES NOT, AND THE CONTRADICTION IS NOW DEEPER.
+
+### THE FIX AND WHY THE EARLIER RUNS WENT SILENT
+  Root cause of the stall: on each hit I disarmed the watchpoint and set
+  single-step, then re-armed ONLY on the resulting step exception. If that
+  exception was ever missed, the watchpoint stayed DISARMED FOREVER and the
+  run went quiet -- which is exactly what 'stopped after 3 hits' was.
+  Fix: re-arm on EVERY debug event for any thread not mid-step. Self-healing.
+
+### RESULT ON THE CHAIN HEAD -- IT WORKS
+  36 head writes captured, all from _cmalloc at cygheap.cc:398, advancing
+  monotonically: 0 -> 0x48A0 -> 0x50B0 -> 0x6A40 -> 0x6A80 -> 0x6B50 ->
+  0x7160 ... -> 0x95C0. EVERY CAPTURED HEAD VALUE IS A VALID IN-CYGHEAP
+  POINTER. No wild value was ever observed being written to the head.
+
+### BUT THE TRACE IS PROVABLY INCOMPLETE, AND I CAN DEMONSTRATE IT
+  0x8000068F0 and 0x800006A00 are BOTH in the final chain -- the walk goes
+  ... 0x6A40 -> 0x6A00 -> 0x68F0 -> wild -- yet NEITHER EVER APPEARS AS A
+  CAPTURED HEAD VALUE. Since every entry becomes the head when it is born,
+  both writes were MISSED, during a window when the watchpoint was disarmed.
+  SO THE 36-LINE TRACE HAS GAPS AND MUST NOT BE READ AS A COMPLETE HISTORY.
+  In particular 'no wild value was written to the head' is NOT established --
+  only 'no wild value was seen in the writes that were captured'.
+
+### THE ENTRY-SLOT WATCH STILL NEVER FIRES, AND THAT IS NOW WORSE
+  Re-ran the watchpoint on 0x8000068F8 WITH the self-healing fix. Armed and
+  readback-verified. NEVER FIRED, again.
+  This contradicts a necessary fact: _cmalloc creates the entry at
+  0x8000068F0 in this very run (the chain walk finds it every time), and
+  creation writes rvc->prev at exactly 0x8000068F8 via the instruction I have
+  disassembled, 1800e8ff8 str x0,[x5,#8]. The birth write ALONE should fire it.
+  So the instrument fails to observe a write that provably occurs.
+
+### WHAT I CONCLUDE: NOTHING, AND THAT IS DELIBERATE
+  A watchpoint that misses a write I can prove happens is not evidence about
+  any other write. I am NOT concluding 'nothing writes the entry slot', and I
+  am NOT concluding the value is pre-existing. The instrument is unreliable
+  for this address for a reason I have not identified, and until that is
+  understood every negative result from it is void.
+  Candidates not distinguished: watchpoint disarmed across the specific window
+  despite self-heal; the write occurring on a thread before its first debug
+  event; or a store form the watchpoint does not trap.
+
+### WHAT SURVIVES FROM THIS ITERATION
+  - The self-healing arm is a real fix and the head trace is genuine as far
+    as it goes (36 verified _cmalloc writes, all valid).
+  - The gap demonstration is itself a solid result: it proves entries are
+    created that the head-watch does not see, so any future use of this
+    instrument must account for gaps.
+  - Structural logic from the sibling stands independently of all this:
+    entries are chained once at birth and never unlinked, and freelist(+0)
+    and chain(+8) are disjoint fields. Combined with the head being valid at
+    0x48A0 early, the deepest entry SHOULD be 0x8000048A0. It is 0x8000068F0.
+    THAT REMAINS THE SHARPEST UNEXPLAINED FACT.
+
+## FOURTH ITERATION: THE GAP IS NOW CHARACTERISED, AND THE INSTRUMENT HAS A
+## LIMITATION I COULD NOT RESOLVE. NO CONCLUSION IS DRAWN FROM IT.
+
+### FULL EVENT LOG ACROSS THE GAP (hits 3 -> 4), WITH EXCEPTION CODES
+   [   3] chain=0x8000050B0            <- last captured before the gap
+   [ev] code=1 tid=48688 ec=0x80000003 first (mid-advance)
+   [ev] code=2 tid=17820                        <- NEW THREAD created
+   [ev] code=1 tid=17820 ec=0x406D1388 first    <- thread-name-set, benign
+   [ev] code=1 tid=17820 ec=0xC00000FF first
+   [ev] code=6 tid=48688                        <- LOAD_DLL
+   [ev] code=6 tid=48688                        <- LOAD_DLL
+   [ev] code=6 tid=48688                        <- LOAD_DLL
+   [ev] code=6 tid=48688                        <- LOAD_DLL
+   [ev] code=6 tid=48688                        <- LOAD_DLL
+   [ev] code=1 tid=48688 ec=0x80000003 first
+   [   4] chain=0x800006A40            <- first captured after the gap
+
+### WHAT THIS ESTABLISHES
+  1. HARDWARE WATCHPOINT HITS ARRIVE AS ec = 0x80000003 (EXCEPTION_BREAKPOINT)
+     on this platform, NOT 0x80000004. Worth recording: it means a watchpoint
+     hit is INDISTINGUISHABLE BY CODE from an ordinary breakpoint, including
+     from the PC+4 advance breakpoint I set myself. Only per-thread state
+     separates them.
+  2. THE MISSED WRITES COINCIDE EXACTLY WITH A BURST OF FIVE LOAD_DLL EVENTS
+     AND ONE THREAD CREATION. That is precisely when Cygwin's dll_list::alloc
+     performs its cmalloc calls, so it is where the births of 0x8000068C0,
+     0x8000068F0 and 0x800006A00 must occur.
+  3. The re-arm did NOT fail: every arm/disarm call now reports failure and
+     none was logged. So the watchpoint was armed across the window and the
+     writes still produced no exception.
+
+### WHAT I CANNOT EXPLAIN, AND AM NOT GOING TO GUESS AT
+  Writes that provably occur, to an address a verified-armed watchpoint is
+  covering, produced no debug event. I have now proposed two explanations for
+  gaps in this trace -- missed single-step exceptions, then a silently
+  disarmed watchpoint -- AND BOTH WERE WRONG. I am not proposing a third.
+  The instrument has a limitation around DLL-load and thread-creation events
+  that I have characterised but not diagnosed.
+
+### CONSEQUENCE FOR THE (a)/(b) DISCRIMINATOR
+  Counting writes to cygheap+8 across the gap WOULD distinguish them: four
+  writes under (a) (wild store + three births), three under (b). THAT COUNT IS
+  EXACTLY WHAT THIS INSTRUMENT CANNOT PROVIDE, because the gap is precisely
+  where the count would have to be taken. A different instrument is needed --
+  one that READS AT KNOWN POINTS rather than trying to capture writes, which
+  is what was recommended and which I have not built.
+
+## CHALLENGE TO MY 'DATA WATCHPOINTS DO NOT DELIVER HERE' CLAIM: ARCHITECTURALLY
+## CORRECT, BUT REFUTED AS AN EXPLANATION BY MY OWN DATA.
+  The challenge: hardware watchpoints on Windows are PER-THREAD (they live in
+  the thread CONTEXT), whereas code breakpoints patch the shared instruction
+  stream and are process-wide. So a watchpoint armed on thread A cannot see a
+  store by thread B, and my 'watchpoint missed what the code breakpoint
+  caught' might simply be a thread I failed to arm.
+  THAT IS CORRECT WINDOWS BEHAVIOUR AND IT IS A GOOD CHALLENGE. It is also
+  exactly the check I have been applying to other people's negatives, so I
+  tested it against my own claim rather than defending the claim.
+
+  MEASURED -- all four allocation births are on ONE thread, the MAIN thread:
+     [MAIN THREAD] tid=96816
+     [1] tid=96816  entry 0x8000048A0
+     [2] tid=96816  entry 0x8000050B0
+     [3] tid=96816  entry 0x8000068C0
+     [4] tid=96816  entry 0x8000068F0
+  The births the data watchpoint MISSED are precisely these -- 0x8000068C0,
+  0x8000068F0 and 0x800006A00. They occur on tid=96816, which is the FIRST
+  thread armed and the one whose arming was verified by GetThreadContext
+  readback (Wcr[0]=0x1FF5, Wvr[0]=0x800000008).
+  SO THE MISSED WRITES WERE ON AN ARMED THREAD. PER-THREAD SCOPING DOES NOT
+  EXPLAIN THE GAPS.
+
+  THE CLAIM STANDS as recorded -- data watchpoints do not deliver reliably in
+  this window on this host -- and the reason remains undiagnosed, which is how
+  I recorded it originally after two wrong explanations.
+  THE ARCHITECTURAL POINT IS STILL WORTH KEEPING: watchpoints are per-thread
+  and code breakpoints are process-wide. That is a real asymmetry, it is a
+  correct reason to arm every thread, and anyone building a capture here
+  should know it -- it simply is not the cause of THIS failure.

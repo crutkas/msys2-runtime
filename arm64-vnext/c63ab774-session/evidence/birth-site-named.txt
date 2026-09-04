@@ -1,0 +1,209 @@
+# THE FAR BOUND OF THE WINDOW IS NAMED. FULL CALL STACK AT THE BIRTH OF THE
+# CORRUPTED ENTRY, RECOVERED BY FRAME WALK.
+# 2026-09-03T12:11:20Z   session c63ab774
+
+## THE INSTRUMENT -- A ZERO-COST RIDER, NOT A NEW HARNESS
+  I had hit a throughput wall trying to breakpoint cstrdup (called too often;
+  each hit costs a disarm/advance/re-arm round trip). A sibling supplied the
+  fix: DON'T breakpoint cstrdup at all -- WALK THE FRAME from the birth probe
+  that already works, at the ONE birth that matters.
+  AAPCS64: [x29] = caller's frame pointer, [x29+8] = caller's return address.
+  This follows directly from my own correction that LR at a post-prologue
+  store is NOT the caller (it pointed inside _cmalloc, clobbered by the SRW
+  lock call). THE RULE: on ARM64, never read LR for a caller -- walk [x29+8].
+  Three pointer chases in the existing handler. No new breakpoint, no fifth
+  harness, and it worked on the first run.
+
+## THE RESULT -- birth of entry 0x8000068F0, x29 = 0x7FFFFCB00
+   [0] RVA 0xA9784   creturn                     mm/cygheap.cc:445
+   [1] RVA 0x14C084  pwdgrp::check_file()         uinfo.cc:1687
+   [2] RVA 0xCCD78   internal_getpwsid(cygpsid&, cyg_ldap*)   passwd.cc:107
+   [3] RVA 0xB4F54   user_info::initialize()      mm/shared.cc:206
+   [4] RVA 0x6FD4    dll_crt0_1(void*)            dcrt0.cc:855
+   [5] RVA 0x5B0C    _cygtls::call2(...)          cygtls.cc:41
+
+## WHAT THIS SETTLES
+  1. THE FAR BOUND OF THE WINDOW IS user_info::initialize(), reached from
+     dll_crt0_1 at dcrt0.cc:855 -- NOT from setup_cygheap. That CONFIRMS the
+     static prediction that the next HEAP_STR after the username is later than
+     the setup_cygheap tail. Predicted from source, now observed.
+  2. THE WINDOW THEREFORE SPANS from cygheap_user::init's username cstrdup
+     (inside setup_cygheap) through to user_info::initialize in dll_crt0_1 --
+     which includes memory_init. Wider in wall-clock than I had assumed, but
+     every allocation inside it is non-HEAP_STR, so the two cstrdup calls
+     really are adjacent in the allocation sequence.
+  3. THE pwdgrp PATH IS ENTERED AFTER ALL -- via internal_getpwsid and
+     pwdgrp::check_file. THIS DOES NOT CONTRADICT my earlier measurement that
+     pwdgrp::fetch_account_from_windows is never entered before the wild
+     birth: check_file and fetch_account_from_windows are different functions,
+     and the stack shows check_file. Both measurements stand.
+     I flag this explicitly because 'the pwdgrp path is dead' would be an easy
+     and wrong summary of the earlier result -- what died was the NetApi
+     buffer hypothesis inside fetch_account_from_windows, not the whole file.
+
+## WHAT IT DOES NOT SETTLE
+  The writer. This names where the VICTIM was born, which bounds the window's
+  far end. The foreign store happens somewhere between the username cstrdup
+  and this call stack, and is still unnamed.
+
+## CAPABILITY LIMIT: ONLY THREE HARDWARE BREAKPOINT REGISTERS ARE HONOURED
+## HERE -- AND MY OWN READBACK CHECK WAS TOO LOOSE AND SAID OTHERWISE.
+  I tried to sample cygheap+8 at three named startup milestones (memory_init
+  0xB574C, sigproc_init 0x1122C8, user_info::initialize 0xB4EB8) using
+  Bcr[2]/Bcr[3]/Bcr[4]. NONE of the milestone breakpoints fired.
+  That negative is VOID, and I can prove it rather than assume it: the frame
+  walk shows user_info::initialize IS on the call stack, so it demonstrably
+  executes. A breakpoint on it that never fires is a broken instrument.
+
+  READBACK, comparing what was written against what was kept:
+     WROTE  Bcr[3] = 0x1E5   Bvr[3] = <sigproc_init address>
+     READ   Bcr[3] = 0x4     Bvr[3] = 0x0
+     WROTE  Bcr[4] = 0x1E5   Bvr[4] = <user_info::initialize address>
+     READ   Bcr[4] = 0x4     Bvr[4] = 0x0
+  THE PLATFORM SILENTLY STRIPPED BOTH -- only the PAC bits survived and the
+  addresses were discarded. Bcr[0], Bcr[1] and Bcr[2] ARE honoured (verified
+  repeatedly, with correct addresses read back). So this host keeps THREE
+  hardware breakpoints, not eight, despite the CONTEXT providing eight slots.
+
+## AND MY VERIFICATION CHECK WAS WRONG IN EXACTLY THE WAY I HAVE BEEN
+## WARNING OTHERS ABOUT ALL DAY
+  My guard was 'if (vB3 != 0 && vB4 != 0) HONOURED'. It printed YES, because
+  0x4 is not 0. THE REGISTER WAS NOT KEPT; ONLY A FRAGMENT OF IT WAS.
+  A READBACK CHECK MUST COMPARE AGAINST WHAT WAS WRITTEN, NOT MERELY TEST FOR
+  NON-ZERO. I introduced the readback discipline specifically because a
+  platform can silently ignore debug registers -- and then implemented the
+  check too weakly to detect the case it existed for.
+  I caught it only by printing the raw values next to the verdict and reading
+  them. THAT IS THE FOURTH TIME TODAY AN INSTRUMENT OF MINE PRODUCED A
+  PLAUSIBLE-LOOKING WRONG ANSWER, AND THE FOURTH TIME THE DEFECT WAS IN THE
+  CHECK RATHER THAN THE MECHANISM: the v2 exclusion list, the data-watchpoint
+  gaps, the mov-x18 scan's overwrite detection, and now this.
+
+## CONSEQUENCE
+  Milestone bisection needs at most three simultaneous breakpoints, or must
+  re-arm a single register between milestones. Not attempted further.
+
+## munge_threadfunc ELIMINATED BY VALUE SHAPE -- BUT IT CARRIES A REAL LATENT
+## DEFECT THAT SHOULD BE RECORDED SEPARATELY.
+  Proposed candidate (init.cc:31): runs on every DLL_THREAD_ATTACH, walks the
+  stack from __builtin_frame_address(0) up to NtCurrentTeb()->Tib.StackBase,
+  and PATCHES stack entries. It executes on the new thread inside my bracket,
+  so the timing fits perfectly.
+
+  ELIMINATED BY THE VALUE, WHICH IS THE ONE THING THAT DOES NOT FIT.
+  The write at init.cc:61 is
+      ebp[threadfunc_ix[i]] = (char *) threadfunc_fe;
+  threadfunc_fe is a FUNCTION -- 't threadfunc_fe(void*)' at 0x1800d2980,
+  i.e. a CODE pointer inside msys-2.0.dll, which at runtime sits around
+  0x7FFDB9xxxxxx (~140 TiB). The observed wild value is ~512 GiB AND IS
+  EXACTLY EQUAL TO THE MAIN THREAD'S TEB. Two quantities differing by ~280x,
+  where one of them matches a different known value to the byte.
+  So munge_threadfunc's patch is not this store.
+
+## BUT THE STRUCTURAL CONCERN IN IT IS GENUINE AND WORTH FLAGGING ANYWAY
+  The indices in threadfunc_ix[] are computed ONCE -- the scan at lines 37-41
+  is guarded by 'if (!threadfunc_ix[0])' -- on whichever thread runs first,
+  as OFFSETS FROM THAT THREAD'S FRAME:
+      threadfunc_ix[i++] = peb - ebp;
+  and are then REUSED on EVERY SUBSEQUENT THREAD at line 61 as offsets from
+  THAT thread's frame:
+      ebp[threadfunc_ix[i]] = (char *) threadfunc_fe;
+  The scan bound is 'peb < top' where top is StackBase, so an index may be as
+  large as the distance from the recording thread's frame to its stack base.
+  IF FRAME DEPTHS DIFFER BETWEEN THREADS -- and there is nothing guaranteeing
+  they do not, least of all across a new architecture's differing prologues --
+  ebp[threadfunc_ix[i]] WRITES AT AN ARBITRARY DISTANCE FROM THE CURRENT
+  FRAME, AND CAN LAND AT OR PAST StackBase.
+  On THIS memory layout StackBase == CYGHEAP_STORAGE_LOW, so 'past StackBase'
+  means 'in the cygheap header'.
+  There is no bounds check on the write; only the ORIGINAL SCAN was bounded.
+  I am NOT claiming this is our defect -- the value refutes it. I am recording
+  it because it is a real hazard of exactly the class we are hunting, in the
+  same window, and it would be missed by anyone who eliminated the function
+  and moved on.
+
+## FINAL BISECTION DATUM: THE STORE IS NOT SYNCHRONOUS WITH THREAD CREATION.
+  Sampled cygheap+8 at EVERY debug event from the FIRST birth onward, so the
+  whole history is covered rather than just the tail:
+     [MAIN THREAD] TEB = 0x8000351000
+     [THREAD CREATE] ntdll.dll+0xB63B0   (x2, both BEFORE the cygheap chain exists)
+     [1] birth 0x8000048A0   -> sample: 0x0 then 0x8000048A0
+     [2] birth 0x8000050B0   -> sample: 0x8000050B0
+     [3] birth 0x8000068C0   -> sample: unchanged
+     [THREAD CREATE] msys-2.0.dll+0x50DC (cygthread::stub)
+         sample after the CREATE event      = 0x8000068C0   STILL CORRECT
+         sample after the cygthread's event = unchanged     STILL CORRECT
+         sample after the main thread event = 0x8000351000  WILD == main TEB
+     [4] birth 0x8000068F0   -> prev = WILD
+
+  SO THE STORE DOES NOT HAPPEN DURING THE CREATE_THREAD EVENT ITSELF, NOR
+  DURING THE NEW THREAD'S FIRST EXCEPTION. The head is verifiably correct
+  after both. It occurs after the cygthread's first event and before the main
+  thread's next one.
+  A generic 'ntdll writes the TEB at thread attach' would have to be later
+  than the create event -- so it would have to be the new thread's
+  DLL_THREAD_ATTACH processing, not the creation itself.
+
+  THE TWO ntdll WORKER THREADS CANNOT BE USED AS A CONTROL: both are created
+  BEFORE the first chained allocation, i.e. before there is a chain head to
+  corrupt. So this run cannot say whether they would also have triggered it.
+  Stating that rather than treating their earlier creation as evidence of
+  anything.
+
+## PRACTICAL LIMIT REACHED FOR THIS INSTRUMENT
+  Event-granularity bisection cannot resolve finer than 'between two debug
+  events'. Going further needs single-stepping the interval (impractical
+  through loader code) or a data watchpoint that works in this window (it does
+  not) -- or the three-breakpoint milestone approach, bounded by the measured
+  limit of three honoured hardware breakpoint registers on this host.
+
+## THE TWO REMAINING ARM64-ASM CANDIDATES ARE BOTH ELIMINATED -- MEASURED
+  Proposal: the bug lives in one of the ARM64 replacements for upstream's
+  '#error unimplemented for this target' sites, specifically one that handles
+  BOTH the TEB and StackBase with the store/load roles swapped. Named
+  candidates: config.h:42 (__getreent) and create_posix_thread.cc:103
+  (pthread_wrapper's stack switch).
+
+  1. __getreent -- ALREADY ELIMINATED BY RUNTIME MEASUREMENT (returns
+     StackBase - 12800 = 0x7ffffce00, matching x86_64's value exactly).
+
+  2. pthread_wrapper -- ELIMINATED TWICE OVER.
+     (a) IT DOES NOT RUN IN THIS WINDOW. cygthread creates its thread with
+         plain CreateThread (cygthread.cc:299: 'CreateThread (&sec_none_nih,
+         0, is_freerange ? simplestub : stub, ...)'), NOT create_posix_thread.
+         So pthread_wrapper is not on the path at all for the sig cygthread.
+     (b) THE ASM IS CORRECT ANYWAY. Read it in full (create_posix_thread.cc
+         102-124):
+            ldr x9, [WRAPPER_ARG, #24]   // stackbase
+            mov x10, CYGTLS_PADSIZE
+            sub x9, x9, x10              // stackbase - 12800
+            and x9, x9, #-16             // AAPCS64 16-byte alignment
+            mov sp, x9
+            mov x29, #0
+         It SUBTRACTS the pad, aligns, and switches sp. IT NEVER TOUCHES x18
+         AND PERFORMS NO STORE AT ALL -- so it cannot be a swapped-operand
+         TEB store. The x86_64 branch above it does the same thing with the
+         same sense.
+
+  So the 'sealed-port ARM64 asm got the operands backwards' hypothesis has no
+  surviving site: of the four #error locations, two are the linker script and
+  _cygtls::lock, one is __getreent (measured correct), and one is
+  pthread_wrapper (not on the path, and correct).
+
+## STATE AT WHICH I AM STOPPING THIS LINE
+  WHAT IS KNOWN, ALL MEASURED:
+    value  = the main thread's TEB, exactly
+    target = cygheap+8 == StackBase+8, a fixed address
+    timing = after the sig cygthread's first exception, before the main
+             thread's next debug event; NOT synchronous with thread creation
+    shape  = case (a); the head is transiently wild and then restored by the
+             next _cmalloc, leaving one poisoned prev
+    origin = NOT in msys-2.0.dll's compiled code (four independent measured
+             negatives from a sibling, scope caveat stated)
+  WHAT IS NOT KNOWN: the instruction.
+  WHY I AM STOPPING: every instrument available to me is now measured against
+  its limit -- data watchpoints do not deliver in this window, only three
+  hardware breakpoint registers are honoured, single-stepping the interval
+  means stepping the Windows loader, and event-granularity bisection cannot
+  resolve finer than two adjacent debug events. Continuing would mean a sixth
+  harness iteration on momentum, which I have twice said I would not do.

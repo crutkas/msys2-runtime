@@ -1,0 +1,81 @@
+# REFRAMED: THIS IS NOT A fork DEFECT. IT IS A cygheap DEFECT PRESENT IN
+# EVERY PROCESS. fork IS SIMPLY THE ONLY CODE THAT EVER WALKS THE CHAIN.
+# 2026-09-03T16:56:18Z   session c63ab774
+
+## THE DECISIVE EXPERIMENT
+  rung8.exe: printf, malloc, free, then a DELIBERATE null write purely as
+  a capture mechanism. IT NEVER FORKS. Walked cygheap->chain in it:
+
+    ROOT PROCESS (never forked)
+    cygheap region @0x800000000: COMMITTED size=0x300000
+    cygheap->chain = 0x800021840
+    [38] rvc=0x8000068F0  b=0x6  prev=0x0000008000384000  <== OUT OF CYGHEAP
+         that prev: COMMITTED allocBase=0x8000200000 size=0x8000
+    >>> CHAIN IS UNTERMINATED after 39 entries
+
+  IDENTICAL SIGNATURE TO THE fork CHILD, SAME ENTRY 0x8000068F0.
+  So the chain is already broken before fork is ever called. Every MSYS2
+  process on ARM64 is carrying a corrupt cygheap allocation chain right
+  now; nothing walks it, so nothing notices, until fork does.
+
+## GEOMETRY MEASURED, NOT ASSUMED
+  Compiled a probe against the real headers:
+    sizeof(init_cygheap)    = 0x48A0 (18592)
+    offsetof(chain)         = 8          <- matches the disassembly
+                                            ldr x19,[x0,#8] and my harness
+    sizeof(mini_cygheap)    = 8
+    sizeof(_cmalloc_entry)  = 16
+    offsetof(data)          = 16
+    NBUCKETS                = 32
+  The deepest chain entry sits at cygheap+0x68F0, which is PAST the
+  0x48A0 header, so it is a genuine allocation and not a false positive
+  from walking into the struct. I checked this specifically because my
+  in-heap range test was loose enough to have accepted a header address.
+
+## WHAT THE DEFECT IS, STATED PRECISELY
+  _cmalloc (mm/cygheap.cc:396-398) does, for a newly sbrk'd entry:
+      rvc->b = b;
+      rvc->prev = cygheap->chain;
+      cygheap->chain = rvc;
+  The FIRST such allocation must therefore store prev = NULL, because a
+  freshly VirtualAlloc'd cygheap is zero-filled. IT DOES NOT. The deepest
+  entry's prev holds a pointer into Cygwin's mmap arena
+  (MMAP_STORAGE_LOW = 0x1000000000; observed allocBase 0x8000200000).
+  cygheap_fixup_in_child walks that chain and dereferences it, and in the
+  child that region does not exist, so it faults.
+
+## MEASUREMENTS THAT CONSTRAIN THE CAUSE
+  - The bad value VARIES PER RUN: 0xBD102AE000, 0x80002D1000,
+    0xDDC4F01000, 0x8000316000, 0x8000384000. So it is an OS-chosen
+    address, not a fixed constant, and therefore not a layout bug.
+  - It does NOT alias any field of the cygheap header: dumped the first
+    0x140 bytes (locale, chain, all 32 buckets) and hunted for the value.
+    No match.
+  - _csbrk NEVER calls VirtualAlloc(NULL,..) -- it always commits at a
+    computed newbase -- so _csbrk cannot itself place an entry outside
+    the arena.
+  - There is a gap: the header ends at 0x48A0 but the deepest chain entry
+    is at 0x68F0, so ~0x2050 bytes were allocated by direct _csbrk calls
+    that never joined the chain. That is expected, not a defect.
+
+## A STRUCTURAL OBSERVATION, OFFERED AS A LEAD AND NOT AS A CAUSE
+  mm/cygheap.cc:30-35
+     static mini_cygheap NO_COPY cygheap_dummy = { {__utf8_mbtowc} };
+     init_cygheap NO_COPY *cygheap = (init_cygheap *) &cygheap_dummy;
+  Before cygheap_init(), the global cygheap points at an object that is
+  EIGHT BYTES LONG but is typed as init_cygheap, whose chain member is at
+  offset 8. Any read or write of cygheap->chain in that window lands one
+  word PAST cygheap_dummy, in adjacent static data. A read there would
+  yield exactly what is observed: a plausible-looking, per-run-varying
+  pointer to real memory.
+  THIS IS NOT PROVEN. It is the same on x86_64, where fork works, so if
+  it is the mechanism then something ARM64-specific must be reaching
+  _cmalloc earlier than upstream expects. I have NOT demonstrated any
+  such early call, and I am not claiming one.
+
+## WHAT I HAVE NOT ESTABLISHED
+  I have not identified what writes the value, and I have not shown that
+  x86_64 differs here. Everything above about the dummy is a hypothesis.
+  The measured facts are: the chain is unterminated, in every process,
+  at the first chained allocation, with a per-run-varying mmap-arena
+  pointer, and fork is the only consumer.

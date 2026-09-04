@@ -1,0 +1,61 @@
+# ARM64 vNext -- RETRACTION: THE MISSING-BASE-RELOCATION DEFECT DOES NOT EXIST
+# 2026-09-03T16:01:31Z   session c63ab774
+
+## THE CLAIM I AM RETRACTING
+  'The linker emits base relocations for only 10 of 424 absolute quads in
+   the autoload thunks; 414 are missing and are fatal under mandatory ASLR.'
+  THAT IS FALSE. ALL 424 ARE RELOCATED. THERE IS NO DEFECT.
+
+## THE MEASUREMENT ERROR
+  ImageBase in the PE header      : 0x180040000
+  .autoload_text TRUE RVA         : 0x1D8000   (VA 0x180218000)
+  RVA I used throughout           : 0x218000
+  I derived that as VA - 0x180000000, ASSUMING the conventional Cygwin image
+  base, instead of reading ImageBase from the header. The .reloc directory
+  stores TRUE RVAs, so every one of my lookups was displaced by exactly
+  0x40000 and missed. The '10 survivors' were coincidental collisions where
+  a wrong RVA happened to match a real relocation elsewhere in the image.
+
+## RE-MEASURED USING THE SECTION TABLE'S OWN RVA
+  absolute image-range qwords in .autoload_text : 424
+    WITH base relocation                        : 424
+    MISSING                                     :   0
+  e.g. RVA 0x1D8030 -> 0x18024A1A0 RELOCATED
+       RVA 0x1D8040 -> 0x180218008 RELOCATED
+
+## IMAGE-WIDE SCAN, for completeness
+  section        absQ   reloc'd  missing
+  .text            28        28        0
+  .autoload_text  424       424        0
+  .data          9173      9173        0
+  .rdata         8212      8212        0
+  DWARF debug sections: 23478 unrelocated -- CORRECT, debug sections are not
+  loaded or relocated and their contents are not pointers needing fixups.
+  The base-relocation mechanism works correctly everywhere it should.
+
+## THE IRONY, RECORDED DELIBERATELY
+  The ImageBase oddity (0x180040000 rather than the requested 0x180000000)
+  is the very thing I had DEPRIORITISED as 'real but not the blocker'.
+  It was not the blocker for the loader. It WAS the defect in my own
+  analysis, and it silently invalidated every relocation lookup I made.
+
+## CONSEQUENCES
+  1. No binutils IOU. There is no ARM64 PE base-relocation bug here.
+     Anyone reading the binutils emission path on my account should STOP.
+  2. The autoload thunks are CORRECT. Stale pointers are NOT the cause of
+     the 0xC0000005 in dll_entry.
+  3. The dll_entry crash is therefore UNEXPLAINED AGAIN, and
+     0xFFFFFFFF00000000 now has no competing explanation at all.
+
+## WHAT STILL STANDS
+  - Windows on Arm mandates ASLR (4/4 control DLLs, err 193). UNAFFECTED.
+  - DLL ASLR is per-image-per-boot, so fork()'s same-base invariant holds.
+    UNAFFECTED.
+  - The TEB fix (tpidr_el0 -> x18) was verified by direct register probe,
+    independently of any relocation reasoning. UNAFFECTED.
+
+## LESSON
+  READ THE IMAGE BASE FROM THE HEADER; NEVER ASSUME IT. An offset error
+  applied uniformly produces a self-consistent, plausible, entirely false
+  result -- and it survived a re-derivation because I re-derived the SITES
+  correctly while reusing the same wrong base.

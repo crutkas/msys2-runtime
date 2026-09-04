@@ -1,0 +1,84 @@
+# THE EXEC HANDLE IS NOT IN THE CHILD'S HANDLE TABLE AT ALL.
+# This splits two different bugs and eliminates one of them.
+# 2026-09-03T23:25:32Z  session c63ab774
+# Probe designed by 57224227: separate "handle invalid" from "handle valid
+# but the read fails" -- explicitly NOT inferring identity from validity.
+
+## THE INSTRUMENT, AND WHY IT IS THE RIGHT ONE
+   GetHandleInformation requires NO access right.  It only asks whether the
+   handle exists in THIS process's handle table.  That is the opposite of my
+   earlier mistake, where I probed with GetExitCodeProcess -- which needs
+   PROCESS_QUERY_INFORMATION -- against a handle carrying only
+   PROCESS_VM_READ, and got a false negative from my own instrument.
+
+## MEASURED, in the exec'd child, before child_copy
+     PROBE: parent=0x194 in_table=0 err=6 flags=0x0 dup_ok=0 duperr=6
+   - GetHandleInformation (parent)  -> FAILS, ERROR_INVALID_HANDLE
+   - DuplicateHandle from the child's OWN process -> FAILS, ERROR_INVALID_HANDLE
+
+## CONCLUSION
+   THE HANDLE IS ABSENT FROM THE CHILD'S HANDLE TABLE.  This is NOT
+   "handle present but ReadProcessMemory fails on access rights or address
+   range".  INHERITANCE GENUINELY DID NOT TAKE.
+   So the read arguments, the copied range, and the access mask are all
+   EXONERATED -- child_copy never had a handle to read through.
+
+## THE SIGNATURE THE ROOT CAUSE MUST NOW EXPLAIN (unchanged, but sharper)
+   A handle that is:
+     - duplicated with bInheritHandle = TRUE            (sigproc.cc:938)
+     - minted in the very process that calls CreateProcessW
+       (measured: minted_in_pid == parent_winpid == 14816)
+     - re-duplicated FRESH per exec, not carried stale
+       (static: placement-new in set(); measured: value received == minted)
+     - passed with bInheritHandles = TRUE               (spawn.cc:660)
+     - transmitted by value via si.lpReserved2 and arriving at the child
+       with the CORRECT NUMERIC VALUE
+   ...and is nonetheless NOT PRESENT in the child's handle table.
+
+## CANDIDATES NOW DEAD (four, all by measurement or sound static reading)
+   1. stale/reused static ch_spawn handle -- refuted, instrumented both ends.
+   2. fork ancestry of the exec'ing process -- refuted, rung19 direct exec
+      fails identically; independently refuted by another session's direct arm.
+   3. the iscygwin-guarded HANDLE_FLAG_INHERIT clear -- static; and
+      non-Cygwin exec measured WORKING.
+   4. STARTUPINFOEX / PROC_THREAD_ATTRIBUTE_HANDLE_LIST -- not used anywhere
+      in spawn.cc or fork.cc (refuted by the coordinator, with a positive
+      control proving the detector works).
+
+## STRUCTURAL ASYMMETRY WORTH CARRYING (57224227)
+   fork never goes through lpReserved2/CreateProcess -- it uses the fork
+   handshake.  So exec is the ONLY path that depends on cross-process handle
+   INHERITANCE for child_copy's source.  That is why fork works and exec did
+   not, and it is where any future instrumentation belongs.
+
+## NOT EXPLAINED.  I am not proposing a fifth mechanism.
+
+## FIFTH CANDIDATE DEAD: THE READER IS THE DIRECT CHILD.  NO INTERMEDIATE
+## GENERATION.  (Question posed by the verifier via the coordinator.)
+   The proposed mechanism: if any intermediate process sat between the
+   CreateProcessW that minted the handle and the process that reads it, a
+   link missing bInheritHandles=TRUE would reproduce exactly this signature
+   -- correct value, invalid handle (their arm B).
+   MEASURED with ProcessBasicInformation.InheritedFromUniqueProcessId, which
+   is the kernel's own record of the creating process:
+     forked exec  my_pid=12172  real_creator_pid=24300  parent_winpid=24300
+                  match=1  parent=0x194  in_table=0  st=0x0
+     direct exec  my_pid=22540  real_creator_pid=16536  parent_winpid=16536
+                  match=1  parent=0x1D0  in_table=0  st=0x0
+   THE KERNEL'S CREATOR PID EQUALS parent_winpid IN BOTH PATHS.  The process
+   that reads child_info->parent IS the direct child of the CreateProcessW
+   call that minted it.  There is no intermediate generation, so arm B's
+   mechanism cannot apply.  Their framing was "if the reader is provably the
+   direct child, say so and this dies too" -- it is, and it does.
+
+   Note both arms still show in_table=0: the handle is absent from the
+   child's table in the direct-exec case too, so this is not a fork artefact.
+
+## THE SIGNATURE, NOW AT ITS TIGHTEST -- FIVE CANDIDATES DEAD
+   A handle that is duplicated bInheritHandle=TRUE, minted in the very
+   process that calls CreateProcessW, re-duplicated fresh per exec, passed
+   with bInheritHandles=TRUE, arriving at the DIRECT CHILD with the correct
+   numeric value -- and absent from that child's handle table.
+   Dead: stale static handle; fork ancestry; iscygwin inherit-clear;
+   STARTUPINFOEX handle-list; intermediate generation.
+   I am not proposing a sixth.

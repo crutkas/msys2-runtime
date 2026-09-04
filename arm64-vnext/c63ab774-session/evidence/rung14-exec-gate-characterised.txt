@@ -1,0 +1,45 @@
+# RUNG 14: fork + execv.  ATTEMPTED, FAILS -- and the failure is now
+# REACHABLE for the first time.  Characterised, NOT fixed.
+# 2026-09-03T22:56:19Z  session c63ab774
+
+## THE TEST
+   rung14 forks, and the child execv()s rung3.exe (which simply returns 77).
+   T1 is a plain fork control in the same process, so a fork failure cannot
+   be mistaken for an exec failure.
+
+## A/B, SAME BINARIES, ONLY THE DLL DIFFERS
+   PRE-FIX  (20ad86ba):
+     T1 FAIL fork -1 errno=11
+     dofork: child -1 - forked process died unexpectedly, exit code 0xC0000005
+     -> EXEC WAS NEVER REACHED.  fork died first.
+   POST-FIX (90bfb483):
+     T1 fork ok, child status 5
+     T2 child_copy: cygheap read copy failed, 0x800000000..0x800025B30,
+                    done 0, windows pid NNNNN, Win32 error 6
+        rung3.exe: *** fatal error - couldn't create signal pipe, Win32 error 5
+        child did not exit normally, status=0xb
+
+## WHAT THIS ESTABLISHES
+   1. exec is a NEWLY REACHABLE defect, not a regression.  Before the fork
+      fix the process never got far enough to call execv at all.
+   2. execv DOES load the new image.  The diagnostics are emitted by "rung3",
+      not by rung14, so the exec'd image started and ran msys startup.
+   3. It then fails in child_copy reading the cygheap range
+      0x800000000..0x800025B30 with "done 0" -- ZERO bytes copied --
+      and Win32 error 6 = ERROR_INVALID_HANDLE.
+   4. It then fails to create the signal pipe with Win32 error 5 =
+      ERROR_ACCESS_DENIED, and dies with status 0xb (signal 11).
+
+## A DISCREPANCY I AM RECORDING RATHER THAN RESOLVING
+   It was reported to me that on the fork-fixed DLL the "child_copy ...
+   Win32 error 6" symptom is GONE and that execl() returns instead.
+   MY MEASUREMENT DISAGREES: error 6 is present, and execv does NOT return
+   (the child became rung3 and died later, at signal-pipe creation).
+   Possible causes: execl vs execv, a different target binary, or a
+   different fixture.  NOT resolved here.  Both measurements should be
+   re-run against an identical test shape before either is trusted.
+
+## NOT DONE
+   I have NOT diagnosed the invalid handle, and I am not speculating about
+   it.  The deliverable here is a reproducible, bounded characterisation of
+   the exec gate, not a fix.

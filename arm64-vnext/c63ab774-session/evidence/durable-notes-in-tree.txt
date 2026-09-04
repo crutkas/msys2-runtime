@@ -1,0 +1,46 @@
+# MADE THREE RETRACTIONS/FIXES DURABLE IN THE TREE AS COMMENTS.
+# 2026-09-03T10:39:57Z   session c63ab774
+# Local edits only. No commits, pushes, PRs, CI or upstream contact.
+
+## WHY
+  A second session (68c032ba, "Arm64 fork diagnosis") independently derived
+  -Wl,--disable-dynamicbase and was about to apply it. It is the LOCALLY
+  CORRECT inference from DllCharacteristics 0x0160 plus a randomised-looking
+  base, and it is wrong: the image becomes unloadable.
+  THE RETRACTION EXISTED ONLY IN CONVERSATION, WHICH IS NOT WHERE SOMEONE
+  ABOUT TO EDIT A LINK LINE IS LOOKING. A fix whose justification lives only
+  in memory will be undone by the next person who reads the code and reasons
+  correctly from it.
+
+## EDIT 1 -- winsup/cygwin/Makefile.am, immediately above the DLL link rule
+  States the MEASUREMENT, not the conclusion:
+   - six stock MS ARM64 DLLs, only DYNAMIC_BASE cleared, all fail err 193
+   - controls: pristine 6/6 load, byte-identical rewrite 6/6 load,
+     checksum-zeroed still 6/6 fail
+   - HIGH_ENTROPY_VA is NOT mandated (clearing it alone still loads 5/6)
+   - DLL ASLR is per-image-per-boot, so fork's same-base invariant holds
+   - the real defect is the cygheap chain corruption
+
+## EDIT 2 -- cygwin.sc.in, above the ctor/dtor conditional
+  Records why __aarch64__ must stay in the condition: the #else branch is the
+  legacy 32-bit form with 4-byte LONG markers and no ALIGN(8), and an 8-byte
+  read straddles the ctor terminator and dtor head marker yielding exactly
+  0xFFFFFFFF00000000. Includes the measured symbol arithmetic (pre-fix
+  __DTOR_LIST__ at 0x180217EFC = 4 mod 8, post-fix 0x180217F00) and the point
+  that THE LINKER VALIDATES NOTHING HERE -- 4-byte and even deliberately wrong
+  12-byte markers both link cleanly, so only execution distinguishes them.
+
+## EDIT 3 -- cygwin.sc.in, above the .xdata guard
+  Records that without __aarch64__ the placement falls to the linker's
+  orphan-section heuristic; that it happened to work but was luck; that it is
+  load-bearing because __unwind_single_frame uses RtlLookupFunctionEntry and
+  RtlVirtualUnwind which read .xdata; and that making it explicit DOES change
+  the image (orphan placement put .xdata before .pdata, the rule puts it
+  after), which is why it was re-verified after the change.
+
+## VERIFICATION -- THE COMMENTS MUST NOT CHANGE THE BUILD
+  cygwin.sc.in is CPP-preprocessed, so C comments are stripped. Regenerated
+  cygwin.sc and diffed against the pre-edit copy:
+     IDENTICAL -- comments stripped, no functional change.
+  Makefile.am edit is comment-only above an existing rule; the rule line is
+  unchanged and still present.

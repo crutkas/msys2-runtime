@@ -1,0 +1,94 @@
+# ROOT CAUSE FOUND -- THE INSTRUCTION IS NAMED. This SUPERSEDES lines 1, 2
+# and 4 of SEALED-CONCLUSION.txt, all three of which are now WRONG.
+# 2026-09-03T22:20:36Z  session c63ab774
+# Lead supplied by supervisor 290c9aaf/ee27c231 (dcrt0.cc:1054-1060).
+# Verified here independently, from the shipped DLL, at bit level.
+
+## THE INSTRUCTION
+   new-msys-2.0.dll, in _dll_crt0, immediately after the ARM64 stack switch:
+
+     180046cb8: 97fff604  bl   create_new_main_thread_stack
+     180046cbc: b40002c0  cbz  x0, ...
+     180046cc0: 9100001f  mov  sp, x0          ; sp = stackaddr = StackBase-16
+     180046cc4: 910003fd  mov  x29, sp
+     180046cc8: aa1203e4  mov  x4, x18         ; x4 = NtCurrentTeb()  <-- THE TEB
+     180046ccc: f94a3c80  ldr  x0, [x4,#5240]  ; TEB->DeallocationStack
+     180046cd0: 52900002  mov  w2, #0x8000     ; MEM_RELEASE
+     180046cd4: d2800001  mov  x1, #0
+  >> 180046cd8: f9000fe4  str  x4, [sp,#24]    ; *** THE CORRUPTING STORE ***
+     180046cdc: 94070c7d  bl   VirtualFree
+     180046ce0: f9400fe4  ldr  x4, [sp,#24]    ; spill reloaded afterwards
+
+   Store VA 0x180046cd8, ImageBase 0x180040000  =>  RVA 0x6CD8.
+
+## ENCODINGS DECODED BIT BY BIT (not trusting objdump's mnemonics)
+   aa1203e4 = 1010 1010 0001 0010 0000 0011 1110 0100
+              ORR shifted-reg: Rm=x18, Rn=x31(zr), Rd=x4  =>  mov x4, x18
+   f9000fe4 = 1111 1001 0000 0000 0000 1111 1110 0100
+              STR imm-unsigned: imm12=3 (scale 8 => +24), Rn=31(sp), Rt=x4
+
+## THE ARITHMETIC -- BOTH MEASURED OPERANDS REPRODUCED EXACTLY
+   create_new_main_thread_stack returns allocationbase + stacksize - 16,
+   i.e. StackBase - 16 (create_posix_thread.cc:276).
+     main StackBase (measured)  = 0x800000000
+     sp after 'mov sp,x0'       = 0x7fffffff0
+     [sp,#24]                   = 0x800000008
+     cygheap base               = 0x800000000  (== StackBase, by construction)
+     cygheap->chain  (base+8)   = 0x800000008   <-- IDENTICAL
+     value stored               = x4 = x18 = main TEB  <-- matches the
+                                  measured wild value 0x8000274000 exactly.
+
+## WHY IT HAPPENS -- A TRUE FACT LED TO THE BUG
+   dcrt0.cc:1046-1060.  x86_64 does:
+        movq %[ADDR],%rsp ; movq %rsp,%rbp ; subq ,%rsp
+   The aarch64 arm does:
+        mov sp,%[ADDR] ; mov x29,sp
+   with the comment "Windows ARM64 has no shadow space, so unlike x86_64
+   nothing has to be subtracted here."
+   THAT PREMISE IS TRUE AND THE CONCLUSION IS WRONG.  The x86 'subq ' is
+   documented as shadow space, but it ALSO buys headroom below the stack top.
+   x86_64 addresses locals at NEGATIVE offsets from rbp, so it stays below
+   stackaddr regardless.  AArch64 addresses spills at POSITIVE offsets from
+   sp.  With sp = StackBase-16 there are only 16 bytes before the cygheap,
+   and the compiler's spill of the TEB across the VirtualFree call reaches
+   offsets 24..31 -- i.e. 8..15 bytes PAST StackBase, straight into
+   cygheap->chain.  Reach 32 bytes vs 16 available.
+
+## WHY MY FOUR STATIC SCANS MISSED IT -- AND ONE OF THEM SHOULD NOT HAVE
+   3 of 4 were correctly scoped and could not see this by design:
+     - 'str x18 as source'          : the store is 'str x4' (a COPY).      OK
+     - 'store base = copy of x18'   : the base here is sp.                 OK
+     - 'store base = const 0x8..'   : the base here is sp.                 OK
+   The 4th SHOULD have caught it and did not:
+     - 'mov xN,x18 then str xN within 40 instrs, xN not redefined' was
+       reported as 159 sites with redef=0 count ZERO.  This site IS that
+       pattern: mov x4,x18 at ...cc8, str x4 at ...cd8, four instructions
+       later, and x4 is NOT redefined in between (ldr x0,[x4] reads it;
+       mov w2 / mov x1 write other registers).  So that scan's overwrite
+       detection was still wrong.  Third instrument failure of this class.
+
+   THE DEEPER REASON ALL FOUR WERE THE WRONG SHAPE: every scan hunted for
+   code that stores the TEB *deliberately*.  Nothing here does.  This is an
+   ordinary COMPILER SPILL of a value that merely happens to be the TEB
+   because the TEB was live across a call.  The bug is that sp sits 16 bytes
+   below the top of the arena; the identity of the spilled value is
+   INCIDENTAL.  Any local live across that call would have corrupted the
+   same slot.  'Who stores the TEB' was unanswerable because no one does.
+
+## WHAT THIS OVERTURNS IN SEALED-CONCLUSION.txt
+   Line 1 'direction inversion' (*(StackBase+8)=TEB as an inverted load):
+     WRONG.  Parsimonious, self-consistent, and not what the code does.
+     There is no inverted load anywhere; there is a stack-pointer placement
+     error and a routine spill.
+   Line 2 'Origin: not msys's compiled code':  REFUTED.  It is msys's
+     compiled code, in _dll_crt0, on the main startup path.
+   Line 4 'Instruction: UNNAMED':  NOW NAMED, RVA 0x6CD8.
+   Line 3 (aliasing exact by construction; relocation not a mitigation)
+     STANDS, and is now shown to be load-bearing: the aliasing is exactly
+     why a 16-byte stack overrun corrupts the allocator chain.
+
+## STILL NOT VERIFIED BY ME
+   I have NOT rebuilt with a corrected subtraction and re-run the rungs.
+   The store is proven present, correctly decoded, and arithmetically lands
+   on cygheap->chain with the measured value; I have not yet demonstrated
+   that fixing it makes fork() pass.  Naming a defect is not fixing it.

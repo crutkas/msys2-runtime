@@ -1,0 +1,56 @@
+# TWO EXEC CANDIDATES REFUTED BY MEASUREMENT, INCLUDING ONE I RELAYED
+# WITHOUT TESTING.  2026-09-03T23:18:05Z  session c63ab774
+
+## A. "THE INHERIT-CLEAR WOULD BREAK EXEC OF A NON-CYGWIN PROGRAM" -- REFUTED.
+   I relayed this from 57224227's rejection of spawn.cc:594-598 as a
+   BY-PRODUCT claim.  The coordinator challenged it: a non-Cygwin child never
+   runs cygheap_fixup_in_child, never reads child_info, and has no use for the
+   parent handle, so clearing HANDLE_FLAG_INHERIT for non-Cygwin targets is
+   deliberate hygiene, not a defect.
+   MEASURED (rung18, clean DLL, NO arguments so MSYS2 path conversion cannot
+   confound it):
+     execv ("C:\\Windows\\System32\\hostname.exe")
+     -> prints DESKTOP-KRJ0R4U, child exits 0, exit=66  WORKS.
+   NON-CYGWIN EXEC WORKS.  The challenge was right and my relayed claim is
+   WITHDRAWN.  I passed on a plausible inference that had inherited its
+   credibility from a correct rejection, without testing it.
+
+   INCIDENTAL, and NOT a defect: rung17 with arguments showed cmd.exe running
+   but receiving mangled args -- MSYS2 converts POSIX-looking arguments such
+   as "/c" into Windows paths.  That is documented MSYS2 behaviour and the
+   reason MSYS2_ARG_CONV_EXCL exists.  Recorded so nobody re-discovers it as
+   a bug.  Note that cmd.exe RAN, which is itself evidence for the above.
+
+## B. "ch_spawn IS A NO_COPY STATIC CARRYING A STALE parent HANDLE" -- REFUTED.
+   Candidate: child_info_spawn NO_COPY ch_spawn (spawn.cc:275) is a static,
+   so its parent handle might have been duplicated in a prior context and
+   reused -- which would explain a non-zero but invalid handle.
+   FIRST, STATIC: the default ctor is EMPTY -- "child_info_spawn () {};"
+   (child_info.h) -- so nothing is minted at static-init.  The real ctor runs
+   via placement new in set(): "new (this) child_info_spawn (ci, b)".
+   THEN, MEASURED, by instrumenting BOTH ends (mint site in sigproc.cc and
+   the child's read in dcrt0.cc):
+     CTOR:  type=1 parent=0x190 minted_in_pid=14816 this=0x7FF96D6FE270
+     CHILD: got parent=0x190 usable=0 err=6 my_pid=24068 parent_winpid=14816
+   READING: the value the child receives (0x190) is EXACTLY the value minted,
+   the minting pid (14816) EQUALS parent_winpid, and the mint happened for
+   THIS spawn (type=1).  The handle is FRESH, minted in the CORRECT process,
+   and TRANSMITTED INTACT -- and still invalid in the child.
+   => The stale/reused-handle hypothesis is DEAD.
+
+## WHAT THE ROOT CAUSE MUST NOW EXPLAIN
+   A handle that is (a) duplicated with bInheritHandle=TRUE, (b) minted in the
+   process that calls CreateProcessW, (c) passed with bInheritHandles=TRUE,
+   and (d) arrives at the child with the correct numeric value -- yet is NOT
+   in the child's handle table.  Note the minting process (14816) is ITSELF a
+   FORKED child, which is the one structural asymmetry with the fork path
+   that these measurements do not rule out.  NOT INVESTIGATED.
+
+## BUILD HYGIENE DEFECT FOUND AND FIXED (reported by the coordinator)
+   new-msys-2.0.dll -- the CANONICAL name, and the name 57224227's checkpoint
+   cites as its disassembly target -- carried 9fcc134e: fork + argv only, NO
+   exec fix.  The best build had the least canonical name.  Live harm: the
+   static lane was analysing a binary without the fix it was hunting.
+   FIXED: new-msys-2.0.dll = 3c1cc03a4164f787 (all four fixes, no
+   instrumentation).  Six intermediate builds moved to STALE-DO-NOT-USE/ with
+   a README naming what each one is and why not to use it.

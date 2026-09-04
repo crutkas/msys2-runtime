@@ -1,0 +1,58 @@
+# ARM64 vNext -- RUNG 3 ATTEMPTED: A REAL ARM64 MSYS2 PROCESS RUNS
+# 2026-09-03T16:18:09Z   session c63ab774
+
+## NEW PORT GAP FOUND AND FIXED: scripts/mkimport emits x86-only thunks
+  my $is_x86_64 = ($cpu eq 'x86_64' ? 1 : 0);
+     if ($is_x86_64) { jmp *$imp_sym(%rip) }   # x86-64
+     else            { jmp *$imp_sym       }   # legacy 32-bit x86
+  aarch64 fell into the else branch and emitted 'jmp', which the AArch64
+  assembler rejects: "unknown mnemonic `jmp'".
+
+  THIS IS THE THIRD INSTANCE OF THE SAME STRUCTURAL DEFECT:
+    1. cygwin.sc.in OUTPUT_FORMAT
+    2. cygwin.sc.in ctor/dtor list markers  (caused the DllMain crash)
+    3. scripts/mkimport import thunks       (this one)
+  In every case a 64-bit path is guarded on x86_64 with a legacy 32-bit
+  fallback that aarch64 silently inherits.
+
+  FIX: emit the standard AArch64 PE import thunk --
+      adrp x16, sym ; ldr x16, [x16, #:lo12:sym] ; br x16
+  x16 (IP0) is the architecturally-sanctioned inter-procedure scratch
+  register, so no argument or callee-saved register is disturbed.
+  Result: libmsys-2.0.a builds (1,437,942 bytes); printf/exit/malloc/main/
+  cygwin_crt0 all present.
+
+## THE EXECUTABLE
+  int main (void) { return 77; }   -- 77 chosen so a pass cannot be
+  confused with an accidental 0.
+  built: crt0.o + rung3.c + libmsys-2.0.a + libgcc + libkernel32
+  rung3.exe  58,975 bytes  sha256 093819b536bece179bf18304e50c31b29498837755cb3f06c628d709dff3ab5b
+  file format pei-aarch64-little, architecture aarch64, EXEC_P
+  imports: KERNEL32.dll and msys-2.0.dll
+
+## IT RAN
+  runtime used: msys-2.0.dll sha256 3d305115... (the ctor-fixed build,
+  identity verified by hash against msys-2.0-ctorfix.dll before running).
+
+  stack reserve 0x200000  (2 MB, default) -> exit -1073741571 = 0xC00000FD
+                                             STATUS_STACK_OVERFLOW
+  stack reserve 0x4000000 (64 MB)         -> exit -1073741819 = 0xC0000005
+                                             STATUS_ACCESS_VIOLATION
+
+  The failure mode CHANGES with the stack reserve, so this is not a simple
+  unbounded recursion: with more stack the process gets further before
+  failing differently. Cygwin manages its own stack and places _cygtls at
+  __CYGTLS_PADSIZE__ (12800) from the stack base, so the reserve interacts
+  with runtime startup directly. NOT YET DIAGNOSED.
+
+## WHAT THIS ESTABLISHES
+  A native ARM64 MSYS2 executable is BUILT, LOADED, and EXECUTES far enough
+  to reach the runtime's own startup code and fail inside it. The process
+  starts; the loader binds msys-2.0.dll; DllMain completes; control reaches
+  crt0/dcrt0. That is further than anything in this programme has gone.
+
+## WHAT IT DOES NOT ESTABLISH
+  main() DID NOT RUN. The expected exit code 77 was NOT observed.
+  RUNG 3 IS NOT PASSED. No user code has executed. fork(), signals and the
+  sigfe trampolines remain unexercised. Not a working runtime, not a product
+  pass, no authority.

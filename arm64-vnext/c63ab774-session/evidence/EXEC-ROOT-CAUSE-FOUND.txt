@@ -1,0 +1,163 @@
+# EXEC ROOT CAUSE FOUND.  It is the candidate THREE parties rejected BY
+# INSPECTION -- the guard exists, and the guard's CONDITION IS WRONG.
+# 2026-09-03T23:32:55Z  session c63ab774
+# Found by measuring the one premise everyone had inferred rather than
+# observed (question posed by the coordinator).
+
+## THE PREMISE NOBODY HAD MEASURED
+   Everyone inferred, from "DuplicateHandle is CALLED with bInheritHandle
+   = TRUE", that HANDLE_FLAG_INHERIT was actually SET on parent at the
+   instant CreateProcessW runs.  Measured at that instant:
+     INH: parent=0x194 query_ok=1 flags=0x0 INHERIT_SET=0 err=0   forked exec
+     INH: parent=0x1C8 query_ok=1 flags=0x0 INHERIT_SET=0 err=0   direct exec
+   GetHandleInformation SUCCEEDS (err=0) and reports flags=0x0.
+   THE HANDLE IS NOT INHERITABLE AT THE CALL.  The premise is FALSE.
+
+## WHO CLEARS IT -- MEASURED AT THE CLEAR SITE
+     CLR: before-clear parent=0x194 q=1 flags=0x1 iscygwin=0 will_clear=1
+     CLR: after-clear  parent=0x194 q=1 flags=0x0
+   Before: flags=0x1, HANDLE_FLAG_INHERIT IS SET -- the DuplicateHandle
+   worked correctly.  Then spawn.cc:602 fires and strips it.
+
+## WHY IT FIRES: iscygwin() IS FALSE FOR A CYGWIN TARGET
+   spawn.cc:602   if (!iscygwin ())
+                    { SetHandleInformation (parent, HANDLE_FLAG_INHERIT, 0); }
+   MEASURED: iscygwin() == 0 while spawning rung3.exe, which IS an MSYS
+   executable linked against this very DLL.
+   The chain, from source:
+     child_info.h:80   iscygwin() = flag & _CI_ISCYGWIN
+     sigproc.cc:923-927 _CI_ISCYGWIN is set ONLY if need_subproc_ready
+     spawn.cc:551      set (chtype, real_path.iscygexec ())
+     path.h:248        iscygexec() = mount_flags & MOUNT_CYGWIN_EXEC
+   So iscygwin() is exactly "was the target classified as a Cygwin exec".
+   It classifies our Cygwin exec as NOT one, so the hygiene branch intended
+   for FOREIGN programs runs against our own.
+
+## THE FULL CAUSAL CHAIN, EVERY LINK MEASURED OR READ FROM SOURCE
+   1. target misclassified: iscygwin() == 0            MEASURED
+   2. => spawn.cc:602 clears HANDLE_FLAG_INHERIT       MEASURED 0x1 -> 0x0
+   3. => at CreateProcessW the handle is not inheritable  MEASURED flags=0x0
+   4. => bInheritHandles=TRUE inherits nothing for it
+   5. => handle ABSENT from the child's table          MEASURED in_table=0
+   6. => child_copy: ReadProcessMemory ERROR_INVALID_HANDLE, done 0
+   7. => "couldn't create signal pipe", child dies
+   This also explains, without further assumption, why the VALUE arrives
+   intact (it travels as bytes in si.lpReserved2) while the HANDLE does not,
+   and why get_parent_handle()'s OpenProcess repairs it (it reconstructs
+   validity in-process, independent of inheritance).
+
+## WHY THREE PARTIES REJECTED THIS CANDIDATE
+   All three -- 57224227, the verifier, and me -- found spawn.cc:602,
+   observed the if (!iscygwin ()) guard, reasoned "our target IS Cygwin so
+   this cannot fire", and moved on.  NOBODY EVALUATED THE CONDITION.
+   The guard is real; the guard is WRONG.  Rejecting a candidate because a
+   guard exists, without measuring what the guard evaluates to, is the same
+   error family as everything else tonight -- an inference standing in for
+   a measurement.
+
+## WHAT I HAVE NOT DETERMINED -- READ BEFORE CITING
+   WHY iscygexec()/MOUNT_CYGWIN_EXEC is false for our binaries is NOT
+   established.  Candidates, none tested:
+     - executable classification failing to recognise an aarch64 PE;
+     - our minimal test environment having no mount table (MOUNT_CYGWIN_EXEC
+       is a MOUNT flag, and a real MSYS2 install configures mounts that this
+       scratch environment does not have);
+     - something else.
+   IF IT IS THE ENVIRONMENT, this may not be an ARM64 defect at all, and the
+   correct fix is not in the runtime.  I am not asserting an ARM64 detection
+   bug.  The chain above is measured; its first link's CAUSE is not.
+
+## THE FIRST LINK IS RESOLVED.  IT IS AN ARM64 DEFECT, NOT AN ENVIRONMENT
+## ARTEFACT -- AND THE FIX IS ONE LINE.
+   The open question was WHY iscygexec()/MOUNT_CYGWIN_EXEC is false for our
+   binaries: aarch64 PE classification, or a scratch environment with no
+   mount table?  ANSWER: PE classification, and it is hard-coded to x86.
+
+   spawn.cc:1225 classifies by INSPECTING THE IMAGE, not by mount flags:
+       real_path.set_cygexec (hook_or_detect_cygwin (buf, NULL, subsys, hm));
+   hook_or_detect_cygwin goes through PEHeaderFromHModule, hookapi.cc:43-51:
+       /* Return valid PIMAGE_NT_HEADERS only for supported architectures. */
+       switch (pNTHeader->FileHeader.Machine)
+         {
+         case IMAGE_FILE_MACHINE_AMD64:
+           break;
+         default:
+           return NULL;
+         }
+   IMAGE_FILE_MACHINE_ARM64 (0xAA64) falls into "default: return NULL", so
+   the PE header is rejected, detection cannot run, and EVERY ARM64 image is
+   classified "not a Cygwin executable".
+   So the mount-table hypothesis is REFUTED: classification never consults
+   the mount table for this decision.  This is a genuine ARM64 port defect.
+
+## THE FIX, AND THE PROOF THAT IT IS THE ROOT CAUSE
+       case IMAGE_FILE_MACHINE_AMD64:
+     + case IMAGE_FILE_MACHINE_ARM64:
+         break;
+   DECISIVE TEST: applied that one line AND **REVERTED** the
+   get_parent_handle() workaround, so the only exec-related change was the
+   hookapi case.  DLL b4bdbd9e3f7d8d50:
+     rung14 fork+execv      exit 66  err6=0  RESULT EXEC WORKS
+     rung15 execv AND execl exit 66  err6=0  both 77
+     rung19 direct exec     exit 77  err6=0
+     rung18 non-Cygwin exec exit 66  err6=0
+     regression rung3 77 / rung6 66 / rung12 ALL PASS
+   THE REAL FIX ALONE IS SUFFICIENT.  My get_parent_handle() workaround is
+   UNNECESSARY and has been REVERTED; the original upstream guard
+   "if (!dynamically_loaded || get_parent_handle ())" is restored verbatim.
+   The handle-leak close inside get_parent_handle() is KEPT -- it is a real
+   pre-existing defect on the path that still calls it.
+
+## SIXTH INSTANCE OF THE x86-ASSUMPTION PATTERN, AND THE MOST CONSEQUENTIAL
+   1. cygwin.sc.in OUTPUT_FORMAT        (#else fallthrough)
+   2. cygwin.sc.in ctor/dtor markers    (#ifdef __x86_64__)
+   3. scripts/gendef                    (shell $cpu test)
+   4. scripts/mkimport                  (a STRING COMPARISON)
+   5. import_address                    (a BARE MAGIC NUMBER, 0x25ff)
+   6. hookapi.cc PEHeaderFromHModule    (a SWITCH with one arch case)
+   Not one of these is a missing #ifdef in C the way people expect.  This
+   one is a switch whose "supported architectures" list was never extended,
+   and its failure mode is SILENT MISCLASSIFICATION rather than a build
+   error or a crash at the site.
+
+## FINAL STATE
+   canonical new-msys-2.0.dll = b4bdbd9e3f7d8d50, and NOTE: two independent
+   link invocations of this source both produced b4bdbd9e -- the
+   --no-insert-timestamp reproducibility result, confirmed again by accident.
+   Combined patch: evidence/all-fixes-FINAL.patch (77 lines, hookapi.cc +
+   dcrt0.cc).  Three fixes: fork stack headroom, argv memmove, hookapi ARM64
+   classification -- plus the get_parent_handle leak close.
+
+## CHAIN VERIFIED LINK-BY-LINK AFTER THE FIX (not just end-to-end).
+   The end-to-end test (exec works with the workaround reverted) logically
+   implies the chain is repaired, but that is an INFERENCE.  Measured
+   directly, same probes as the "before" run, with the hookapi fix applied
+   and the get_parent_handle workaround still reverted:
+
+     BEFORE                              AFTER
+     iscygwin=0                          V1: iscygwin=1
+     will_clear=1                        V1: will_clear=0
+     flags 0x1 -> 0x0 (stripped)         V1: flags_before=0x1 (not stripped)
+     at CreateProcess flags=0x0          V2: flags=0x1 INHERIT_SET=1
+     child in_table=0                    V3: child in_table=1 flags=0x1
+     child_copy err6, done 0             RESULT EXEC WORKS, exit 66
+
+   Every predicted intermediate state confirmed.  The one case label repairs
+   the classification, the classification stops the clear firing, the flag
+   survives to CreateProcessW, the handle lands in the child's table, and
+   child_copy succeeds.
+
+## wincap.cc:308 CHECKED AND BENIGN
+   host_mach = IMAGE_FILE_MACHINE_AMD64 is a FALLBACK, taken only when
+   IsWow64Process2 FAILS, and its own comment says so: it is for OS versions
+   predating that API, where AMD64 was the only realistic host.  On Windows
+   11 ARM64 the call succeeds and host_mach is correct.  Not a defect here.
+
+## FINAL SOURCE STATE
+   hookapi.cc  : + case IMAGE_FILE_MACHINE_ARM64          (the root-cause fix)
+   dcrt0.cc    : sub sp,sp,#64                            (fork headroom)
+                 memmove x2 in quoted()                   (argv overlap)
+                 CloseHandle(prev) in get_parent_handle() (pre-existing leak)
+                 upstream guard RESTORED verbatim -- my workaround reverted,
+                 because the root-cause fix makes it unnecessary.
+   Zero probes, zero stray backups.

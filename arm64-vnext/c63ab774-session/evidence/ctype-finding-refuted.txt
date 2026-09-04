@@ -1,0 +1,63 @@
+# REFUTATION: the '__ctype_b dangling / libc has a hole' finding is WRONG.
+# 2026-09-03T16:48:43Z   session c63ab774
+
+## FIRST, AN ARTEFACT-IDENTITY CORRECTION
+  The report was flagged as measured on 'a different artefact from yours',
+  490dfe09..., 30,894,383 bytes. THAT IS MY CURRENT BUILD. Same sha256,
+  same byte count. It is the post-import-fix, post-.xdata, post-pseudo-reloc
+  relink. So the caveat dissolves and the claim applies to me directly --
+  which is exactly why I tested it rather than dismissing it.
+
+## EMPIRICAL RESULT ON THAT EXACT BUILD -- ALL ctype WORKS
+  rung7.exe, one printf per function, flushed, so the last line printed
+  would name any function that died:
+    A strlen  -> 17
+    B abs     -> 42
+    C toupper -> 65
+    D tolower -> 97      <- reported as CRASH
+    E isalpha -> 1       <- reported as CRASH
+    F isdigit -> 1
+    G isspace -> 1
+    H atoi    -> 12345   <- reported as CRASH
+    I strtol  -> 6789
+    ALL CTYPE OK
+  exit 44. No crash. The three functions reported as crashing all return
+  correct values.
+
+## AND THE SYMBOL TABLE READING WAS WRONG IN TWO WAYS
+  CLAIM: '_ctype_ has ZERO occurrences'.
+  MEASURED: 12 occurrences, and the table itself IS defined:
+    0000000180244800 D _ctype_b        <- ONE underscore, DEFINED
+                     U __ctype_b       <- TWO underscores, undefined
+  These are DIFFERENT SYMBOLS. The defined one is the real table.
+
+## MECHANISM -- WHY THE UNDEFINED SYMBOL IS BENIGN
+  newlib/libc/ctype/ctype_.c:
+     88   char _ctype_b[128 + 256] = { ...   /* the actual table */
+    102   .set    _ctype_,_ctype_b+127
+    109   .set    __ctype_,__ctype_b+127
+    173   ctype_ptr = _ctype_b;             /* what is actually used */
+  Line 109 is a compatibility alias for targets whose ABI PREPENDS A
+  LEADING UNDERSCORE to C symbols (i386 PE). On aarch64 no underscore is
+  prepended, so '__ctype_b' inside that .set names a symbol that does not
+  exist on this target. It produces a 'U __ctype_b' entry that NOTHING
+  REFERENCES. Confirmed: zero object files in the build reference it, and
+  there are zero source references outside that asm alias block.
+
+## HOW THE FALSE POSITIVE WAS CONSTRUCTED
+  A real observation ('U __ctype_b') was joined to a real observation
+  (three functions crashed) by an assumed causal link that was never
+  tested. The crashes, whatever caused them, were NOT ctype and NOT this
+  symbol -- because on this same binary those functions return correct
+  values. TWO TRUE FACTS AND A FALSE CONNECTIVE.
+  Note also the pass/fail split was read as 'exactly the ctype boundary'.
+  It is not: toupper/tolower are the SAME newlib implementation family,
+  and isdigit/isspace were never tested in the original report though they
+  use the identical table lookup as isalpha.
+
+## WHAT I DID NOT VERIFY
+  I did not reproduce the original crashes and cannot say what caused
+  them. Per-function isolation under bare LoadLibrary is a different
+  harness from a linked executable, and the earlier getpid()==0 result
+  shows that harness does not fully initialise Cygwin process state.
+  That is the likeliest source and it is NOT a libc defect.

@@ -1,0 +1,569 @@
+# (a)/(b) SETTLED BY MEASUREMENT: CASE (a). THE HEAD WAS ALREADY WILD AT BIRTH.
+# 2026-09-03T10:57:54Z   session c63ab774
+
+## THE INSTRUMENT -- READ AT KNOWN POINTS, NEVER CAPTURE A WRITE
+  At msys-2.0.dll RVA 0xA8FF8 the instruction is
+      str x0, [x5, #8]        ; rvc->prev = cygheap->chain   (cygheap.cc:397)
+  so at that PC, x5 is the entry being born and x0 is the value about to
+  become its prev. A CODE breakpoint there answers the question straight out
+  of the registers.
+  Bcr[0]/Bvr[0] carry the probe and Bcr[1]/Bvr[1] the PC+4 advance, so the two
+  never contend. DBGBCR = E|PAC(EL0)|BAS(0xF) = 0x1E5.
+
+## RESULT -- ALL FOUR BIRTHS CAPTURED, NO GAPS
+   [1] entry(x5)=0x8000048A0   prev-to-store(x0)=0x0                correct
+   [2] entry(x5)=0x8000050B0   prev-to-store(x0)=0x8000048A0        correct
+   [3] entry(x5)=0x8000068C0   prev-to-store(x0)=0x8000050B0        correct
+   [4] entry(x5)=0x8000068F0   prev-to-store(x0)=0x8000341000       *** WILD ***
+
+## VERDICT: CASE (a)
+  cygheap->chain WAS ALREADY WILD WHEN ENTRY 0x8000068F0 WAS BORN. _cmalloc
+  read a clobbered head and faithfully copied it into the new entry's prev.
+  Case (b) -- the slot being overwritten after birth -- IS ELIMINATED.
+
+## THEREFORE THE FOREIGN STORE IS BOUNDED BY TWO CONSECUTIVE _cmalloc CALLS
+  It happens AFTER 0x8000068C0's birth (at which point chain was correctly
+  set to 0x8000068C0) and BEFORE 0x8000068F0's birth. That is the tightest
+  possible bound short of the instruction itself: the interval between two
+  adjacent allocations.
+
+## AND THE INSTRUMENT SUCCEEDED EXACTLY WHERE THE WATCHPOINT FAILED
+  The hardware DATA watchpoint on cygheap+8 MISSED these same three births --
+  they fell in its trace gap, coinciding with a burst of five LOAD_DLL events
+  and a thread creation. The CODE breakpoint caught all four with no gaps.
+  So the limitation is specific to data watchpoints on this platform, not to
+  debug registers in general. That is a reusable capability finding:
+  WHEN A DATA WATCHPOINT GOES QUIET ACROSS DLL LOADS, A CODE BREAKPOINT ON THE
+  STORING INSTRUCTION IS AN EQUIVALENT AND MORE RELIABLE INSTRUMENT.
+  It also vindicates the advice to read at known points rather than capture
+  writes -- the design was suggested statically and it worked first time.
+
+## WHAT IS STILL NOT KNOWN
+  The identity of the foreign store. This measurement bounds WHEN it happens
+  and proves it goes through cygheap+8 rather than the entry slot, but it does
+  NOT name the instruction. The faulting PC is still required.
+
+## NAMING ATTEMPT: NOT ACHIEVED. FOUR ITERATIONS, HONEST ACCOUNT.
+  With the window proven to be two consecutive _cmalloc calls, I tried to name
+  the foreign instruction by arming the DATA watchpoint on cygheap+8 ONLY
+  inside that interval, using the code breakpoint to open and close it.
+
+  v1  Watchpoint re-fired without advancing; the log grew unbounded and the
+      run died with "Insufficient memory". My own bug, not a platform limit.
+  v2  Stopped at the first hit. It reported PC = base+0xA9000 -- which is
+      'str x5,[x2,#8]', THE LEGITIMATE 'cygheap->chain = rvc' two instructions
+      after the probe. NOT a foreign store. I had excluded only the probe PC
+      from the classifier, so every normal allocation looked foreign.
+      WORTH RECORDING: had I stopped at v2 I would have reported the
+      allocator's own correct store as the culprit. The exclusion list, not
+      the capture, was the defect.
+  v3  Excluded the legitimate store from LOGGING but did not advance past it,
+      so it re-fired forever and the run hung.
+  v4  Advanced past every watchpoint hit -- but SetBps re-arms the watchpoint
+      from wpOn on every call, so the advance itself left it armed and it
+      re-fired at the same PC. Hung again.
+
+  STATUS: the foreign instruction is NOT named. Each failure was in my own
+  harness rather than in the platform, and I am recording them because three
+  of the four produced a plausible-looking output that was wrong.
+
+## WHAT STANDS REGARDLESS
+  Case (a) is confirmed by the code-breakpoint probe, which is a separate and
+  working instrument: all four births captured, no gaps, and entry
+  0x8000068F0 born with x0 = 0x8000341000, a wild head. That result does not
+  depend on any part of the naming attempt.
+  The window is bounded by two consecutive _cmalloc calls.
+  The store targets cygheap+8, not the entry slot.
+
+## A FALSIFIABLE PRIOR WAS OFFERED AND IT SURVIVED ITS FIRST TEST.
+  The prior (from the defects session): the wild value's magnitude band --
+  512-898 GiB, neither the system-image band nor the low user-VA band -- is
+  where the Win32 heap manager places segment-backed allocations. So prefer
+  APIs that allocate their OWN buffer and return a pointer, over ones that
+  fill a caller-supplied stack buffer. Named candidate: the NetUserGetInfo /
+  NetLocalGroupGetInfo / NetUserGetGroups 'bufptr' out-parameter, reached via
+  uinfo.cc's internal_getpwsid / pwdgrp path, freed later by NetApiBufferFree.
+  Explicitly falsifiable: if the faulting PC lands elsewhere, the prior dies.
+
+  CHEAPEST POSSIBLE FIRST TEST: is the netapi machinery even loaded?
+  MEASURED -- modules in a live rung9 process (whose entire body is one
+  deliberate null store, no user malloc, no stdio):
+     advapi32.dll  bcryptPrimitives.dll  CRYPTBASE.DLL  KERNEL32.DLL
+     KERNELBASE.dll  msvcrt.dll  mswsock.dll  msys-2.0.dll
+     netapi32.dll  NETUTILS.DLL  ntdll.dll  RPCRT4.dll  rung9.exe
+     SAMCLI.DLL  SAMLIB.dll  sechost.dll  ucrtbase.dll  ws2_32.dll
+  netapi32.dll, NETUTILS.DLL, SAMCLI.DLL and SAMLIB.dll ARE ALL PRESENT.
+
+  So the user/group lookup machinery genuinely runs during startup even for a
+  program that does nothing. THE PRIOR IS NOT REFUTED, and it now has one
+  positive datum behind it rather than only plausibility.
+
+  WHAT THIS IS NOT: it is NOT confirmation that any Net* call made the store.
+  Loading is not calling, and calling is not storing-to-cygheap+8. Five of the
+  eighteen modules relate to this path, which is suggestive and no more.
+  THE CONFIRMING TEST IS STILL THE FAULTING PC, and the prior was offered on
+  exactly those terms.
+
+  NEXT TEST IF RESUMED: resolve netapi32's load base in the target, set a code
+  breakpoint on NetUserGetInfo / NetApiBufferAllocate, and compare the
+  returned bufptr against the wild value. The code-breakpoint instrument is
+  the one that works reliably here; the data watchpoint is not.
+
+## THE REFINED NetApi PRIOR IS FALSIFIED BY A VERIFIED INSTRUMENT.
+  The refined prior: the foreign store's window is the get_home/get_shell/
+  get_gecos copy-out from a Net-allocated buffer inside
+  pwdgrp::fetch_account_from_windows, reached via internal_getpwsid.
+
+  TEST: a third code breakpoint on fetch_account_from_windows entry
+  (RVA 0x14C800, from nm minus the ImageBase read from the header), running
+  alongside the working birth probe, so the two are interleaved in one trace.
+
+  RESULT -- fetch_account_from_windows was NEVER ENTERED before the wild birth:
+     [1] entry=0x8000048A0  prev-to-store=0x0
+     [2] entry=0x8000050B0  prev-to-store=0x8000048A0
+     [3] entry=0x8000068C0  prev-to-store=0x8000050B0
+     [4] entry=0x8000068F0  prev-to-store=WILD
+     (no 'fetch_account_from_windows ENTERED' line anywhere before [4])
+
+## AND I VERIFIED THE INSTRUMENT BEFORE TRUSTING THE NEGATIVE
+  A negative from an unverified instrument is not evidence -- the rule this
+  session has applied all day, and it applies to my own instruments too.
+  The probe used Bcr[0]/Bvr[0] (known to fire) and the new one Bcr[2]/Bvr[2],
+  which had never been exercised. READBACK from GetThreadContext:
+     Bcr[0]=0x1E5  Bvr[0]=0x7FFDB9C58FF8
+     Bcr[2]=0x1E5  Bvr[2]=0x7FFDB9CFC800
+  Base = 0x7FFDB9C58FF8 - 0xA8FF8 = 0x7FFDB9BB0000, and
+  0x7FFDB9CFC800 - 0x7FFDB9BB0000 = 0x14C800 -- the correct RVA.
+  Bcr[2] IS honoured and armed on the same footing as Bcr[0]. So the absence
+  of hits is a real absence, not a silent instrument failure.
+
+## CONCLUSION
+  THE CORRUPTION HAPPENS BEFORE THE pwdgrp / NetApi PATH RUNS AT ALL.
+  The netapi32/SAMCLI/SAMLIB modules being loaded was real but ambient: those
+  DLLs are present, yet fetch_account_from_windows has not executed by the
+  time the chain head is already wild. LOADING IS NOT CALLING -- stated as a
+  caveat when the module list was measured, and now demonstrated.
+  The prior was offered as explicitly falsifiable and it has been falsified
+  cleanly, which is exactly what it was for.
+
+## NET EFFECT ON THE SEARCH
+  The window is EARLIER than the user/group lookup: between the birth of
+  0x8000068C0 and the birth of 0x8000068F0, both HEAP_STR, and before
+  fetch_account_from_windows. Whatever runs there is a smaller region of
+  startup than the pwdgrp path.
+
+## __getreent() ELIMINATED AS THE WRITER (a candidate from the fork-diagnosis session)
+  The candidate was reasonable: config.h has '#error unimplemented for this
+  target' for non-x86_64, so the ARM64 port must override it, and _my_tls is
+  computed FROM StackBase -- which is exactly 0x800000000, so cygheap+8 IS
+  StackBase+8. A sign or offset error there would land precisely on the slot.
+
+  MEASURED -- the implementation in my tree:
+     __asm __volatile__ ("mov %0, x18" : "=r" (__teb));   /* TEB */
+     ret = *(char **) (__teb + 8);                        /* NT_TIB.StackBase */
+     return (struct _reent *) (ret - __CYGTLS_PADSIZE__);
+  THE OFFSET IS NEGATIVE. _my_tls = StackBase - 12800, and sizeof(_cygtls) is
+  5016, so the struct occupies [StackBase-12800, StackBase-7784] -- entirely
+  below the cygheap with 7784 bytes of headroom. It cannot reach StackBase+8.
+
+## BUCKET RECONCILIATION IS CLEAN ON ARM64 (a caveat raised from x86_64 data)
+  Measured live, with bucket_val[] read from source:
+     0x8000048A0 b=12 -> +16+2048 = 0x8000050B0   exact
+     0x8000050B0 b=15 -> +16+6144 = 0x8000068C0   exact
+     0x8000068C0 b=0  -> +16+  32 = 0x8000068F0   exact
+     0x8000068F0 b=6  -> bucket_val[6] = 256
+  Every entry abuts the next to the byte. The unreconciled extent reported
+  elsewhere is an x86_64 reading (b=0 at 0x8000068F0, versus b=6 on ARM64).
+  The two architectures agree through 0x8000050B0 (both b=15) but need not
+  agree after. I cannot settle the x86_64 side: I have no x86_64 build of our
+  tree, only Git for Windows' shipped 3.6.9.
+  NONE OF THIS TOUCHES THE CORE DATUM, which is independent of bucket
+  interpretation: 0x8000068F8 should hold 0x8000068C0 and holds a wild value.
+
+## BISECTION BY SAMPLING AT DEBUG EVENTS -- THE STORE IS NOW BRACKETED, AND
+## THE NEWLY-CREATED THREAD IS THE PRIME SUSPECT.
+
+## WHY NOT SINGLE-STEP (the suggested next instrument)
+  Single-stepping [3]->[4] would have been correct in principle but is not
+  practical: the interval was believed to contain five LOAD_DLL events, and
+  stepping through the Windows loader is potentially millions of debug-event
+  round trips. Instead I applied read-at-known-points to BISECTION: sample
+  cygheap+8 at EVERY debug event after birth [3]. No new capability, no
+  dependence on data-watchpoint delivery, and the events are already being
+  delivered to the debugger for free.
+
+## RESULT -- ALL BIRTHS ON ONE THREAD, AND A TIGHT BRACKET
+   [1] tid=120744  entry=0x8000048A0  prev-to-store=0x0
+   [2] tid=120744  entry=0x8000050B0  prev-to-store=0x8000048A0
+   [3] tid=120744  entry=0x8000068C0  prev-to-store=0x8000050B0
+       >>> sampling begins
+       after ev code=1 tid=120744   cygheap+8 = 0x8000050B0   (chain store not yet retired)
+       after ev code=2 tid=50920    cygheap+8 = 0x8000068C0   NEW THREAD CREATED; head CORRECT
+       after ev code=1 tid=50920    cygheap+8 unchanged
+       after ev code=1 tid=120744   cygheap+8 = 0xF822322000  *** WILD ***
+   [4] tid=120744  entry=0x8000068F0  prev-to-store=WILD
+
+## WHAT THIS ESTABLISHES
+  1. ALL FOUR ALLOCATIONS ARE ON ONE THREAD (tid=120744). So the births are
+     single-threaded even though the corruption window is not.
+  2. THE HEAD IS STILL CORRECT (0x8000068C0) IMMEDIATELY AFTER THE NEW THREAD
+     IS CREATED, and is WILD by the main thread's very next debug event.
+  3. THERE ARE NO LOAD_DLL EVENTS IN THIS BRACKET. The five DLL loads seen in
+     the earlier, wider window fall outside it. THAT RETIRES THE DLL-LOAD
+     HYPOTHESIS FOR THE STORE ITSELF -- the loads are real but are not in the
+     bracket where the value changes.
+  4. The bracket spans an exception on the NEWLY CREATED THREAD (tid=50920)
+     and the next event on the main thread.
+
+## PRIME SUSPECT, STATED AS A HYPOTHESIS NOT A FINDING
+  The thread created at code=2 tid=50920. It is created during setup_cygheap,
+  before the pwdgrp path (which is separately proven not to run yet), and the
+  head goes wild across its startup.
+  A MECHANISM THAT WOULD FIT: every thread's _cygtls lives at ITS OWN
+  StackBase - __CYGTLS_PADSIZE__. The MAIN thread's StackBase is exactly
+  0x800000000 == CYGHEAP_STORAGE_LOW. If a new thread's _cygtls base were
+  computed from the WRONG StackBase -- the main thread's rather than its own --
+  writes intended for _cygtls would land at or above 0x800000000, i.e. in the
+  cygheap header.
+  I HAVE NOT TESTED THIS. Against it: _cygtls::init_thread memsets 5016 bytes
+  to ZERO, which would zero the chain and the buckets rather than store a
+  pointer, and the buckets are demonstrably intact. So if the new thread is
+  the writer, it is via some other store, not the memset.
+  NOT A FINDING. The bracket is measured; the mechanism is speculation.
+
+## SPAN TEST CONFIRMS b=6 ON ARM64 BY A SECOND, UNION-INDEPENDENT ROUTE
+  A free-list reading of the union was proposed from x86_64 data, with the
+  suggestion that a span measurement is the reliable test because it does not
+  depend on interpreting the union. Ran it:
+     the entry whose prev is 0x8000068F0 is 0x800006A00
+     gap = 0x800006A00 - 0x8000068F0 = 0x110 = 272 bytes
+     minus the 16-byte header        = 256 bytes of data
+     bucket_val[6]  = 256    MATCH
+     bucket_val[23] = 98304  (would require a gap of 0x18010)
+  SPAN AND UNION READ AGREE: b=6, 256 bytes. Two independent methods.
+
+## AND THE FREE-LIST QUESTION IS ANSWERED DIRECTLY FOR ARM64
+  I had already dumped the whole buckets[] array from the live cygheap header
+  -- all 32 entries, not a partial range:
+     buckets[0]=0x800008C70   buckets[1]=0x800008C30   buckets[4]=0x800008A90
+     buckets[6]=0x800008B20   buckets[11]=0x8000075B0  buckets[23]=0x800009620
+  buckets[23] on ARM64 is 0x800009620, NOT 0x8000068F0. So on ARM64 that entry
+  is NOT on the bucket-23 free list. The x86_64 finding stands for x86_64 and
+  simply does not transfer -- consistent with the two sequences being free to
+  diverge after 0x8000050B0, the last address where both measure b=15.
+
+## NOTE ON THE ERROR THAT PRODUCED THE ORIGINAL DISCONFIRMATION
+  The free-list hypothesis was first reported as disconfirmed because only
+  buckets[0..15] were scanned, while NBUCKETS is 32. That is the partial-scan
+  trap: a search over part of a range reported as a result about the whole
+  range. It was caught and retracted by the session that made it.
+  MY OWN PROTECTION AGAINST IT HERE WAS ACCIDENTAL RATHER THAN DELIBERATE -- I
+  dumped the full header because I was hunting for the wild value anywhere in
+  it, not because I foresaw this question. Worth noting honestly: dumping the
+  whole structure rather than the fields you think you need is cheap and it
+  paid off twice today.
+
+## NONE OF THIS AFFECTS THE LOAD-BEARING RESULTS
+  0x8000068F8 should hold 0x8000068C0 and does not; and the head was already
+  wild at birth (case (a), code-breakpoint measurement). Both are independent
+  of any bucket or union interpretation.
+
+## A CLAIMED sigfe.s / __getreent CONTRADICTION DOES NOT EXIST -- MEASURED
+  The lead: sigfe.s allegedly uses 'mrs x16, tpidr_el0' while __getreent()
+  uses 'mov x18', so if the two ever disagree __getreent returns a bogus base.
+  MEASURED in my tree:
+     generated sigfe.s:  'mov x16, x18'        x4
+                         'mrs ... tpidr_el0'   x0
+        its own header comment reads:
+        'TEB access: mov x16, x18 then ldr from [x16, #8]'
+        'x18 is the platform register - READ ONLY, never written'
+     linked new-msys-2.0.dll: tpidr_el0 occurrences in the ENTIRE image: 0
+  NOT ONE tpidr_el0 INSTRUCTION EXISTS IN THE LINKED IMAGE. sigfe.s and
+  __getreent both use x18, so they agree and cannot disagree. The 'if they
+  ever disagree' branch has no premise.
+
+## WHY THE CLAIM WAS REASONABLE ANYWAY -- AND THE GENERAL LESSON
+  'mrs tpidr_el0' WAS in this tree earlier today. The original __getreent()
+  used it under a comment asserting it was the TEB register, which is false on
+  Windows on Arm. I proved that by executing raw AArch64 instructions in RWX
+  memory: tpidr_el0 reads 0, x18 holds the TEB. The fix went into config.h and
+  six gendef sites and took the count from 520 to 0.
+  SO THE CLAIM ACCURATELY DESCRIBES A REAL HISTORICAL STATE OF THE TREE, JUST
+  NOT THE CURRENT ONE.
+  GENERAL LESSON WORTH RECORDING: a lead derived from source that has since
+  changed looks perfectly sound and is unfalsifiable against the running
+  binary -- the reader has no way to know their copy is stale. This is a
+  sibling of the artefact-identity problem (verifying a binary that was
+  rebuilt underneath you), but on the source side, and it is why 'measured in
+  the linked image' beats 'read in the source' whenever the two can be
+  compared.
+
+## __getreent ITSELF: SUBTRACTION PRESENT, OFFSET NEGATIVE
+  Reads [x18+8] for StackBase and returns (ret - __CYGTLS_PADSIZE__).
+  _my_tls spans [StackBase-12800, StackBase-7784], entirely below the cygheap
+  with 7784 bytes of headroom. The 'subtraction doesn't happen' branch is not
+  the case in this build.
+
+## __getreent() EXONERATED BY DIRECT RUNTIME MEASUREMENT
+  The challenge was well-posed: verifying that the SOURCE contains the
+  subtraction is not the same as verifying the EMITTED CODE performs it, nor
+  that the RUNTIME VALUE is right. Those are three separate claims and only
+  the first had been checked. Also correctly noted: the sealed port has no
+  ARM64 __getreent at all (#error unimplemented), so this is new port code,
+  exactly the kind that can get arithmetic wrong while x86_64 stays correct.
+
+  MEASURED -- built rung11.exe, which reads x18 and [x18+8] itself and calls
+  __getreent(), in a live ARM64 process:
+     x18 (TEB)         = 0xcbc3c78000
+     StackBase [x18+8] = 0x800000000
+     __getreent()      = 0x7ffffce00
+     difference        = 12800
+  THE SUBTRACTION IS PERFORMED. The difference is exactly
+  __CYGTLS_PADSIZE__ = 12800, so __getreent() returns 0x7ffffce00, not the raw
+  StackBase. The hypothesis predicted 0x800000000 for the defective case; the
+  measurement is the healthy value.
+
+  AND IT MATCHES x86_64 EXACTLY. The corroborating datum offered with the
+  challenge was that on x86_64 the entry at 0x8000050B0 holds 0x7FFFFCE00 at
+  data+0x10 -- the healthy _my_tls pointer. ARM64's __getreent() returns
+  0x7ffffce00. IDENTICAL ACROSS ARCHITECTURES, which is the strongest possible
+  form of this negative: not merely 'plausible on ARM64' but 'the same number
+  the working architecture produces'.
+
+  ALSO CONFIRMED IN PASSING, by the program reading it directly rather than by
+  inference: the main thread's StackBase IS 0x800000000, i.e. exactly
+  CYGHEAP_STORAGE_LOW. So cygheap+8 really is StackBase+8. That adjacency is
+  real -- it is just not reached via __getreent.
+
+## STATUS OF THE _cygtls / TEB FAMILY OF HYPOTHESES: EXHAUSTED
+  - TEB register: correct (x18), and zero tpidr_el0 instructions in the image.
+  - StackBase read: correct ([x18+8], measured).
+  - PADSIZE subtraction: correct (measured, 12800).
+  - _cygtls size versus pad: 5016 versus 12800, 7784 bytes of headroom.
+  - _cygtls overflow would write struct CONTENT, not a pointer.
+  Every step of that path is now measured rather than assumed, and none of it
+  reaches cygheap+8.
+
+## A CORRECTION OF A CORRECTION: 'THE HEAD IS VALID, SO IT WAS NEVER CORRUPT'
+## DOES NOT FOLLOW. A RESTING VALUE IS NOT A HISTORY.
+  A separate probe walked the chain on ARM64 and found cygheap->chain valid
+  (0x800021AD0), 43 clean entries, and the wild prev at 0x8000068F0. From the
+  head being valid it concluded that a data watchpoint on 0x800000008 'would
+  NEVER fire on the corrupt value'.
+
+  THAT DOES NOT FOLLOW. A data watchpoint fires on WRITES, not on the resting
+  value. The head being valid when walked later means it was OVERWRITTEN
+  afterwards -- which is exactly what case (a) predicts: _cmalloc reads the
+  wild head into the new entry's prev, then immediately stores the new entry
+  as the head, restoring it. THE CORRUPTION IS TRANSIENT IN THE HEAD AND
+  PERMANENT ONLY IN THAT ONE ENTRY'S prev.
+
+  AND I HAVE OBSERVED THE TRANSIENT STATE DIRECTLY, which settles it:
+     after ev code=2 (new thread)   cygheap+8 = 0x8000068C0   correct
+     after ev code=1 (new thread)   unchanged
+     after ev code=1 (main thread)  cygheap+8 = 0xF822322000  *** WILD ***
+  The head genuinely goes wild and is then restored.
+
+  SAME ERROR SHAPE AS THE DAY'S OTHERS: a true observation (the head is valid
+  now) supporting an inference it cannot carry (therefore it was never
+  written wild). Alongside 1<<b and the mmap bound, that is three instances of
+  a correct measurement with an overreaching conclusion.
+
+## CORROBORATION THAT IS REAL, AND WORTH RECORDING
+  Independently, on separate runs and a separate probe, that session found the
+  wild prev AT THE SAME ENTRY 0x8000068F0, with per-run randomised values
+  (0xD2D3D15000, 0xD977331000). My observed values include 0x80002CA000,
+  0x8DCA825000, 0xA557227000, 0xF822322000. SAME ENTRY, SAME PER-RUN
+  VARIATION, TWO INDEPENDENT INSTRUMENTS.
+
+## ARTEFACT IDENTITY MATTERS NOW THAT THREE SESSIONS ARE MEASURING
+  That probe walks 43 entries where mine walks 39, and reads b=3 where mine
+  reads b=6. My span test is union-independent and settles my build: the entry
+  whose prev is 0x8000068F0 is 0x800006A00, gap 0x110 = 16 + 256 =
+  bucket_val[6]. b=3 would be 96 bytes and contradicts that span.
+  So the builds or the allocation sequences differ -- the differing entry
+  count already implies that.
+  MY NUMBERS ARE FROM msys-2.0.dll sha256 490dfe09... ENTRY COUNTS AND BUCKET
+  INDICES ARE BUILD-DEPENDENT. The invariant that has reproduced across every
+  instrument and every build compared is the prev corruption at 0x8000068F0.
+
+## A RULE, NOT A LESSON: THE TWO CANDIDATE STORES ARE INDISTINGUISHABLE BY SHAPE
+  My v2 naming attempt reported base+0xA9000 as the foreign store, which is
+  the LEGITIMATE 'cygheap->chain = rvc'. I recorded that as an incomplete
+  exclusion list. A sibling sharpened WHY, and the sharper form is a rule:
+     0xA8FF8  str x0, [x5, #8]     rvc->prev = cygheap->chain
+     0xA9000  str x5, [x2, #8]     cygheap->chain = rvc
+  BOTH ARE 'str ..., [..., #8]'. So any capture filter phrased as 'a store to
+  offset +8' CANNOT distinguish the foreign store from the legitimate one BY
+  SHAPE AT ALL. The exclusion must be BY RVA.
+  That is not a mistake I happened to make; it is a property of the
+  instruction pair, and it would catch anyone using a pattern-based filter.
+
+## AND A GENERAL TEST-DESIGN POINT WORTH KEEPING
+  For any candidate buffer, test the wild value for CONTAINMENT in
+  [base, base+size), not EQUALITY with the base. An interior pointer
+  mis-stored is the realistic shape; equality with a base would be the
+  surprising outcome and would point at a different mechanism.
+
+## 'LOADED != CALLED != STORED' -- ALL THREE LINKS TESTED SEPARATELY TODAY
+  netapi32/SAMCLI/SAMLIB were LOADED (measured, module enumeration).
+  fetch_account_from_windows was NEVER CALLED before the corruption
+  (measured, code breakpoint with register readback verification).
+  Therefore nothing was STORED from it.
+  The module-presence datum was explicitly not allowed to stand as
+  confirmation when it was taken, and that caution is now cashed. THE CHAIN
+  MATTERED: a weaker discipline would have stopped at 'the DLLs are loaded,
+  the prior is confirmed'.
+
+## ATTEMPT TO NAME 0x8000068F0's BIRTH SITE: NOT ACHIEVED (instrument too slow)
+  A sibling traced statically that 0x8000068F0's birth is NOT in the
+  setup_cygheap tail -- user::init allocates no HEAP_STR after the username
+  cstrdup, init_installation_root writes only into the fixed
+  installation_root_buf member, and pg.init allocates nothing -- so the next
+  cstrdup must come later, in memory_init. That is a testable claim and it
+  bounds the FAR end of the window.
+
+  MY TEST: cstrdup is at RVA 0xA9F94 (from nm minus the ImageBase read from
+  the header). At a function's ENTRY, LR holds the caller's return address, so
+  a code breakpoint there names the caller directly -- unlike the probe at
+  0xA8FF8, where LR is already clobbered by _cmalloc's internal lock call
+  (observed: LR values 0xA8F2C and 0xA8F84, both inside _cmalloc itself).
+
+  RESULT: the run does not complete. cstrdup is called frequently, and every
+  hit costs a disarm / advance-breakpoint / re-arm round trip through the
+  debug loop. The run was still going after ten minutes and I stopped it.
+  NOT A PLATFORM LIMIT -- a throughput limit of my single-stepping advance.
+  A better design would filter in-process, or breakpoint the specific
+  _cmalloc(HEAP_STR,...) call site rather than all of cstrdup, or capture
+  only the Nth hit.
+
+  I am recording this rather than iterating further: this is the fifth
+  harness iteration on the naming problem, and the earlier rule applies --
+  if a fifth attempt is worth running it is worth running deliberately rather
+  than on momentum.
+
+## WHAT THE FAILED ATTEMPT DID ESTABLISH
+  LR at the 0xA8FF8 probe is NOT the caller -- it points inside _cmalloc
+  (0xA8F2C / 0xA8F84), because _cmalloc calls the SRW lock before that store.
+  So any future attempt to name a caller must break at a function ENTRY, or
+  walk the frame, rather than reading LR at an arbitrary mid-function point.
+  That is worth knowing before someone reads the existing LR values as caller
+  addresses -- they are not.
+
+## USERNAME-LENGTH DISCRIMINATOR: THE VICTIM MOVES, THE TARGET DOES NOT.
+## AND THE PROPOSED INTERPRETATION OF THIS TEST IS WRONG.
+  Proposed test: run with a different-length username; if the corrupt slot
+  moves the writer is allocation-relative, if it stays it is an absolute
+  address. cygheap_user::init reads USERNAME from the environment, so this is
+  settable without a rebuild.
+
+  MEASURED:
+     USERNAME='crutkasLocal' (12 chars) -> corrupt entry 0x8000068F0
+     USERNAME=54 chars                  -> corrupt entry 0x800006930
+     shift = 0x40 = 64 bytes
+  Consistent with the username string moving from bucket_val[0]=32 to
+  bucket_val[2]=64 (+32) across two allocations, e.g. USER and USERNAME.
+
+  THE CORRUPT ENTRY MOVES. But the proposed inference does not follow.
+
+## WHY THE INFERENCE FAILS -- IT CONFLATES THE VICTIM WITH THE TARGET
+  Case (a) is already MEASURED: the foreign store lands on cygheap->chain at
+  0x800000008 -- a FIXED address -- and whichever entry is born NEXT inherits
+  the wild head as its prev. So the CORRUPTED ENTRY is simply 'whatever is
+  allocated next', and it necessarily moves whenever the allocation layout
+  moves. THE VICTIM MOVING IS EXACTLY WHAT AN ABSOLUTE-ADDRESS WRITER
+  PREDICTS, so this test cannot distinguish the two hypotheses it was designed
+  to separate.
+  The store target has been directly observed at the fixed address: sampling
+  showed cygheap+8 itself going from 0x8000068C0 to a wild value and back.
+
+## WHAT THE TEST DOES ESTABLISH, AND IT IS WORTH HAVING
+  THE STORE'S POSITION IN THE ALLOCATION SEQUENCE IS INVARIANT UNDER LAYOUT
+  CHANGES. Across a 64-byte shift of every subsequent address, the corruption
+  still lands on the entry IMMEDIATELY AFTER the username allocations, and the
+  chain still breaks after 39 entries in both runs.
+  So the foreign store happens at a FIXED POINT IN THE STARTUP SEQUENCE --
+  right after the username is allocated -- rather than at a fixed wall-clock
+  moment or a fixed address in the heap. That is a genuine new invariant and
+  it strengthens the case that the writer is a specific piece of startup code
+  reached at a specific point, not a stray asynchronous write.
+
+## ONE RUN NOT EXPLAINED
+  USERNAME='aa' (2 chars) produced NO chain-walk output at all -- neither a
+  corrupt entry nor a clean termination. I do not know why and am not
+  guessing. It may be that the process failed earlier, or that the walker's
+  capture did not trigger. Recording it as an unexplained data point rather
+  than omitting it.
+
+## GUARDING AGAINST AN OVER-ELIMINATION: 'StackBase+8 IS DEAD TWICE' IS WRONG
+  A reconciliation from another session concluded the StackBase+8 hypothesis
+  was 'dead twice' -- once by measurement (__getreent correct) and once
+  'geometrically', because StackBase+8 = 0x800000008 'only reaches the chain
+  head, which is the right address but the mechanism doesn't produce it'.
+
+  THE SECOND COUNT IS NOT AN ELIMINATION -- IT IS A MATCH, AND IT SUPPORTS THE
+  HYPOTHESIS RATHER THAN KILLING IT. I measured that the main thread's
+  StackBase IS 0x800000000, so cygheap+8 IS StackBase+8, to the byte. That
+  exact coincidence is the strongest structural fact in favour of a
+  StackBase-derived writer.
+
+  WHAT IS ACTUALLY ELIMINATED IS __getreent SPECIFICALLY -- one consumer of
+  StackBase, measured to read [x18+8], subtract 12800, and return 0x7ffffce00.
+  ANY OTHER CODE HOLDING StackBase AND ADDING A SMALL POSITIVE OFFSET WOULD
+  LAND ON THE CHAIN HEAD, and nothing measured rules that out.
+
+     __getreent as the writer:            DEAD (measured)
+     a StackBase-derived store generally: ALIVE, and the most mechanically
+                                          plausible remaining shape
+
+  RECORDED BECAUSE THE FAILURE MODE IS EXPENSIVE: 'dead twice' would close a
+  live class on the strength of a fact that supports it. Prematurely-closed
+  classes are worse than open ones -- an open class gets tested, a closed one
+  does not. The right first question of any faulting PC remains: is the
+  store's base register sp- or x18-derived?
+
+## WINDOW REFINEMENTS CARRIED FORWARD
+  Not 'between two adjacent cstrdup calls in set_name/cygheap_init': after the
+  username cstrdup, user::init, init_installation_root and pg.init allocate NO
+  HEAP_STR, so the next cstrdup is later, in memory_init. The interval spans
+  the whole setup_cygheap tail. My bisection places a THREAD CREATION inside
+  the bracket and NO DLL loads.
+
+## A PROVENANCE ERROR ABOUT MY OWN EDIT, CORRECTED BEFORE IT ENTERED THE RECORD
+  Another session reported: 'The port also wrote the static_assert at
+  cygtls.h:313-329 predicting this exact failure -- StackBase+8 is exactly
+  cygheap->chain -- BEFORE the bug was observed. The port author knew this was
+  possible.'
+  I WROTE THAT ASSERT AND THAT COMMENT TODAY, ABOUT NINETY MINUTES AGO, AFTER
+  the bug was fully characterised. The quoted phrasing is mine, and I could
+  only write it BECAUSE I had already measured StackBase == CYGHEAP_STORAGE_LOW
+  == 0x800000000 and identified the corrupted slot.
+  As reported it would have entered the record as evidence that the sealed
+  port ANTICIPATED this defect. It is the opposite: a guard added in RESPONSE
+  to it.
+  THIS IS THE ARTEFACT-IDENTITY FAILURE ON THE SOURCE SIDE -- the same class as
+  verifying a binary that was rebuilt underneath you. A tree that has been
+  edited during an investigation will present today's conclusions as though
+  they were yesterday's foresight, and nothing in the file says otherwise.
+  RULE: WHEN CITING SOURCE AS PRIOR ART, ESTABLISH ITS AGE. In a tree under
+  active edit, 'the code already says X' may mean 'someone said X an hour ago'.
+
+## AND THE tlsoffsets LEAD, CHECKED AND CLOSED
+  Claim: gentls_offsets greps '.long' while ARM64 GCC emits '.word', so the
+  offsets were hand-generated and one may be wrong -- which would make asm
+  writes land at a wrong address while C++ stayed correct.
+  THE SCRIPT OBSERVATION IS CORRECT: scripts/gentls_offsets does grep .long
+  (lines 65 and 88).
+  THE OFFSETS ARE NEVERTHELESS RIGHT. Compared the generated file against a
+  compiled probe of the real struct:
+     tlsoffsets     _cygtls.initialized = -7792   _cygtls.initialized_p = 5008
+     compiled       offsetof - PADSIZE  = -7792   offsetof              = 5008
+                    sizeof(_cygtls) = 5016
+  EXACT MATCH, 59 lines, self-consistent.
+  AND THE SPECIFIC QUESTION ASKED -- is any offset +8, or reachable as +8 by a
+  sign error? NO. Negative offsets run -7787..-7912; positive '_p' variants run
+  4888..5013. Negating -7792 gives +7792, not +8. Nothing is near +8.
+  RESIDUE WORTH KEEPING ON ITS OWN TERMS: the file is CORRECT but NOT
+  REPRODUCIBLY REGENERABLE on this target, because the generator greps for a
+  directive the compiler does not emit. That is a real latent build-system
+  defect -- just not this bug.

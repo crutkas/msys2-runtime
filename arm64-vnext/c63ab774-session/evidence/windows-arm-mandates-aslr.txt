@@ -1,0 +1,47 @@
+# ARM64 vNext -- WINDOWS ON ARM MANDATES ASLR (session c63ab774)
+# 2026-09-03T15:53:32Z   host: Windows 11 ARM64 10.0.28000.0
+
+## THE CONTROL EXPERIMENT
+  Take a KNOWN-GOOD Microsoft ARM64 system DLL, copy it, and clear ONLY the
+  DYNAMIC_BASE bit (0x0040) in DllCharacteristics. Change nothing else.
+  Then LoadLibraryEx both copies in a fresh process.
+
+  DLL                     DllChar    DYNAMIC_BASE set   DYNAMIC_BASE cleared
+  ----------------------- ---------- ------------------ --------------------
+  System32\version.dll     0x4160     LOADED             FAILED err=193
+  System32\winmm.dll       0x4160     LOADED             FAILED err=193
+  System32\psapi.dll       0x4160     LOADED             FAILED err=193
+  System32\profapi.dll     0x4160     LOADED             FAILED err=193
+
+  FOUR FOR FOUR. err=193 is ERROR_BAD_EXE_FORMAT -- the SAME error our
+  fixed-base msys-2.0.dll produced. The only variable changed was one bit.
+
+## CONCLUSION
+  WINDOWS ON ARM REQUIRES ASLR-CAPABLE IMAGES. A non-relocatable ARM64 PE is
+  rejected outright at load time. This is a platform rule, not a property of
+  our build.
+
+## WHAT THIS RETRACTS -- TWO OF MY OWN CLAIMS
+  1. 'Link with --disable-dynamicbase' is NOT a viable fix on Windows ARM64.
+     It removes the crash only by making the image unloadable. RETRACTED.
+  2. I downgraded the missing-base-relocation finding on the grounds that
+     disabling ASLR made it moot. That reasoning is now INVALID.
+     THE 414 MISSING BASE RELOCATIONS ARE A GENUINE MUST-FIX DEFECT.
+     I re-raise it, and the earlier downgrade is withdrawn.
+
+## THE ARCHITECTURAL CONSEQUENCE -- LARGER THAN THE LINK
+  Cygwin's fork() copies the address space and REQUIRES the runtime DLL at
+  the SAME address in parent and child. Upstream achieves this with a fixed
+  image base and never relocating. Windows on Arm FORBIDS exactly that.
+
+  These two requirements are in DIRECT CONFLICT. On Windows ARM64 the runtime
+  WILL be relocated, therefore:
+    - every absolute .quad in the autoload thunks MUST carry a base
+      relocation (the 414 are fatal, not benign)
+    - fork() cannot rely on a fixed load address and needs a different
+      strategy on this platform
+  This is a design-level problem for the ARM64 port, not a build-flag question.
+
+## STATUS
+  Measured, reproduced 4x, and it contradicts two of my own earlier claims.
+  Nothing has executed beyond the loader. No user code has run.

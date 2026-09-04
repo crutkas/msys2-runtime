@@ -1,0 +1,57 @@
+# TWO ITEMS CLOSED.  2026-09-03T23:21:18Z  session c63ab774
+
+## A. BUILD REPRODUCIBILITY: CLOSED.  THE LINK *IS* REPRODUCIBLE; MY RECIPE
+##    WAS NOT.
+   The Makefile's DLL rule carries
+       \$\
+   -- a LINKER FLAG gated on SOURCE_DATE_EPOCH, not a post-processing step,
+   which is what I had guessed.  My sealed sF7 recipe omitted it.
+   MEASURED, two relinks each, same command, 2s apart:
+     WITHOUT the flag : a8629a21... vs 11b7f0f0...   DIFFER, 3 bytes
+     WITH the flag    : 490ffdec... vs 490ffdec...   BYTE-IDENTICAL
+   So the three-byte delta -- independently reproduced by a third party
+   earlier tonight by accident -- is the PE timestamp, and the link is
+   deterministic once it is suppressed.
+   FIXED: -Wl,--no-insert-timestamp added to files/sF7-relink-import.sh.
+   The recipe is now what it was sealed as: reproducible.
+
+## B. "THE EXEC'ING PROCESS BEING ITSELF A FORKED CHILD" -- REFUTED BY MY OWN
+##    TEST, WHICH I PROPOSED.
+   I offered fork-ancestry as the one surviving structural asymmetry.  I then
+   built the discriminator rather than leave it as a hypothesis: rung19 execs
+   DIRECTLY from main with no fork anywhere, run against a DLL with the exec
+   fix REVERTED (0234f4f6), so the only difference between arms is whether a
+   fork preceded the exec.
+     A  direct exec, NO fork : child_copy err 6, signal-pipe err 5,
+                               exit 2816 (= 0x0B00, SIGSEGV wait status)
+     B  fork then exec       : identical signature, error6=1, status 0xb
+   IDENTICAL FAILURE.  Fork ancestry is NOT the variable.  My hypothesis is
+   dead, killed by the test I proposed for it.
+   (The coordinator relayed the same refutation from the verifier's direct
+   arm at about the same time -- two independent refutations, agreeing.)
+
+## WHAT THE ROOT CAUSE STILL HAS TO EXPLAIN -- NOW WITH THREE CANDIDATES DEAD
+   A handle duplicated with bInheritHandle=TRUE, minted in the very process
+   that calls CreateProcessW, passed bInheritHandles=TRUE, arriving at the
+   child with the CORRECT NUMERIC VALUE, that is nonetheless not usable in
+   the child.  Refuted so far: stale/reused static handle (measured);
+   fork ancestry (measured); the iscygwin-guarded inherit-clear (static, and
+   non-Cygwin exec measured working).  STILL UNEXPLAINED.
+
+## C. A SELF-INFLICTED "CHECK THAT CANNOT FAIL", CAUGHT IMMEDIATELY.
+   When adding the flag to sF7 I first placed the explanatory comments
+   INSIDE the command's line continuation:
+       aarch64-pc-cygwin-g++ ... \
+           # comment
+           -Wl,--gc-sections ... \
+   "bash -n" reported "syntax OK" -- BEFORE AND AFTER the bad edit.  It is
+   syntactically valid and semantically broken: a "#" after a joined
+   continuation comments out the REST OF THE LOGICAL LINE, truncating the
+   link command.  A syntax check cannot detect it.
+   FIXED by moving the comments above the command, and verified by a check
+   that CAN fail: join the continuation lines and confirm
+   (a) "no-insert-timestamp" survives the join, and
+   (b) zero comment lines remain inside the command.
+   Recorded because it is the same family as everything else tonight, and
+   because "bash -n passed" would have been an entirely reasonable-sounding
+   basis for calling the recipe fixed.

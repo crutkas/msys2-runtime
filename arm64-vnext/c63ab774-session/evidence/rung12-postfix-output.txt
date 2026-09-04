@@ -1,0 +1,17 @@
+T1 fork + waitpid + exit status
+  ok   fork returned a pid
+  ok   waitpid reaped the child
+  ok   child exit status is 7
+T2 second fork after the first was reaped
+  ok   second fork returned a pid
+  ok   second child status 9
+T3 pipe: child writes, parent reads
+  ok   pipe created
+  ok   parent read 16 bytes
+  ok   pipe payload intact
+T4 nested fork: child forks a grandchild
+  ok   reaped the child that forked
+  ok   grandchild ran and was reaped by child
+T5 heap work in the child (exercises the cygheap post-fork)
+  ok   child malloc/memset/free clean
+RESULT ALL PASS (0 failures)

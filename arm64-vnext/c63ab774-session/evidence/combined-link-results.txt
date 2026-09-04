@@ -1,0 +1,41 @@
+# ARM64 vNext -- COMBINED LINK RESULTS (session c63ab774)
+# Captured 2026-09-03T15:07:49Z. Tree: /root/xc/w-link (my own copy).
+# Preserved /root/xc/{inst,runtime,bld} NOT modified.
+
+## PRECONDITIONS
+_cygwin.h aarch64 _WIN64 guard : PRESENT
+w32api commit                  : 819a6ec2ea87c19814b287e21d65e0dc7f05abba
+w32api describe                : v12.0.0
+mbstate_t in corecrt.h         : 0 (want 0)
+autoload.cc md5                : 45fd56e736709e712ee202b7ed3c9c4f (fixed=45fd56e736709e712ee202b7ed3c9c4f)
+gendef md5 (LF-normalised)     : 1cfe15204c429030bd09426836f39cf2
+gendef md5 (as delivered CRLF) : d78ea8d7ac923428d0130aa04ab40c2f
+tlsoffsets lines               : 59
+
+## GENERATED ARTEFACTS
+sigfe.s            293901  2b81f06af800ba243d512f38f4cc35f37d3ed6b0b32656758e1c53f597cd0d8f
+sigfe.o            157795  fa2ad89df273e9529f97a98ba326a03949e5d07083046e2f1e7954226ce7d4fe
+msys.def            40498  536a86d04603acfd9c500e1d1bf06ebff984dc1c291f5b8be9d5de47c1e30cb6
+autoload.o          78262  1c27dac473591d841a237e2d60f6c6643f88cde9f6739900152a7389ee86afe0
+cygwin.sc            3765  7c75b20ebde7318de3f1e8b153ca15c1787bdaf61d465e99f1eade6d11da6b7e
+libdll.a         31443044  9609b52772d90f1a2d418d0a63d81f76e186a7a017d18a67efbc7760ba2522d6
+
+## DLL (DIAGNOSTIC CONFIG ONLY -- 10 export entries removed from cygwin.din)
+path            : /root/xc/w-link/bld/winsup/cygwin/new-msys-2.0.dll
+size            : 30846960 bytes
+sha256          : bfacc87a370c944f7731b4a68170c266d9b0a7793c06b5593d4624ec4299287b
+stripped size   : 3215953 bytes
+stripped sha256 : 822c7dceafc2091588bcd8f6e5345a4e5a539d8e016757d2bfc0e95cc030c53c
+file            : PE32+ executable (DLL) (console) Aarch64, for MS Windows, 23 sections
+PE machine      :  64 aa  (0xAA64 = IMAGE_FILE_MACHINE_ARM64)
+bfd format      : pei-aarch64-little
+entry point     : 0x00000001800d2770
+sections        : 23
+exports (EAT)   : 1757 (0x6dd)
+imported DLLs   : DLL Name: KERNEL32.dll DLL Name: ntdll.dll
+
+## HONEST STATUS
+UNEXECUTED AND UNVALIDATED. Linking is not running.
+Nothing in this programme has ever been executed on ARM64.
+This DLL is MISSING 10 EXPORTS and is NOT a complete msys-2.0.dll.
+It is a diagnostic artefact answering 'is anything else behind those 10?'.

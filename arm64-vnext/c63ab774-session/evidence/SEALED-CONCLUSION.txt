@@ -1,0 +1,147 @@
+# SEALED CONCLUSION -- ARM64 msys2-runtime cygheap chain defect
+# 2026-09-03T12:30:25Z   session c63ab774
+# Agreed wording between this session and 57224227, with two amendments I
+# insisted on. Written for someone reading cold.
+
+## 1. MECHANISM: DERIVED, NOT OBSERVED.
+   MEASURED: the stored value is the main thread's TEB exactly (difference
+   zero, many runs); the store target is cygheap+8, which IS StackBase+8
+   (main StackBase == 0x800000000 == CYGHEAP_STORAGE_LOW, measured).
+   DERIVED: since NT_TIB.StackBase lives at TEB+8, those two facts are
+   explained by a single-thread direction inversion --
+        *(StackBase+8) = TEB     where the correct idiom is
+        StackBase = *(TEB+8)
+   NO INSTRUCTION PERFORMING THIS HAS BEEN OBSERVED. No PC, no opcode, no
+   register pair. cygheap->chain is collateral: it merely occupies that
+   address.
+   [A draft of this line read 'Mechanism: KNOWN'. I amended it. The direction
+    inversion is MY inference and signing 'KNOWN' onto it would be the exact
+    failure this session spent the day correcting in others -- and it would
+    have flattered my own finding.]
+
+## 2. ORIGIN: NARROWED TO 'NOT msys's COMPILED CODE'.
+   Four independent measured static negatives from 57224227: TEB-as-value
+   (4 vectors, zero); TEB-field-as-destination [mov-copy-of-x18, #8] (3 sites,
+   all legitimately writing a computed stackbase into the real TEB);
+   cygthread::stub and callees (clean); constant-base CYGHEAP_STORAGE_LOW
+   (3 materialisations, none a store base).
+   SCOPE CAVEAT, STATED BY ITS AUTHOR: this scans the statically-linked msys
+   image. It cannot see ntdll/loader code or anything trampolined at runtime.
+   'Not in msys's image' is NOT 'not executed by our process'.
+   SURVIVING HYPOTHESIS: a Windows DLL_THREAD_ATTACH path. The store is
+   measured to be NOT synchronous with thread creation -- the head is still
+   correct after the CREATE_THREAD event and after the new thread's first
+   exception.
+
+## 3. CONTRIBUTING FACTOR: MEASURED -- AND NOT A REMEDY.
+   THREAD_STORAGE_HIGH == CYGHEAP_STORAGE_LOW == 0x800000000, so the main
+   thread's StackBase IS the cygheap base. That coincidence is what turns an
+   inverted store into cygheap corruption rather than a harmless write.
+   RELOCATING THE CYGHEAP IS NOT AN AVAILABLE MITIGATION -- TESTED, BREAKS THE
+   RUNTIME OUTRIGHT. Moving CYGHEAP_STORAGE_LOW to 0x900000000 produced a
+   clean NULL-terminated chain AND made every rung abort with 0x80000001; the
+   chain was clean only because the process died after three allocations
+   instead of thirty-nine. The fixed base is load-bearing beyond the layout
+   header.
+   [This sentence is mandatory. Without it line 3 reads as an implied fix --
+    the exact fix I nearly reported and had to retract.]
+
+## 4. INSTRUCTION: UNNAMED.
+   No store-PC was captured. Instrument limits, all measured on this host:
+   data watchpoints do not deliver in this window (armed and readback-verified,
+   yet missed writes proven to occur on an armed thread); only THREE hardware
+   breakpoint registers are honoured (Bcr[3]/Bcr[4] silently stripped, values
+   discarded on readback); single-stepping the interval means stepping the
+   Windows loader; and event-granularity bisection cannot resolve finer than
+   two adjacent debug events.
+   THE REMAINING ARBITER IS A STORE-PC CAPTURE, AND IT IS BEYOND THE
+   INSTRUMENTS AVAILABLE HERE.
+
+## WHAT WORKS TODAY, FOR CONTEXT
+   rung3 (return 77), rung4 (malloc/printf/free, real stdout), rung5a
+   (signal handler runs) ALL PASS on the restored baseline. fork() fails.
+   This is a working minimal runtime for single-threaded, non-forking
+   programs. It is not a product pass and creates no authority.
+
+## AMENDMENT (later same day) -- LINE 3 STRENGTHENED.
+   Contributed by session 57224227, verified independently here against
+   memory_layout.h:33-47 and create_posix_thread.cc:134/230/274.
+
+   The StackBase/cygheap aliasing is NOT a coincidence. It is EXACT BY
+   CONSTRUCTION:
+       thread_allocator () : current (THREAD_STORAGE_HIGH)   // seeded AT cygheap base
+       addr = current - real_size                            // grows DOWNWARD
+       StackBase = allocationbase + stacksize                // adds the size back
+   For the FIRST allocation (the main thread stack, before any pthread):
+       StackBase = (THREAD_STORAGE_HIGH - real_size) + stacksize
+   which cancels to THREAD_STORAGE_HIGH exactly whenever real_size == stacksize.
+   MEASURED on rung10.exe: SizeOfStackReserve = 0x200000 (2 MB);
+   roundup2(.,THREAD_STACK_SLOT=1MB) = 0x200000; roundup2(.,64K) = 0x200000.
+   EQUAL -> StackBase == THREAD_STORAGE_HIGH == CYGHEAP_STORAGE_LOW
+         == 0x800000000, identical to the measured value.
+   CONDITION (not unconditional): a reserve that is not a whole number of
+   1 MB slots would make the two roundings disagree and shift StackBase
+   below the boundary. The measured 2 MB satisfies it.
+
+   CONSEQUENCE -- RELOCATION CAN NEVER DECOUPLE THEM. main StackBase is
+   THREAD_STORAGE_HIGH; the cygheap base is CYGHEAP_STORAGE_LOW; the design
+   DEFINES those two constants equal. Any correct coordinated re-partition
+   moves both together and the aliasing SURVIVES the move. The two addresses
+   are the same symbol. Decoupling requires inserting a gap between the
+   arenas -- breaking the layout's contiguity invariant, not changing its
+   addresses.
+
+   WHY MY EARLIER RELOCATION BROKE (root cause, not just symptom): I moved
+   CYGHEAP_STORAGE_LOW alone, leaving THREAD_STORAGE_HIGH, CYGHEAP_STORAGE_HIGH
+   and USERHEAP_START behind -- opening an unowned gap 0x800000000-0x900000000,
+   halving the cygheap arena, and stranding the main stack on the old boundary.
+   A one-constant edit to a value four other constants abut.
+
+   NET: 'relocate the cygheap' is dead as a mitigation on TWO independent
+   grounds -- it breaks the runtime empirically, AND it cannot remove the
+   aliasing even done correctly. The real fix remains the direction-inversion
+   store itself, which is still UNNAMED (line 4 unchanged).
+
+## CORRECTION TO THE AMENDMENT ABOVE -- I PROVED THE PATH THAT DOESN'T RUN.
+   Caught because session 57224227 declined to assert the _alloc path was
+   identical without tracing it. Conclusion survives; mechanism restated.
+
+   THE EXECUTED PATH IS _alloc, NOT _alloc_old.
+   wincap.cc sets has_extended_mem_api:false for the 5 older entries and
+   true from Win10-1803+ onward. Windows 11 ARM64 => true => l232 selects
+   alloc_func = &thread_allocator::_alloc.
+
+   AND _alloc DOES NOT USE 'current' AT ALL (l142-179): no seed, no
+   'current - real_size', no writeback. So the constructor seed
+   'current (THREAD_STORAGE_HIGH)' that the amendment above builds on is
+   IRRELEVANT ON THIS HOST. That part of the derivation is WITHDRAWN.
+
+   WHAT _alloc ACTUALLY DOES:
+       MEM_ADDRESS_REQUIREMENTS thread_req = {
+         THREAD_STORAGE_LOW, THREAD_STORAGE_HIGH - 1, THREAD_STACK_SLOT };
+       real_size = roundup2 (size, THREAD_STACK_SLOT);
+       VirtualAlloc2 (..., MEM_RESERVE | MEM_TOP_DOWN, ..., &thread_ext, 1);
+   First allocation, empty arena, THREAD_STORAGE_HIGH (0x800000000) is
+   1 MB-aligned => MEM_TOP_DOWN under a HighestEndingAddress of
+   THREAD_STORAGE_HIGH-1 returns the topmost fitting block:
+       allocationbase = THREAD_STORAGE_HIGH - real_size
+
+   THE IDENTITY IS UNCHANGED because l274 is shared by both paths:
+       StackBase = allocationbase + stacksize
+                 = THREAD_STORAGE_HIGH        iff real_size == stacksize
+   Condition measured and met (reserve 0x200000; roundup2(.,1MB) and
+   roundup2(.,64KB) both 0x200000). Corroborated directly: main StackBase
+   measured 0x800000000 exactly.
+
+   CORRECTED STATEMENT: both paths place the first stack at
+   THREAD_STORAGE_HIGH - real_size and both recompute StackBase at l274, so
+   StackBase == THREAD_STORAGE_HIGH == CYGHEAP_STORAGE_LOW by construction on
+   either -- _alloc_old because 'current' is seeded at THREAD_STORAGE_HIGH,
+   _alloc because THREAD_STORAGE_HIGH-1 is the hard ceiling under
+   MEM_TOP_DOWN. The un-relocatability conclusion (line 3) is UNCHANGED and
+   now rests on the branch actually taken.
+
+   PATTERN, FOURTH INSTANCE TODAY: reasoning sound, INPUT wrong. Others were
+   the '414 missing base relocations' claim, the cygheap-relocation 'fix',
+   and the ImageBase premise. Second instance where the tell was someone
+   declining to assert what they had not personally traced.
