@@ -162,9 +162,15 @@ quoted (char *cmd, int winshell, int glob)
   if (!winshell || !glob)
     {
       char *p;
-      strcpy (cmd, cmd + 1);
+      /* NB: source and destination overlap, so strcpy() is undefined
+	 behaviour here.  x86_64's byte-forward strcpy happens to produce
+	 the intended left-shift; AArch64's reads 16-byte NEON blocks from
+	 a down-aligned source and re-reads bytes its own stores already
+	 overwrote, duplicating one character and dropping another.  Use
+	 memmove, which is defined for overlapping regions.  */
+      memmove (cmd, cmd + 1, strlen (cmd + 1) + 1);
       if (*(p = strchrnul (cmd, quote)))
-	strcpy (p, p + 1);
+	memmove (p, p + 1, strlen (p + 1) + 1);
       return p;
     }
 
