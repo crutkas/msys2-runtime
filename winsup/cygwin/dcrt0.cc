@@ -1057,6 +1057,19 @@ _dll_crt0 ()
 		       movq  %%rsp, %%rbp  \n\
 		       subq  $32,%%rsp     \n"
 		       : : [ADDR] "r" (stackaddr));
+#elif defined (__aarch64__)
+	      /* Set stack pointer to new address and point the frame pointer
+	         (x29) at it.  ARM64 has no shadow space, but a subtraction is
+	         still required here: AArch64 addresses frame slots at positive
+	         offsets from sp, so leaving sp at the very top of the stack
+	         area lets this function's own register spills write above it,
+	         into the cygheap, whose base is exactly this thread's
+	         StackBase.  */
+	      __asm__ ("\n\
+		       mov  sp, %[ADDR]  \n\
+		       sub  sp, sp, #64  \n\
+		       mov  x29, sp      \n"
+		       : : [ADDR] "r" (stackaddr));
 #else
 #error unimplemented for this target
 #endif
