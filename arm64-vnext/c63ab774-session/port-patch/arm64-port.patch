@@ -1,0 +1,2458 @@
+diff --git a/newlib/libc/machine/aarch64/asmdefs.h b/newlib/libc/machine/aarch64/asmdefs.h
+index 131b95e1f..bda34c9b6 100644
+--- a/newlib/libc/machine/aarch64/asmdefs.h
++++ b/newlib/libc/machine/aarch64/asmdefs.h
+@@ -51,7 +51,11 @@
+ /* If set then the GNU Property Note section will be added to
+    mark objects to support BTI and PAC-RET.  */
+ #ifndef WANT_GNU_PROPERTY
+-#define WANT_GNU_PROPERTY 1
++# if defined(__CYGWIN__) || defined(_WIN32)
++#  define WANT_GNU_PROPERTY 0   /* PE/COFF has no .note.gnu.property */
++# else
++#  define WANT_GNU_PROPERTY 1
++# endif
+ #endif
+ 
+ #if WANT_GNU_PROPERTY
+@@ -59,6 +63,30 @@
+ GNU_PROPERTY (FEATURE_1_AND, FEATURE_1_BTI|FEATURE_1_PAC)
+ #endif
+ 
++/* __aarch64_pe_asmdefs__ : PE/COFF has no %function type nor .size, and
++   uses .def/.scl/.type/.endef instead.  */
++#if defined(__CYGWIN__) || defined(_WIN32)
++
++#define ENTRY_ALIGN(name, alignment)	\
++  .global name;		\
++  .def name; .scl 2; .type 32; .endef;	\
++  .p2align alignment;	\
++  name:			\
++  .cfi_startproc;	\
++  BTI_C;
++
++#define ENTRY(name)	ENTRY_ALIGN(name, 6)
++
++#define ENTRY_ALIAS(name)	\
++  .global name;		\
++  .def name; .scl 2; .type 32; .endef;	\
++  name:
++
++#define END(name)	\
++  .cfi_endproc;
++
++#else
++
+ #define ENTRY_ALIGN(name, alignment)	\
+   .global name;		\
+   .type name,%function;	\
+@@ -78,6 +106,8 @@ GNU_PROPERTY (FEATURE_1_AND, FEATURE_1_BTI|FEATURE_1_PAC)
+   .cfi_endproc;		\
+   .size name, .-name;
+ 
++#endif
++
+ #define L(l) .L ## l
+ 
+ #ifdef __ILP32__
+diff --git a/newlib/libc/machine/aarch64/rawmemchr.S b/newlib/libc/machine/aarch64/rawmemchr.S
+index 26da81005..c870fa32a 100644
+--- a/newlib/libc/machine/aarch64/rawmemchr.S
++++ b/newlib/libc/machine/aarch64/rawmemchr.S
+@@ -40,7 +40,11 @@
+ 	.text
+ 	.p2align \p2align
+ 	.global \f
++#if defined(__CYGWIN__) || defined(_WIN32)  /* __pe_asm_fixed__ */
++	.def \f; .scl 2; .type 32; .endef
++#else
+ 	.type \f, %function
++#endif
+ \f:
+ 	.endm
+ 
+@@ -63,6 +67,8 @@ L(do_strlen):
+ 	ret	x15
+ 	.cfi_endproc
+ 
++#if !(defined(__CYGWIN__) || defined(_WIN32))  /* __pe_asm_fixed__ */
+ 	.size   rawmemchr, . - rawmemchr
+ #endif
++#endif
+ 
+diff --git a/newlib/libc/machine/aarch64/setjmp.S b/newlib/libc/machine/aarch64/setjmp.S
+index 0856145bf..8f92f8e78 100644
+--- a/newlib/libc/machine/aarch64/setjmp.S
++++ b/newlib/libc/machine/aarch64/setjmp.S
+@@ -43,7 +43,11 @@
+ 
+ // int setjmp (jmp_buf)
+ 	.global	setjmp
++#if defined(__CYGWIN__) || defined(_WIN32)  /* __pe_asm_fixed__ */
++	.def setjmp; .scl 2; .type 32; .endef
++#else
+ 	.type	setjmp, %function
++#endif
+ setjmp:
+ 	mov	x16, sp
+ #define REG_PAIR(REG1, REG2, OFFS)	stp REG1, REG2, [x0, OFFS]
+@@ -54,11 +58,17 @@ setjmp:
+ #undef REG_ONE
+ 	mov	w0, #0
+ 	ret
++#if !(defined(__CYGWIN__) || defined(_WIN32))  /* __pe_asm_fixed__ */
+ 	.size	setjmp, .-setjmp
++#endif
+ 
+ // void longjmp (jmp_buf, int) __attribute__ ((noreturn))
+ 	.global	longjmp
++#if defined(__CYGWIN__) || defined(_WIN32)  /* __pe_asm_fixed__ */
++	.def longjmp; .scl 2; .type 32; .endef
++#else
+ 	.type	longjmp, %function
++#endif
+ longjmp:
+ #define REG_PAIR(REG1, REG2, OFFS)	ldp REG1, REG2, [x0, OFFS]
+ #define REG_ONE(REG1, OFFS)		ldr REG1, [x0, OFFS]
+@@ -71,4 +81,6 @@ longjmp:
+ 	cinc	w0, w1, eq
+ 	// use br not ret, as ret is guaranteed to mispredict
+ 	br	x30
++#if !(defined(__CYGWIN__) || defined(_WIN32))  /* __pe_asm_fixed__ */
+ 	.size	longjmp, .-longjmp
++#endif
+diff --git a/winsup/configure.ac b/winsup/configure.ac
+index 4dd5ccb9f..cae3695ce 100644
+--- a/winsup/configure.ac
++++ b/winsup/configure.ac
+@@ -103,12 +103,14 @@ DLL_ENTRY="dll_entry"
+ 
+ case "$target_cpu" in
+    x86_64)	;;
++   aarch64)	;;
+    *)		AC_MSG_ERROR([Invalid target processor "$target_cpu"]) ;;
+ esac
+ 
+ AC_SUBST(DLL_ENTRY)
+ 
+ AM_CONDITIONAL(TARGET_X86_64, [test $target_cpu = "x86_64"])
++AM_CONDITIONAL(TARGET_AARCH64, [test $target_cpu = "aarch64"])
+ 
+ AC_ARG_ENABLE(doc,
+ 	      [AS_HELP_STRING([--disable-doc], [do not build documentation])],,
+diff --git a/winsup/cygwin/Makefile.am b/winsup/cygwin/Makefile.am
+index 41190bdb7..ceba8e670 100644
+--- a/winsup/cygwin/Makefile.am
++++ b/winsup/cygwin/Makefile.am
+@@ -16,6 +16,9 @@ COMMON_CFLAGS=-Wimplicit-fallthrough=5 -Werror -fmerge-constants -ftracer
+ if TARGET_X86_64
+ COMMON_CFLAGS+=-mcmodel=small
+ endif
++if TARGET_AARCH64
++COMMON_CFLAGS+=-mcmodel=small
++endif
+ 
+ VERSION_CFLAGS = -DMSYS2_RUNTIME_COMMIT="\"@MSYS2_RUNTIME_COMMIT@\""
+ VERSION_CFLAGS += -DMSYS2_RUNTIME_COMMIT_SHORT="\"@MSYS2_RUNTIME_COMMIT_SHORT@\""
+@@ -29,6 +32,10 @@ if TARGET_X86_64
+ # Needed by mcountFunc.S to choose the right code path and symbol names
+ AM_CCASFLAGS=-D_WIN64
+ endif
++if TARGET_AARCH64
++# Needed by mcountFunc.S to choose the right code path and symbol names
++AM_CCASFLAGS=-D_WIN64
++endif
+ 
+ target_builddir=@target_builddir@
+ newlib_build=$(target_builddir)/newlib
+@@ -67,6 +74,19 @@ TARGET_FILES= \
+ 	x86_64/wmemmove.S \
+ 	x86_64/wmempcpy.S
+ endif
++if TARGET_AARCH64
++TARGET_FILES= \
++	aarch64/bcopy.S \
++	aarch64/memchr.S \
++	aarch64/memcpy.S \
++	aarch64/memmove.S \
++	aarch64/mempcpy.S \
++	aarch64/memset.S \
++	aarch64/swab.S \
++	aarch64/wmemcpy.S \
++	aarch64/wmemmove.S \
++	aarch64/wmempcpy.S
++endif
+ 
+ LIB_FILES= \
+ 	lib/_cygwin_crt0_common.cc \
+@@ -151,7 +171,11 @@ LIBC_FILES= \
+ 	libc/tss.c \
+ 	libc/xsique.cc
+ 
+-MATH_FILES= \
++# The .S files below are hand-written x87 (80-bit long double) assembly and
++# have no AArch64 analogue: on ARM64 long double is the same 64-bit IEEE
++# double as double.  They are therefore x86_64-only.  NOTE: the ARM64 build
++# does not yet provide replacements for the routines they implement.
++MATH_COMMON_FILES= \
+ 	math/acoshl.c \
+ 	math/acosl.c \
+ 	math/asinhl.c \
+@@ -166,17 +190,14 @@ MATH_FILES= \
+ 	math/catanl.c \
+ 	math/cbrtl.c \
+ 	math/ccosl.c \
+-	math/ceill.S \
+ 	math/cephes_emath.c \
+ 	math/cexpl.c \
+ 	math/cimagl.c \
+ 	math/clog10l.c \
+ 	math/clogl.c \
+ 	math/conjl.c \
+-	math/copysignl.S \
+ 	math/coshl.c \
+ 	math/cosl.c \
+-	math/cosl_internal.S \
+ 	math/cossin.c \
+ 	math/cpowl.c \
+ 	math/cprojl.c \
+@@ -186,21 +207,16 @@ MATH_FILES= \
+ 	math/ctanl.c \
+ 	math/erfl.c \
+ 	math/exp10l.c \
+-	math/exp2l.S \
+ 	math/expl.c \
+ 	math/expm1l.c \
+ 	math/fabsl.c \
+ 	math/fdiml.c \
+ 	math/finite.c \
+-	math/floorl.S \
+ 	math/fmal.c \
+ 	math/fmaxl.c \
+ 	math/fminl.c \
+ 	math/fmodl.c \
+-	math/frexpl.S \
+ 	math/hypotl.c \
+-	math/ilogbl.S \
+-	math/internal_logl.S \
+ 	math/isinf.c \
+ 	math/isnan.c \
+ 	math/ldexpl.c \
+@@ -209,9 +225,6 @@ MATH_FILES= \
+ 	math/llrintf.c \
+ 	math/llrintl.c \
+ 	math/llroundl.c \
+-	math/log10l.S \
+-	math/log1pl.S \
+-	math/log2l.S \
+ 	math/logbl.c \
+ 	math/logl.c \
+ 	math/lrint.c \
+@@ -219,34 +232,57 @@ MATH_FILES= \
+ 	math/lrintl.c \
+ 	math/lroundl.c \
+ 	math/modfl.c \
+-	math/nearbyint.S \
+-	math/nearbyintf.S \
+-	math/nearbyintl.S \
+ 	math/nextafterl.c \
+ 	math/nexttoward.c \
+ 	math/nexttowardf.c \
+ 	math/pow10l.c \
+ 	math/powil.c \
+ 	math/powl.c \
+-	math/remainder.S \
+-	math/remainderf.S \
+-	math/remainderl.S \
+-	math/remquol.S \
+ 	math/rint.c \
+ 	math/rintf.c \
+ 	math/rintl.c \
+ 	math/roundl.c \
+-	math/scalbl.S \
+-	math/scalbnl.S \
+ 	math/sinhl.c \
+ 	math/sinl.c \
+-	math/sinl_internal.S \
+ 	math/sqrtl.c \
+ 	math/tanhl.c \
+-	math/tanl.S \
+ 	math/tgammal.c \
+ 	math/truncl.c
+ 
++if TARGET_X86_64
++MATH_TARGET_FILES= \
++	math/ceill.S \
++	math/copysignl.S \
++	math/cosl_internal.S \
++	math/exp2l.S \
++	math/floorl.S \
++	math/frexpl.S \
++	math/ilogbl.S \
++	math/internal_logl.S \
++	math/log10l.S \
++	math/log1pl.S \
++	math/log2l.S \
++	math/nearbyint.S \
++	math/nearbyintf.S \
++	math/nearbyintl.S \
++	math/remainder.S \
++	math/remainderf.S \
++	math/remainderl.S \
++	math/remquol.S \
++	math/scalbl.S \
++	math/scalbnl.S \
++	math/sinl_internal.S \
++	math/tanl.S
++endif
++if TARGET_AARCH64
++MATH_TARGET_FILES= \
++	math/aarch64/longdouble.c
++endif
++
++MATH_FILES= \
++	$(MATH_COMMON_FILES) \
++	$(MATH_TARGET_FILES)
++
+ MM_FILES = \
+ 	mm/cygheap.cc \
+ 	mm/heap.cc \
+@@ -372,6 +408,10 @@ if TARGET_X86_64
+ GMON_TARGET_FILES = \
+ 	x86_64/mcountFunc.S
+ endif
++if TARGET_AARCH64
++GMON_TARGET_FILES = \
++	aarch64/mcountFunc.S
++endif
+ 
+ GMON_FILES= \
+ 	$(GMON_TARGET_FILES) \
+@@ -606,6 +646,28 @@ $(LDSCRIPT): $(LDSCRIPT).in
+ 
+ # msys-2.0 dll
+ # Set PE and export table header timestamps to zero for reproducible builds.
++#
++# ARM64 NOTE -- DO NOT ADD -Wl,--disable-dynamicbase TO THIS LINK LINE.
++#
++# It is a locally reasonable inference from DllCharacteristics 0x0160 plus a
++# randomised-looking load base, and it has been independently derived at least
++# twice.  It is wrong, and it makes the DLL UNLOADABLE.
++#
++# MEASURED: Windows on Arm MANDATES DYNAMIC_BASE.  Six stock Microsoft ARM64
++# system DLLs (version, winmm, bcrypt, wintrust, cryptbase, profapi) with ONLY
++# that one bit cleared all fail LoadLibrary with err 193 ERROR_BAD_EXE_FORMAT.
++# Controls: pristine copies load 6/6; byte-identical rewrites load 6/6;
++# checksum-zeroed variants still fail 6/6.  Only DYNAMIC_BASE is mandated --
++# HIGH_ENTROPY_VA is not, and clearing it alone still loads 5/6.
++#
++# AND fork() DOES NOT NEED A FIXED BASE.  DLL ASLR is per-image-per-boot:
++# measured on an ASLR-enabled image, 5 concurrent processes and 3 sequential
++# loads after full unload all received base 0x7ffe4ed60000 -- one distinct
++# base, and not the preferred one, so relocation demonstrably occurred.
++# Parent and child therefore share a base and fork's invariant holds.
++#
++# The real defect behind the fork failure is cygheap allocation-chain
++# corruption, which is present even in programs that never call fork.
+ $(NEW_DLL_NAME): $(LDSCRIPT) libdll.a $(VERSION_OFILES) $(LIBSERVER)\
+ 		  $(newlib_build)/libm.a $(newlib_build)/libc.a
+ 	$(AM_V_CXXLD)$(CXX) $(CXXFLAGS) \
+diff --git a/winsup/cygwin/autoload.cc b/winsup/cygwin/autoload.cc
+index d5d344d21..373c4a6f6 100644
+--- a/winsup/cygwin/autoload.cc
++++ b/winsup/cygwin/autoload.cc
+@@ -83,6 +83,31 @@ bool NO_COPY wsock_started;
+   .set		" #dllname "_primed, 1			\n\
+ .endif							\n\
+ ");
++#elif defined (__aarch64__)
++/* Identical to the x86_64 block except for the DLL name: the AArch64
++   assembler has no .string16, so the UTF-16 name is emitted a character at
++   a time.  .irpc substitutes into a string literal (the '\c character
++   constant form is NOT accepted), and each ASCII byte is followed by a zero
++   byte, which yields exactly the little-endian UTF-16 .string16 produced. */
++#define LoadDLLprime(dllname, init_also, no_resolve_on_fork) __asm__ ("	\n\
++.ifndef " #dllname "_primed				\n\
++  .section	.data_cygwin_nocopy,\"w\"		\n\
++  .balign	8					\n\
++."#dllname "_info:					\n\
++  .quad		_std_dll_init				\n\
++  .quad		" #no_resolve_on_fork "			\n\
++  .long		-1					\n\
++  .balign	8					\n\
++  .quad		" #init_also "				\n\
++  .irpc		c, " #dllname ".dll			\n\
++    .ascii	\"\\c\"					\n\
++    .byte	0					\n\
++  .endr							\n\
++  .hword	0					\n\
++  .text							\n\
++  .set		" #dllname "_primed, 1			\n\
++.endif							\n\
++");
+ #else
+ #error unimplemented for this target
+ #endif
+@@ -123,6 +148,51 @@ _win32_" #name ":					\n\
+   .asciz	\"" #name "\"				\n\
+   .text							\n\
+ ");
++#elif defined (__aarch64__)
++/* AArch64 thunk.  Same mechanism as x86_64: the first instruction loads a
++   slot that initially points at the loader stub (1) and is overwritten with
++   the resolved address once known, so later calls branch straight there.
++   As on x86_64 the call's return address deliberately points AT the info
++   block, so dll_func_load recovers it - from x30 here rather than [sp].
++
++   Unlike the x86_64 block the payload is laid out so that every field is
++   naturally aligned AND matches the C struct func_info exactly (dll@0,
++   decoration@8, func_addr@16, name@24); the x86_64 layout puts func_addr
++   at 12 and name at 20, which disagrees with the C declaration and is only
++   harmless because C never reads those two fields.  All offsets below are
++   derived with .set from the labels rather than written as literals. */
++#define LoadDLLfuncEx3(name, dllname, notimp, err, no_resolve_on_fork) \
++  LoadDLLprime (dllname, dll_func_load, no_resolve_on_fork) \
++  __asm__ ("						\n\
++  .section	." #dllname "_autoload_text,\"wx\"	\n\
++  .global	" #name "				\n\
++  .global	_win32_" #name "			\n\
++  .balign	16					\n\
++" #name ":						\n\
++_win32_" #name ":					\n\
++  ldr		x16, 3f		// resolved addr, initially 1b	\n\
++  br		x16					\n\
++1:							\n\
++  stp		x0, x1, [sp, #-80]!	// save arg registers	\n\
++  stp		x2, x3, [sp, #16]			\n\
++  stp		x4, x5, [sp, #32]			\n\
++  stp		x6, x7, [sp, #48]			\n\
++  stp		x8, x30, [sp, #64]	// x8 = indirect result	\n\
++  adr		x16, 2f					\n\
++  ldr		x17, [x16]	// &" #dllname "_info	\n\
++  ldr		x17, [x17]	// its load_state	\n\
++  nop			// keeps 2f 8-byte aligned	\n\
++  blr		x17					\n\
++2:.quad		." #dllname "_info	// dll        @0	\n\
++  .hword	" #notimp "		// decoration @8	\n\
++  .hword	((" #err ") & 0xffff)			\n\
++  .hword	0			// pad			\n\
++  .hword	0					\n\
++3:.quad		1b			// func_addr  @16	\n\
++4:.asciz	\"" #name "\"		// name       @24	\n\
++  .balign	8					\n\
++  .text							\n\
++");
+ #else
+ #error unimplemented for this target
+ #endif
+@@ -203,6 +273,71 @@ dll_chain:								\n\
+ 	push	%rax		# Restore 'return address'		\n\
+ 	jmp	*%rdx		# Jump to next init function		\n\
+ ");
++#elif defined (__aarch64__)
++__asm__ ("								\n\
++	 .section .rdata,\"r\"						\n\
++msg1:									\n\
++	.ascii	\"couldn't dynamically determine load address for '%s' (handle %p), %E\\0\"\n\
++									\n\
++	/* The AArch64 assembler will not accept a symbolic expression as an	\n\
++	   immediate, so the two asm-only field offsets below are literals.	\n\
++	   They are proven correct by the _Static_assert on offsetof that	\n\
++	   follows the struct func_info declaration.  */			\n\
++									\n\
++	 .text								\n\
++	.p2align 4							\n\
++noload:									\n\
++	/* x19 holds the info block pointer.  */			\n\
++	ldr	w0, [x19, #8]	// decoration				\n\
++	tbz	w0, #0, 1f	// not 'ignore' -> fatal		\n\
++	asr	w20, w0, #16	// upper word = desired return value	\n\
++	mov	w0, #127	// ERROR_PROC_NOT_FOUND			\n\
++	bl	SetLastError						\n\
++	mov	w0, w20		// get back the return value		\n\
++	ldp	x19, x20, [sp], #16					\n\
++	ldp	x2, x3, [sp, #16]	// restore, but NOT x0/x1:	\n\
++	ldp	x4, x5, [sp, #32]	//   x0 carries the result	\n\
++	ldp	x6, x7, [sp, #48]					\n\
++	ldp	x8, x30, [sp, #64]					\n\
++	add	sp, sp, #80						\n\
++	ret								\n\
++1:									\n\
++	ldr	x1, [x19]	// &dll_info				\n\
++	ldr	x2, [x1, #8]	// dll_info->handle	(3rd arg)	\n\
++	add	x1, x19, #24		// func_info.name    (2nd arg)	\n\
++	adrp	x0, msg1						\n\
++	add	x0, x0, :lo12:msg1	// message	 (1st arg)	\n\
++	bl	api_fatal	// never returns			\n\
++									\n\
++	.globl	dll_func_load						\n\
++dll_func_load:								\n\
++	/* x30 is the 'return address' and points at the info block,	\n\
++	   exactly as [rsp] does on x86_64.  */				\n\
++	stp	x19, x20, [sp, #-16]!					\n\
++	mov	x19, x30						\n\
++	ldr	x0, [x19]	// &dll_info				\n\
++	ldr	x0, [x0, #8]	// dll_info->handle	(1st arg)	\n\
++	add	x1, x19, #24		// func_info.name    (2nd arg)	\n\
++	bl	GetProcAddress						\n\
++	cbz	x0, noload	// failed -> error or ignore		\n\
++	str	x0, [x19, #16]		// patch func_info.func_addr	\n\
++	mov	x16, x0		// keep the target across the restore	\n\
++	ldp	x19, x20, [sp], #16					\n\
++	ldp	x0, x1, [sp]		// restore the arg registers	\n\
++	ldp	x2, x3, [sp, #16]					\n\
++	ldp	x4, x5, [sp, #32]					\n\
++	ldp	x6, x7, [sp, #48]					\n\
++	ldp	x8, x30, [sp, #64]					\n\
++	add	sp, sp, #80						\n\
++	br	x16		// straight to the resolved function	\n\
++									\n\
++	.global	dll_chain						\n\
++dll_chain:								\n\
++	/* two_addr_t comes back in x0/x1: x0 = func (the 'return	\n\
++	   address'), x1 = the next init function.  */			\n\
++	mov	x30, x0							\n\
++	br	x1							\n\
++");
+ #else
+ #error unimplemented for this target
+ #endif
+@@ -227,6 +362,25 @@ struct func_info
+   char name[];
+ };
+ 
++#ifdef __aarch64__
++/* The AArch64 autoload thunk lays its payload out to match this struct
++   exactly, and dll_func_load reaches func_addr and name with literal
++   offsets because the assembler will not take a symbolic immediate.
++   Prove those literals here so a layout change fails at compile time.
++   Note the x86_64 thunk deliberately uses a different, tighter layout
++   (func_addr at 12, name at 20) which does NOT match this declaration; that
++   is pre-existing and harmless only because C never reads those two
++   fields.  */
++static_assert (offsetof (struct func_info, dll) == 0,
++	       "autoload asm expects func_info.dll at offset 0");
++static_assert (offsetof (struct func_info, decoration) == 8,
++	       "autoload asm expects func_info.decoration at offset 8");
++static_assert (offsetof (struct func_info, func_addr) == 16,
++	       "autoload asm uses a literal 16 for func_info.func_addr");
++static_assert (offsetof (struct func_info, name) == 24,
++	       "autoload asm uses a literal 24 for func_info.name");
++#endif
++
+ /* Mechanism for setting up info for passing to dll_chain routines. */
+ typedef __uint128_t two_addr_t;
+ union retchain
+@@ -300,6 +454,38 @@ _" #func ":								\n\
+ 
+ INIT_WRAPPER (std_dll_init)
+ 
++#elif defined (__aarch64__)
++/* AArch64 has no stack slot holding the return address - it arrives in lr -
++   so the x86_64 trick of overwriting 0x28(%rsp) with dll_chain has no
++   counterpart and is not needed: the wrapper simply restores the frame and
++   TAIL-BRANCHES to dll_chain.  Likewise two_addr_t is a 16-byte non-HFA
++   struct, which AAPCS64 returns directly in x0/x1, so the xmm0 -> rax/rdx
++   round trip through the stack disappears.  clang's own codegen emits this
++   same restore-then-tail-branch shape, so the packed unwind data describes
++   it correctly.  */
++#define INIT_WRAPPER(func) \
++__asm__ ("								\n\
++	.text								\n\
++	.p2align 4							\n\
++	.seh_proc _" #func "						\n\
++_" #func ":								\n\
++	stp	x29, x30, [sp, #-16]!					\n\
++	.seh_save_fplr_x 16						\n\
++	mov	x29, sp							\n\
++	.seh_set_fp							\n\
++	.seh_endprologue						\n\
++	mov	x0, x30		// incoming lr is the return address	\n\
++	bl	" #func "	// returns two_addr_t in x0/x1		\n\
++	.seh_startepilogue						\n\
++	ldp	x29, x30, [sp], #16					\n\
++	.seh_save_fplr_x 16						\n\
++	.seh_endepilogue						\n\
++	b	dll_chain						\n\
++	.seh_endproc							\n\
++");
++
++INIT_WRAPPER (std_dll_init)
++
+ #else
+ #error unimplemented for this target
+ #endif
+@@ -360,7 +546,7 @@ std_dll_init (struct func_info *func)
+ 
+ /* Initialization function for winsock stuff. */
+ 
+-#ifdef __x86_64__
++#if defined (__x86_64__) || defined (__aarch64__)
+ /* See above comment preceeding std_dll_init. */
+ INIT_WRAPPER (wsock_init)
+ #else
+diff --git a/winsup/cygwin/create_posix_thread.cc b/winsup/cygwin/create_posix_thread.cc
+index 3fcd61707..1ffe72ba5 100644
+--- a/winsup/cygwin/create_posix_thread.cc
++++ b/winsup/cygwin/create_posix_thread.cc
+@@ -99,6 +99,29 @@ pthread_wrapper (PVOID arg)
+ 	   call  *%%r12			# Call thread func		\n"
+ 	   : : [WRAPPER_ARG] "o" (wrapper_arg),
+ 	       [CYGTLS] "i" (__CYGTLS_PADSIZE__));
++#elif defined (__aarch64__)
++  __asm__ ("\n\
++	   ldr   x19, [%[WRAPPER_ARG]]		// thread func		\n\
++	   ldr   x20, [%[WRAPPER_ARG], #8]	// thread arg		\n\
++	   ldr   x0,  [%[WRAPPER_ARG], #16]	// stackaddr -> arg 1	\n\
++	   ldr   x9,  [%[WRAPPER_ARG], #24]	// stackbase		\n\
++	   mov   x10, %[CYGTLS]			// __CYGTLS_PADSIZE__	\n\
++	   sub   x9, x9, x10						\n\
++	   and   x9, x9, #-16			// AAPCS64: sp 16-aligned\n\
++	   mov   sp, x9						\n\
++	   mov   x29, #0			// clear frame pointer	\n\
++	   # We moved to the new stack.					\n\
++	   # Now it's safe to release the OS stack.			\n\
++	   # Windows ARM64 has no shadow space, so nothing to reserve.	\n\
++	   mov   x1, #0				// dwSize:     0	\n\
++	   mov   x2, #0x8000			// dwFreeType: MEM_RELEASE\n\
++	   bl    VirtualFree						\n\
++	   # All set.  Copy the thread arg from the callee-saved	\n\
++	   # register x20 and call the function in x19.			\n\
++	   mov   x0, x20			// thread arg -> arg 1	\n\
++	   blr   x19			 	// call thread func	\n"
++	   : : [WRAPPER_ARG] "r" (&wrapper_arg),
++	       [CYGTLS] "i" (__CYGTLS_PADSIZE__));
+ #else
+ #error unimplemented for this target
+ #endif
+diff --git a/winsup/cygwin/cygwin.din b/winsup/cygwin/cygwin.din
+index 073b8d07f..bf1adcb78 100644
+--- a/winsup/cygwin/cygwin.din
++++ b/winsup/cygwin/cygwin.din
+@@ -12,10 +12,14 @@ __progname DATA
+ __rcmd_errstr DATA
+ __stack_chk_guard DATA
+ _check_for_executable DATA
++#ifndef __aarch64__
+ _ctype_ DATA
++#endif
+ _daylight DATA
+ _fe_dfl_env DATA
++#ifndef __aarch64__
+ _fe_nomask_env DATA
++#endif
+ _impure_ptr DATA
+ _sys_errlist DATA
+ _sys_nerr DATA
+@@ -135,7 +139,9 @@ __xdrrec_getrec SIGFE
+ __xdrrec_setnonblock SIGFE
+ __xpg_sigpause SIGFE
+ __xpg_strerror_r SIGFE
++#ifndef __aarch64__
+ _alloca = __alloca NOSIGFE
++#endif
+ _dll_crt0 NOSIGFE
+ _Exit SIGFE
+ _exit SIGFE
+@@ -532,7 +538,9 @@ feenableexcept SIGFE
+ fegetenv NOSIGFE
+ fegetexcept NOSIGFE
+ fegetexceptflag NOSIGFE
++#ifndef __aarch64__
+ fegetprec NOSIGFE
++#endif
+ fegetround NOSIGFE
+ feholdexcept SIGFE
+ feof SIGFE
+@@ -542,7 +550,9 @@ ferror SIGFE
+ ferror_unlocked SIGFE
+ fesetenv SIGFE
+ fesetexceptflag SIGFE
++#ifndef __aarch64__
+ fesetprec NOSIGFE
++#endif
+ fesetround NOSIGFE
+ fetestexcept NOSIGFE
+ feupdateenv SIGFE
+diff --git a/winsup/cygwin/cygwin.sc.in b/winsup/cygwin/cygwin.sc.in
+index 4dc5daed8..c6fe6204e 100644
+--- a/winsup/cygwin/cygwin.sc.in
++++ b/winsup/cygwin/cygwin.sc.in
+@@ -5,6 +5,9 @@ SEARCH_DIR("/usr/x86_64-pc-msys/lib/w32api"); SEARCH_DIR("=/usr/lib/w32api");
+ # else
+ SEARCH_DIR("/usr/x86_64-pc-cygwin/lib/w32api"); SEARCH_DIR("=/usr/lib/w32api");
+ # endif
++#elif defined(__aarch64__)
++OUTPUT_FORMAT(pei-aarch64-little)
++SEARCH_DIR("/usr/aarch64-pc-cygwin/lib/w32api"); SEARCH_DIR("=/usr/lib/w32api");
+ #else
+ #error unimplemented for this target
+ #endif
+@@ -21,13 +24,31 @@ SECTIONS
+     *(SORT(.text$*))
+     *(.glue_7t)
+     *(.glue_7)
+-#ifdef __x86_64__
++/* ARM64 NOTE -- __aarch64__ MUST stay in this condition.  Do not narrow it
++   back to #ifdef __x86_64__.
++
++   The #else branch below is the LEGACY 32-BIT form: single 4-byte LONG
++   markers and no ALIGN(8).  It is correct for i386 and fatal for aarch64,
++   which walks the list with 8-byte loads.  With 4-byte markers an 8-byte read
++   STRADDLES the ctor terminator LONG(0) and the dtor head marker LONG(-1),
++   yielding exactly 0xFFFFFFFF00000000, which is then called as a function
++   pointer.  MEASURED: pre-fix __DTOR_LIST__ landed at 0x180217EFC, which is
++   4 mod 8 -- misaligned -- and post-fix at 0x180217F00, moved by exactly +4.
++   A captured fault had x20 resolving exactly to __CTOR_LIST__ and PC at an
++   unmapped 0xFFFFFFFF00000000.
++
++   This cost a full debugging session to find because THE LINKER VALIDATES
++   NOTHING HERE: a build with 4-byte markers links cleanly, and so does one
++   with deliberately wrong 12-byte markers.  Only execution distinguishes
++   them, and the symptom is a crash inside DllMain before any user code.  */
++#if defined(__x86_64__) || defined(__aarch64__)
+     . = ALIGN(8);
+      ___CTOR_LIST__ = .; __CTOR_LIST__ = .;
+ 			LONG (-1); LONG (-1); *(SORT(.ctors.*)); *(.ctors); *(.ctor); LONG (0); LONG (0);
+      ___DTOR_LIST__ = .; __DTOR_LIST__ = .;
+ 			LONG (-1); LONG (-1); *(SORT(.dtors.*)); *(.dtors); *(.dtor);  LONG (0); LONG (0);
+ #else
++    /* LEGACY 32-BIT ONLY.  aarch64 must NOT reach this branch -- see above. */
+      ___CTOR_LIST__ = .; __CTOR_LIST__ = .;
+ 			LONG (-1); *(SORT(.ctors.*)); *(.ctors); *(.ctor); LONG (0);
+      ___DTOR_LIST__ = .; __DTOR_LIST__ = .;
+@@ -76,7 +97,18 @@ SECTIONS
+   {
+     *(.pdata*)
+   }
+-#ifdef __x86_64__
++/* ARM64 NOTE -- __aarch64__ belongs here.  Without it aarch64 gets no explicit
++   .xdata rule and unwind data is placed only by the linker's orphan-section
++   heuristic.  That happened to work (266 of 273 aarch64 objects emit .xdata,
++   and orphan placement put it adjacent to .pdata), but it was luck, not
++   design.  It is load-bearing: __unwind_single_frame uses
++   RtlLookupFunctionEntry and RtlVirtualUnwind, which read .xdata, so signal
++   delivery depends on it.
++   Making it explicit DOES change the image -- orphan placement put .xdata
++   BEFORE .pdata, this rule puts it after -- so it was verified after the
++   change: Exception Directory RVA 0x2d5000 size 0xbab8 still matches .pdata,
++   and the executable rung tests still pass.  */
++#if defined(__x86_64__) || defined(__aarch64__)
+   .xdata ALIGN(__section_alignment__) :
+   {
+     *(.xdata*)
+@@ -109,7 +141,16 @@ SECTIONS
+     SORT(*)(.idata$3)
+     /* These zeroes mark the end of the import list.  */
+     LONG (0); LONG (0); LONG (0); LONG (0); LONG (0);
++#ifdef __aarch64__
++    /* __aarch64_idata_align__ : IMAGE_IMPORT_DESCRIPTOR is 20 bytes, so the IAT
++       would otherwise start 4-mod-8.  AArch64 IMAGE_REL_ARM64_PAGEOFFSET_12L on
++       a 64-bit LDR scales imm12 by 8 and requires an 8-byte-aligned target.  */
++    . = ALIGN(8);
++#endif
+     SORT(*)(.idata$4)
++#ifdef __aarch64__
++    . = ALIGN(8);
++#endif
+     SORT(*)(.idata$5)
+     SORT(*)(.idata$6)
+     SORT(*)(.idata$7)
+diff --git a/winsup/cygwin/exceptions.cc b/winsup/cygwin/exceptions.cc
+index ca86b3643..eb60e2ffe 100644
+--- a/winsup/cygwin/exceptions.cc
++++ b/winsup/cygwin/exceptions.cc
+@@ -44,6 +44,18 @@ details. */
+ #define _MC_instPtr	rip
+ #define _MC_stackPtr	rsp
+ #define _MC_uclinkReg	rbx	/* MUST be callee-saved reg */
++#elif defined (__aarch64__)
++/* Validated against the Win32 ARM64 CONTEXT (winnt.h ARM64_NT_CONTEXT):
++   Pc is at offset 0x108, Sp at 0x100 and Fp (x29) at 0x0f0. */
++#define _CX_instPtr	Pc
++#define _CX_stackPtr	Sp
++#define _CX_framePtr	Fp
++/* For special register access inside mcontext. */
++#define _MC_retReg	x0	/* AAPCS64 result register */
++#define _MC_instPtr	pc
++#define _MC_stackPtr	sp
++#define _MC_uclinkReg	x19	/* MUST be callee-saved reg; x19-x28 are
++				   callee-saved under AAPCS64 */
+ #else
+ #error unimplemented for this target
+ #endif
+@@ -251,6 +263,35 @@ cygwin_exception::dump_exception ()
+   small_printf ("cs=%04x ds=%04x es=%04x fs=%04x gs=%04x ss=%04x\r\n",
+ 		ctx->SegCs, ctx->SegDs, ctx->SegEs, ctx->SegFs,
+ 		ctx->SegGs, ctx->SegSs);
++#elif defined (__aarch64__)
++  if (exception_name)
++    small_printf ("Exception: %s at pc=%012X\r\n", exception_name, ctx->Pc);
++  else
++    small_printf ("Signal %d at pc=%012X\r\n", e->ExceptionCode, ctx->Pc);
++  small_printf ("x0 =%016X x1 =%016X x2 =%016X\r\n",
++		ctx->X0, ctx->X1, ctx->X2);
++  small_printf ("x3 =%016X x4 =%016X x5 =%016X\r\n",
++		ctx->X3, ctx->X4, ctx->X5);
++  small_printf ("x6 =%016X x7 =%016X x8 =%016X\r\n",
++		ctx->X6, ctx->X7, ctx->X8);
++  small_printf ("x9 =%016X x10=%016X x11=%016X\r\n",
++		ctx->X9, ctx->X10, ctx->X11);
++  small_printf ("x12=%016X x13=%016X x14=%016X\r\n",
++		ctx->X12, ctx->X13, ctx->X14);
++  small_printf ("x15=%016X x16=%016X x17=%016X\r\n",
++		ctx->X15, ctx->X16, ctx->X17);
++  small_printf ("x18=%016X x19=%016X x20=%016X\r\n",
++		ctx->X18, ctx->X19, ctx->X20);
++  small_printf ("x21=%016X x22=%016X x23=%016X\r\n",
++		ctx->X21, ctx->X22, ctx->X23);
++  small_printf ("x24=%016X x25=%016X x26=%016X\r\n",
++		ctx->X24, ctx->X25, ctx->X26);
++  small_printf ("x27=%016X x28=%016X\r\n", ctx->X27, ctx->X28);
++  small_printf ("fp =%016X lr =%016X sp =%016X\r\n",
++		ctx->Fp, ctx->Lr, ctx->Sp);
++  small_printf ("program=%W, pid %u, thread %s\r\n",
++		myself->progname, myself->pid, mythreadname ());
++  small_printf ("cpsr=%08x\r\n", ctx->Cpsr);
+ #else
+ #error unimplemented for this target
+ #endif
+@@ -1816,6 +1857,8 @@ _cygtls::call_signal_handler ()
+ 		{
+ #ifdef __x86_64__
+ 		  context1.uc_mcontext.rip = retaddr ();
++#elif defined (__aarch64__)
++		  context1.uc_mcontext.pc = retaddr ();
+ #else
+ #error unimplemented for this target
+ #endif
+@@ -1935,6 +1978,45 @@ _cygtls::call_signal_handler ()
+ 		       [FUNC]	"o" (thisfunc),
+ 		       [WRAPPER] "o" (altstack_wrapper)
+ 		   : "memory");
++#elif defined (__aarch64__)
++	  /* Unlike the x86_64 block, which hand-saves eight registers
++	     because it cannot declare rsp clobbered, the AArch64 version
++	     declares the call-clobbered registers to the compiler and only
++	     has to preserve sp and the frame pointer by hand.  The operands
++	     are "r" rather than "o" because AArch64 has no lea equivalent
++	     for taking the address of a memory operand; they are copied into
++	     scratch registers first so that setting up x0-x3 cannot clobber
++	     an operand that has not been read yet.  */
++	  __asm__ ("\n\
++		   mov   x9,  %[NEW_SP]	// read all operands first	\n\
++		   mov   w10, %w[SIG]					\n\
++		   mov   x11, %[SI]					\n\
++		   mov   x12, %[CTX]					\n\
++		   mov   x13, %[FUNC]					\n\
++		   mov   x14, %[WRAPPER]				\n\
++		   sub   x9, x9, #32	// room for old sp and fp	\n\
++					// (new_sp is already 16 aligned)\n\
++		   mov   x15, sp					\n\
++		   str   x15, [x9]	// save old sp			\n\
++		   str   x29, [x9, #8]	// save old frame pointer	\n\
++		   mov   w0, w10	// thissig      -> arg 1	\n\
++		   mov   x1, x11	// &thissi      -> arg 2	\n\
++		   mov   x2, x12	// thiscontext  -> arg 3	\n\
++		   mov   x3, x13	// thisfunc     -> arg 4	\n\
++		   mov   sp, x9		// move to alternate stack	\n\
++		   blr   x14		// call wrapper			\n\
++		   ldr   x29, [sp, #8]	// revert frame pointer		\n\
++		   ldr   x15, [sp]	// and stack pointer		\n\
++		   mov   sp, x15					\n"
++		   : : [NEW_SP]	"r" (new_sp),
++		       [SIG]	"r" (thissig),
++		       [SI]	"r" (&thissi),
++		       [CTX]	"r" (thiscontext),
++		       [FUNC]	"r" (thisfunc),
++		       [WRAPPER] "r" (altstack_wrapper)
++		   : "memory", "cc", "x0", "x1", "x2", "x3", "x4", "x5",
++		     "x6", "x7", "x8", "x9", "x10", "x11", "x12", "x13",
++		     "x14", "x15", "x16", "x17", "x30");
+ #else
+ #error unimplemented for this target
+ #endif
+@@ -2076,6 +2158,28 @@ __cont_link_context:			\n\
+ 	.seh_endproc			\n\
+ 	");
+ 
++#elif defined (__aarch64__)
++/* _MC_uclinkReg == x19.  x19 holds the address of the stack slot which
++   holds the uc_link pointer, exactly as rbx does on x86_64. */
++__asm__ ("				\n\
++	.global	__cont_link_context	\n\
++	.seh_proc __cont_link_context	\n\
++__cont_link_context:			\n\
++	.seh_endprologue		\n\
++	ldr	x0, [x19]		\n\
++	# switch to the prepared stack, keeping sp 16-byte aligned	\n\
++	mov	x9, x19			\n\
++	and	x9, x9, #-16		\n\
++	mov	sp, x9			\n\
++	cbz	x0, 1f			\n\
++	bl	setcontext		\n\
++	mov	x0, #0xff		\n\
++1:					\n\
++	bl	cygwin_exit		\n\
++	nop				\n\
++	.seh_endproc			\n\
++	");
++
+ #else
+ #error unimplemented for this target
+ #endif
+@@ -2141,6 +2245,39 @@ makecontext (ucontext_t *ucp, void (*func) (void), int argc, ...)
+ 	sp[i + 1] = va_arg (ap, uintptr_t);
+ 	break;
+       }
++#elif defined (__aarch64__)
++    /* AAPCS64 passes the first eight integer arguments in x0-x7; the
++       remainder go on the stack. */
++    switch (i)
++      {
++      case 0:
++	ucp->uc_mcontext.x0 = va_arg (ap, uintptr_t);
++	break;
++      case 1:
++	ucp->uc_mcontext.x1 = va_arg (ap, uintptr_t);
++	break;
++      case 2:
++	ucp->uc_mcontext.x2 = va_arg (ap, uintptr_t);
++	break;
++      case 3:
++	ucp->uc_mcontext.x3 = va_arg (ap, uintptr_t);
++	break;
++      case 4:
++	ucp->uc_mcontext.x4 = va_arg (ap, uintptr_t);
++	break;
++      case 5:
++	ucp->uc_mcontext.x5 = va_arg (ap, uintptr_t);
++	break;
++      case 6:
++	ucp->uc_mcontext.x6 = va_arg (ap, uintptr_t);
++	break;
++      case 7:
++	ucp->uc_mcontext.x7 = va_arg (ap, uintptr_t);
++	break;
++      default:
++	sp[i + 1] = va_arg (ap, uintptr_t);
++	break;
++      }
+ #else
+ #error unimplemented for this target
+ #endif
+diff --git a/winsup/cygwin/fork.cc b/winsup/cygwin/fork.cc
+index 2aa52737c..9d77dd34f 100644
+--- a/winsup/cygwin/fork.cc
++++ b/winsup/cygwin/fork.cc
+@@ -667,9 +667,11 @@ dofork (void **proc, bool *with_forkables)
+     volatile char * volatile stackp;
+ #ifdef __x86_64__
+     __asm__ volatile ("movq %%rsp,%0": "=r" (stackp));
+-#else
+-#error unimplemented for this target
+-#endif
++    #elif defined (__aarch64__)
++        __asm__ volatile ("mov %0, sp": "=r" (stackp));
++    #else
++    #error unimplemented for this target
++    #endif
+ 
+     if (!ischild)
+       res = grouped.parent (stackp);
+diff --git a/winsup/cygwin/include/cygwin/config.h b/winsup/cygwin/include/cygwin/config.h
+index 2a7083278..d2428d430 100644
+--- a/winsup/cygwin/include/cygwin/config.h
++++ b/winsup/cygwin/include/cygwin/config.h
+@@ -38,6 +38,18 @@ extern inline struct _reent *__getreent (void)
+   register char *ret;
+ #ifdef __x86_64__
+   __asm __volatile__ ("movq %%gs:8,%0" : "=r" (ret));
++#elif defined (__aarch64__)
++  /* On Windows on Arm the TEB pointer is held in x18, the reserved
++     "platform register", which the OS maintains.  tpidr_el0 is the
++     ELF/Linux TLS register and is NOT populated by Windows for user-mode
++     threads -- reading it yields 0, so dereferencing it faults on address 8.
++     NT_TIB.StackBase lives at offset 8 on every 64-bit Windows target, so
++     this is the exact analogue of the %gs:8 access used above. */
++  {
++    char *__teb;
++    __asm __volatile__ ("mov %0, x18" : "=r" (__teb));
++    ret = *(char **) (__teb + 8);
++  }
+ #else
+ #error unimplemented for this target
+ #endif
+diff --git a/winsup/cygwin/include/cygwin/signal.h b/winsup/cygwin/include/cygwin/signal.h
+index de728bede..3d2383fab 100644
+--- a/winsup/cygwin/include/cygwin/signal.h
++++ b/winsup/cygwin/include/cygwin/signal.h
+@@ -98,13 +98,79 @@ struct __attribute__ ((__aligned__ (16))) __mcontext
+   __uint64_t cr2;
+ };
+ 
++#elif defined (__aarch64__)
++
++struct _uc_neon128
++{
++  __uint64_t low;
++  __int64_t high;
++};
++
++/* This mirrors the Win32 ARM64 CONTEXT (see winnt.h ARM64_NT_CONTEXT)
++   field for field, with oldmask and cr2 appended as on x86_64.  The
++   offsets in the comments are the CONTEXT offsets this layout must stay
++   in sync with; cr2 has no ARM64 meaning and exists only so that the
++   generic code which references it keeps compiling. */
++struct __attribute__ ((__aligned__ (16))) __mcontext
++{
++  __uint32_t ctxflags;			/* 000 */
++  __uint32_t cpsr;			/* 004 */
++  __uint64_t x0;			/* 008 */
++  __uint64_t x1;			/* 010 */
++  __uint64_t x2;			/* 018 */
++  __uint64_t x3;			/* 020 */
++  __uint64_t x4;			/* 028 */
++  __uint64_t x5;			/* 030 */
++  __uint64_t x6;			/* 038 */
++  __uint64_t x7;			/* 040 */
++  __uint64_t x8;			/* 048 */
++  __uint64_t x9;			/* 050 */
++  __uint64_t x10;			/* 058 */
++  __uint64_t x11;			/* 060 */
++  __uint64_t x12;			/* 068 */
++  __uint64_t x13;			/* 070 */
++  __uint64_t x14;			/* 078 */
++  __uint64_t x15;			/* 080 */
++  __uint64_t x16;			/* 088 */
++  __uint64_t x17;			/* 090 */
++  __uint64_t x18;			/* 098 */
++  __uint64_t x19;			/* 0a0 */
++  __uint64_t x20;			/* 0a8 */
++  __uint64_t x21;			/* 0b0 */
++  __uint64_t x22;			/* 0b8 */
++  __uint64_t x23;			/* 0c0 */
++  __uint64_t x24;			/* 0c8 */
++  __uint64_t x25;			/* 0d0 */
++  __uint64_t x26;			/* 0d8 */
++  __uint64_t x27;			/* 0e0 */
++  __uint64_t x28;			/* 0e8 */
++  __uint64_t fp;			/* 0f0 */
++  __uint64_t lr;			/* 0f8 */
++  __uint64_t sp;			/* 100 */
++  __uint64_t pc;			/* 108 */
++  struct _uc_neon128 vregs[32];		/* 110 */
++  __uint32_t fpcr;			/* 310 */
++  __uint32_t fpsr;			/* 314 */
++  __uint32_t bcr[8];			/* 318 */
++  __uint64_t bvr[8];			/* 338 */
++  __uint32_t wcr[2];			/* 378 */
++  __uint64_t wvr[2];			/* 380 */
++  __uint64_t oldmask;			/* 390 */
++  __uint64_t cr2;			/* 398 */
++};
++
+ #else
+ #error unimplemented for this target
+ #endif
+ 
+ /* Needed for GDB.  It only compiles in the context copy code if this macro is
+    defined.  This is not sizeof(CONTEXT) due to historical accidents. */
++#ifdef __x86_64__
+ #define __COPY_CONTEXT_SIZE 816
++#else
++/* ARM64 CONTEXT is 0x390 bytes and carries no such historical discrepancy. */
++#define __COPY_CONTEXT_SIZE 912
++#endif
+ 
+ typedef union sigval
+ {
+diff --git a/winsup/cygwin/include/machine/_endian.h b/winsup/cygwin/include/machine/_endian.h
+index dbd4429b8..819589812 100644
+--- a/winsup/cygwin/include/machine/_endian.h
++++ b/winsup/cygwin/include/machine/_endian.h
+@@ -26,17 +26,28 @@ _ELIDABLE_INLINE __uint16_t __ntohs(__uint16_t);
+ _ELIDABLE_INLINE __uint32_t
+ __ntohl(__uint32_t _x)
+ {
++#ifdef __x86_64__
+ 	__asm__("bswap %0" : "=r" (_x) : "0" (_x));
+ 	return _x;
++#else
++	/* AArch64 has no bswap; __builtin_bswap32 lowers to a single rev
++	   instruction and additionally allows constant folding. */
++	return __builtin_bswap32 (_x);
++#endif
+ }
+ 
+ _ELIDABLE_INLINE __uint16_t
+ __ntohs(__uint16_t _x)
+ {
++#ifdef __x86_64__
+ 	__asm__("xchgb %b0,%h0"		/* swap bytes		*/
+ 		: "=Q" (_x)
+ 		:  "0" (_x));
+ 	return _x;
++#else
++	/* AArch64 equivalent lowers to rev16. */
++	return __builtin_bswap16 (_x);
++#endif
+ }
+ 
+ #define __htonl(_x) __ntohl(_x)
+diff --git a/winsup/cygwin/local_includes/cpuid.h b/winsup/cygwin/local_includes/cpuid.h
+index 6dbb1bddf..182303c1d 100644
+--- a/winsup/cygwin/local_includes/cpuid.h
++++ b/winsup/cygwin/local_includes/cpuid.h
+@@ -9,6 +9,7 @@ details. */
+ #ifndef CPUID_H
+ #define CPUID_H
+ 
++#ifdef __x86_64__
+ static inline void __attribute ((always_inline))
+ cpuid (uint32_t *a, uint32_t *b, uint32_t *c, uint32_t *d, uint32_t ain,
+        uint32_t cin = 0)
+@@ -18,7 +19,6 @@ cpuid (uint32_t *a, uint32_t *b, uint32_t *c, uint32_t *d, uint32_t ain,
+ 		: "a" (ain), "c" (cin));
+ }
+ 
+-#ifdef __x86_64__
+ static inline bool __attribute ((always_inline))
+ can_set_flag (uint32_t long flag)
+ {
+@@ -39,6 +39,33 @@ can_set_flag (uint32_t long flag)
+   );
+   return ((r1 ^ r2) & flag) != 0;
+ }
++#elif defined (__aarch64__)
++/* AArch64 has neither a CPUID instruction nor an EFLAGS register, so
++   neither of these x86 primitives has an ARM64 analogue.  Feature and
++   topology discovery on Windows ARM64 goes through
++   IsProcessorFeaturePresent() and the ID_AA64* system registers instead.
++
++   These are deliberately NON-FUNCTIONAL stubs.  They exist only so that
++   the x86-oriented callers in fhandler/proc.cc and sysconf.cc keep
++   compiling; they report nothing.  Consequently /proc/cpuinfo and the
++   sysconf() CPU cache/topology queries return no CPU detail on ARM64.
++   Porting those callers is separate, still-unfinished work and must not
++   be mistaken for a working implementation. */
++static inline void __attribute ((always_inline))
++cpuid (uint32_t *a, uint32_t *b, uint32_t *c, uint32_t *d, uint32_t ain,
++       uint32_t cin = 0)
++{
++  (void) ain;
++  (void) cin;
++  *a = *b = *c = *d = 0;
++}
++
++static inline bool __attribute ((always_inline))
++can_set_flag (uint32_t flag)
++{
++  (void) flag;
++  return false;
++}
+ #else
+ #error unimplemented for this target
+ #endif
+diff --git a/winsup/cygwin/local_includes/cygmalloc.h b/winsup/cygwin/local_includes/cygmalloc.h
+index 5e1fe8154..79e6cdfa3 100644
+--- a/winsup/cygwin/local_includes/cygmalloc.h
++++ b/winsup/cygwin/local_includes/cygmalloc.h
+@@ -21,6 +21,7 @@ int dlmalloc_trim (size_t);
+ int dlmallopt (int p, int v);
+ void dlmalloc_stats ();
+ 
++#undef MALLOC_ALIGNMENT
+ #define MALLOC_ALIGNMENT ((size_t)16U)
+ 
+ #if defined (DLMALLOC_VERSION)	/* Building malloc.cc */
+diff --git a/winsup/cygwin/local_includes/cygtls.h b/winsup/cygwin/local_includes/cygtls.h
+index 306497a33..257344527 100644
+--- a/winsup/cygwin/local_includes/cygtls.h
++++ b/winsup/cygwin/local_includes/cygtls.h
+@@ -246,13 +246,25 @@ public: /* Do NOT remove this public: line, it's a marker for gentls_offsets. */
+       {
+ #ifdef __x86_64__
+ 	__asm__ ("pause");
++#elif defined (__aarch64__)
++	/* AArch64 spin-wait hint.  This is purely a scheduling hint with no
++	   ordering implications; the acquire side of the lock is already
++	   provided by the InterlockedExchange above. */
++	__asm__ __volatile__ ("yield" ::: "memory");
+ #else
+ #error unimplemented for this target
+ #endif
+ 	Sleep (0);
+       }
+   }
++#ifdef __aarch64__
++  /* AArch64 is weakly ordered, so unlike x86 a plain store is not a
++     release.  Without release semantics the stackptr accesses guarded by
++     this lock could be observed after the lock has been dropped. */
++  void unlock () { __atomic_store_n (&stacklock, 0, __ATOMIC_RELEASE); }
++#else
+   void unlock () { stacklock = 0; }
++#endif
+   bool locked () { return !!stacklock; }
+   HANDLE get_signal_arrived (bool wait_for_lock = true)
+   {
+@@ -298,6 +310,24 @@ private:
+ };
+ #pragma pack(pop)
+ 
++/* _my_tls is placed at StackBase - __CYGTLS_PADSIZE__, so the struct MUST fit
++   inside the pad.  If it ever grows past it, the tail overruns StackBase and
++   lands in whatever the memory layout puts immediately above the stack arena.
++   On this target that is CYGHEAP_STORAGE_LOW: THREAD_STORAGE_HIGH and
++   CYGHEAP_STORAGE_LOW are both 0x800000000, so StackBase+8 is exactly
++   cygheap->chain and the failure would be silent heap-chain corruption
++   discoverable only at fork() time.
++
++   Nothing else in the tree checks this.  It matters most for a new port,
++   where _cygtls embeds ucontext_t -> __mcontext, which is target-defined
++   (signal.h has '#error unimplemented for this target' for anything the port
++   has not filled in).  Measured on aarch64: sizeof(_cygtls) 5016 versus a
++   12800 pad, so 7784 bytes of headroom -- but that is a fact about today's
++   struct, not a guarantee.  */
++static_assert (sizeof (_cygtls) <= __CYGTLS_PADSIZE__,
++	       "_cygtls exceeds __CYGTLS_PADSIZE__: it would overrun StackBase "
++	       "and corrupt the cygheap");
++
+ #include "cygerrno.h"
+ #include "ntdll.h"
+ 
+@@ -323,7 +353,19 @@ public:
+        address of the _except block to restore the context correctly.
+        See comment preceeding myfault_altstack_handler in exception.cc. */
+     ret = (DWORD64) _ret;
++#ifdef __x86_64__
+     __asm__ volatile ("movq %%rsp,%0": "=o" (frame));
++#elif defined (__aarch64__)
++    /* AArch64 cannot move sp straight to memory, so read it into a
++       register and let the compiler perform the store. */
++    {
++      DWORD64 __sp;
++      __asm__ volatile ("mov %0, sp": "=r" (__sp));
++      frame = __sp;
++    }
++#else
++#error unimplemented for this target
++#endif
+   }
+   ~san () __attribute__ ((always_inline))
+   {
+@@ -336,6 +378,23 @@ public:
+ };
+ 
+ /* Exception handling macros. This is a handmade SEH try/except. */
++/* Mangled name of exception::myfault for the .seh_handler directive below.
++   It embeds the parameter type name, which differs per target: on ARM64
++   winnt.h names the struct _DISPATCHER_CONTEXT_ARM64.  __try is a macro,
++   so this cannot be an #ifdef inside it; it is concatenated instead. */
++#ifdef __x86_64__
++#define _CYG_SEH_MYFAULT_SYM \
++  "_ZN9exception7myfaultEP17_EXCEPTION_RECORDPvP8_CONTEXTP19_DISPATCHER_CONTEXT"
++/* .seh_code switches back to the code section after .seh_handlerdata.  It is
++   an x86-only directive; on AArch64 a plain .text does the same job. */
++#define _CYG_SEH_CODE "  .seh_code							\n"
++#elif defined (__aarch64__)
++#define _CYG_SEH_MYFAULT_SYM \
++  "_ZN9exception7myfaultEP17_EXCEPTION_RECORDPvP8_CONTEXTP19_DISPATCHER_CONTEXT"
++#define _CYG_SEH_CODE "  .text								\n"
++#else
++#error unimplemented for this target
++#endif
+ #define __mem_barrier	__asm__ __volatile__ ("" ::: "memory")
+ #define __try \
+   { \
+@@ -343,11 +402,11 @@ public:
+     __mem_barrier; \
+     san __sebastian (&&__l_except); \
+     __asm__ goto ("\n" \
+-      "  .seh_handler _ZN9exception7myfaultEP17_EXCEPTION_RECORDPvP8_CONTEXTP19_DISPATCHER_CONTEXT, @except						\n" \
++      "  .seh_handler " _CYG_SEH_MYFAULT_SYM ", @except			\n" \
+       "  .seh_handlerdata						\n" \
+       "  .long 1							\n" \
+       "  .rva %l[__l_try],%l[__l_endtry],%l[__l_except],%l[__l_except]	\n" \
+-      "  .seh_code							\n" \
++      _CYG_SEH_CODE \
+       : : : : __l_try, __l_endtry, __l_except); \
+     { \
+       __l_try: \
+diff --git a/winsup/cygwin/local_includes/exception.h b/winsup/cygwin/local_includes/exception.h
+index 13159d17b..56969b98b 100644
+--- a/winsup/cygwin/local_includes/exception.h
++++ b/winsup/cygwin/local_includes/exception.h
+@@ -7,7 +7,18 @@ details. */
+ #pragma once
+ 
+ #define exception_list void
++#ifdef __x86_64__
+ typedef struct _DISPATCHER_CONTEXT *PDISPATCHER_CONTEXT;
++#elif defined (__aarch64__)
++/* w32api (v12.0.0) already provides
++     typedef struct _DISPATCHER_CONTEXT *PDISPATCHER_CONTEXT;
++   for ARM64 too, so redeclaring it here would conflict.  Note the struct is
++   plain _DISPATCHER_CONTEXT on every architecture -- there is no
++   _DISPATCHER_CONTEXT_ARM64 -- hence the mangled handler name below uses
++   P19_DISPATCHER_CONTEXT, identical to x86_64. */
++#else
++#error unimplemented for this target
++#endif
+ 
+ class exception
+ {
+@@ -18,16 +29,37 @@ class exception
+ public:
+   exception () __attribute__ ((always_inline))
+   {
+-    /* Install SEH handler. */
+-    asm volatile ("\n\
+-    1:									\n\
+-      .seh_handler							  \
+-	_ZN9exception6handleEP17_EXCEPTION_RECORDPvP8_CONTEXTP19_DISPATCHER_CONTEXT,	  \
+-	@except								\n\
+-      .seh_handlerdata							\n\
+-      .long 1								\n\
+-      .rva 1b, 2f, 2f, 2f						\n\
+-      .seh_code								\n");
++    /* Install SEH handler.  The .seh_handler directive needs the mangled
++       name of exception::handle, which embeds its parameter type and so
++       differs between targets (verified with llvm-nm). */
++#ifdef __x86_64__
++    asm volatile ("\n"
++      "  1:								\n"
++      "    .seh_handler _ZN9exception6handleEP17_EXCEPTION_RECORDPvP8_CONTEXT"
++      "P19_DISPATCHER_CONTEXT, @except					\n"
++      "    .seh_handlerdata						\n"
++      "    .long 1							\n"
++      "    .rva 1b, 2f, 2f, 2f					\n"
++      "    .seh_code							\n");
++#else
++    asm volatile ("\n"
++      "  1:								\n"
++      "    .seh_handler _ZN9exception6handleEP17_EXCEPTION_RECORDPvP8_CONTEXT"
++      "P19_DISPATCHER_CONTEXT, @except				\n"
++      "    .seh_handlerdata						\n"
++      "    .long 1							\n"
++      /* The AArch64 assembler accepts named symbols but not numeric local
++	 labels (1b/2f) as .rva operands, so alias them first.  %= keeps
++	 the alias names unique per instantiation, and 2f still resolves
++	 to this object's matching destructor label exactly as before. */
++      "    .set Lcygseh%=_beg, 1b					\n"
++      "    .set Lcygseh%=_end, 2f					\n"
++      "    .rva Lcygseh%=_beg, Lcygseh%=_end, Lcygseh%=_end, Lcygseh%=_end \n"
++      "    .text							\n"
++      /* A clobber list makes this extended asm, which is required for %=
++	 to be substituted; basic asm does no operand substitution. */
++      ::: "memory");
++#endif
+   };
+   ~exception () __attribute__ ((always_inline))
+   {
+diff --git a/winsup/cygwin/math/acosl.c b/winsup/cygwin/math/acosl.c
+index 553d06f75..3e6566449 100644
+--- a/winsup/cygwin/math/acosl.c
++++ b/winsup/cygwin/math/acosl.c
+@@ -7,6 +7,7 @@ long double acosl (long double x);
+ 
+ long double acosl (long double x)
+ {
++#ifdef __x86_64__
+   long double res = 0.0L;
+ 
+   /* acosl = atanl (sqrtl(1 - x^2) / x) */
+@@ -20,4 +21,10 @@ long double acosl (long double x)
+ 	"fpatan"
+ 	: "=t" (res) : "0" (x) : "st(1)");
+   return res;
++#else
++  /* AArch64 has no x87.  long double is the same 64-bit IEEE double as
++     double here, so delegate to the double-precision acos.  acos itself
++     comes from newlib, so this does not recurse. */
++  return __builtin_acos ((double) x);
++#endif
+ }
+diff --git a/winsup/cygwin/math/asinl.c b/winsup/cygwin/math/asinl.c
+index 35df3b5dd..04d48eb26 100644
+--- a/winsup/cygwin/math/asinl.c
++++ b/winsup/cygwin/math/asinl.c
+@@ -14,6 +14,7 @@ long double asinl (long double x);
+ 
+ long double asinl (long double x)
+ {
++#ifdef __x86_64__
+   long double res = 0.0L;
+ 
+   asm volatile (
+@@ -25,4 +26,10 @@ long double asinl (long double x)
+ 	"fpatan"
+ 	: "=t" (res) : "0" (x) : "st(1)");
+   return res;
++#else
++  /* AArch64 has no x87.  long double is the same 64-bit IEEE double as
++     double here, so delegate to the double-precision asin, which comes
++     from newlib and therefore does not recurse. */
++  return __builtin_asin ((double) x);
++#endif
+ }
+diff --git a/winsup/cygwin/math/atan2l.c b/winsup/cygwin/math/atan2l.c
+index a4300cbf4..4029eb6c4 100644
+--- a/winsup/cygwin/math/atan2l.c
++++ b/winsup/cygwin/math/atan2l.c
+@@ -8,7 +8,14 @@ long double atan2l (long double y, long double x);
+ long double
+ atan2l (long double y, long double x)
+ {
++#ifdef __x86_64__
+   long double res = 0.0L;
+   asm volatile ("fpatan" : "=t" (res) : "u" (y), "0" (x) : "st(1)");
+   return res;
++#else
++  /* AArch64 has no x87 fpatan.  long double is the same 64-bit IEEE
++     double as double here, so delegate to the double-precision atan2,
++     which comes from newlib and therefore does not recurse. */
++  return __builtin_atan2 ((double) y, (double) x);
++#endif
+ }
+diff --git a/winsup/cygwin/math/atanl.c b/winsup/cygwin/math/atanl.c
+index d289ef08c..15a88cf52 100644
+--- a/winsup/cygwin/math/atanl.c
++++ b/winsup/cygwin/math/atanl.c
+@@ -8,6 +8,7 @@ long double atanl (long double x);
+ long double
+ atanl (long double x)
+ {
++#ifdef __x86_64__
+   long double res = 0.0L;
+ 
+   asm volatile (
+@@ -15,4 +16,9 @@ atanl (long double x)
+        "fpatan"
+        : "=t" (res) : "0" (x));
+   return res;
++#else
++  /* AArch64 has no x87 fpatan; long double is the same 64-bit IEEE double
++     as double here, so delegate to the double-precision atan. */
++  return __builtin_atan ((double) x);
++#endif
+ }
+diff --git a/winsup/cygwin/math/cossin.c b/winsup/cygwin/math/cossin.c
+index 0095daa66..918d23105 100644
+--- a/winsup/cygwin/math/cossin.c
++++ b/winsup/cygwin/math/cossin.c
+@@ -10,6 +10,7 @@ void sincosf (float __x, float *p_sin, float *p_cos);
+ 
+ void sincos (double __x, double *p_sin, double *p_cos)
+ {
++#ifdef __x86_64__
+   long double c, s;
+ 
+   __asm__ __volatile__ ("fsincos\n\t"
+@@ -28,10 +29,17 @@ void sincos (double __x, double *p_sin, double *p_cos)
+     "1:" : "=t" (c), "=u" (s) : "0" (__x));
+   *p_sin = (double) s;
+   *p_cos = (double) c;
++#else
++  /* AArch64 has no x87 fsincos, so compute the two values separately.
++     sin and cos come from newlib, so this does not recurse. */
++  *p_sin = __builtin_sin (__x);
++  *p_cos = __builtin_cos (__x);
++#endif
+ }
+ 
+ void sincosf (float __x, float *p_sin, float *p_cos)
+ {
++#ifdef __x86_64__
+   long double c, s;
+ 
+   __asm__ __volatile__ ("fsincos\n\t"
+@@ -50,10 +58,17 @@ void sincosf (float __x, float *p_sin, float *p_cos)
+     "1:" : "=t" (c), "=u" (s) : "0" (__x));
+   *p_sin = (float) s;
+   *p_cos = (float) c;
++#else
++  /* AArch64 has no x87 fsincos, so compute the two values separately.
++     sin and cos come from newlib, so this does not recurse. */
++  *p_sin = __builtin_sinf (__x);
++  *p_cos = __builtin_cosf (__x);
++#endif
+ }
+ 
+ void sincosl (long double __x, long double *p_sin, long double *p_cos)
+ {
++#ifdef __x86_64__
+   long double c, s;
+ 
+   __asm__ __volatile__ ("fsincos\n\t"
+@@ -72,4 +87,10 @@ void sincosl (long double __x, long double *p_sin, long double *p_cos)
+     "1:" : "=t" (c), "=u" (s) : "0" (__x));
+   *p_sin = s;
+   *p_cos = c;
++#else
++  /* AArch64 has no x87 fsincos, so compute the two values separately.
++     sin and cos come from newlib, so this does not recurse. */
++  *p_sin = __builtin_sin ((double) __x);
++  *p_cos = __builtin_cos ((double) __x);
++#endif
+ }
+diff --git a/winsup/cygwin/math/exp.def.h b/winsup/cygwin/math/exp.def.h
+index 3066b745d..de93afffe 100644
+--- a/winsup/cygwin/math/exp.def.h
++++ b/winsup/cygwin/math/exp.def.h
+@@ -51,6 +51,12 @@ static long double c1 = 7.05260771340735992468e-6L;
+ static long double
+ __expl_internal (long double x)
+ {
++#ifdef __aarch64__
++  /* AArch64 has no x87.  long double is the same 64-bit IEEE double as
++     double here, so delegate to the double-precision exp.  exp comes from
++     newlib and is not built from this header, so this does not recurse. */
++  return __builtin_exp ((double) x);
++#else
+   long double res = 0.0L;
+   asm volatile (
+        "fldl2e\n\t"             /* 1  log2(e)         */
+@@ -102,6 +108,7 @@ __expl_internal (long double x)
+        "fstp	%%st(1)\n\t"    /* 0  */
+        : "=t" (res) : "0" (x), "m" (c0), "m" (c1) : "ax", "dx");
+   return res;
++#endif
+ }
+ 
+ __FLT_TYPE
+diff --git a/winsup/cygwin/math/expm1.def.h b/winsup/cygwin/math/expm1.def.h
+index 028211f91..3050b83c4 100644
+--- a/winsup/cygwin/math/expm1.def.h
++++ b/winsup/cygwin/math/expm1.def.h
+@@ -64,9 +64,17 @@ __FLT_ABI(expm1) (__FLT_TYPE x)
+   }
+   if (__FLT_ABI (fabs) (x) < __FLT_LOGE2)
+     {
++#ifdef __aarch64__
++      /* AArch64 has no x87 f2xm1.  The sequence below computes exactly
++	 expm1; delegate to the double-precision expm1, which comes from
++	 newlib and is not built from this header, so it does not
++	 recurse. */
++      return (__FLT_TYPE) __builtin_expm1 ((double) x);
++#else
+       x /= __FLT_LOGE2;
+       __asm__ __volatile__ ("f2xm1" : "=t" (x) : "0" (x));
+       return x;
++#endif
+     }
+   return __FLT_ABI (exp) (x) - __FLT_CST (1.0);
+ }
+diff --git a/winsup/cygwin/math/fabsl.c b/winsup/cygwin/math/fabsl.c
+index f3864ea13..931962711 100644
+--- a/winsup/cygwin/math/fabsl.c
++++ b/winsup/cygwin/math/fabsl.c
+@@ -12,7 +12,7 @@ fabsl (long double x)
+   long double res = 0.0L;
+   asm volatile ("fabs;" : "=t" (res) : "0" (x));
+   return res;
+-#elif defined(__arm__) || defined(_ARM_)
++#elif defined(__arm__) || defined(_ARM_) || defined(__aarch64__)
+   return __builtin_fabsl (x);
+ #endif /* defined(__x86_64__) || defined(_AMD64_) || defined(__i386__) || defined(_X86_) */
+ }
+diff --git a/winsup/cygwin/math/fastmath.h b/winsup/cygwin/math/fastmath.h
+index eb1846cb3..88447b18c 100644
+--- a/winsup/cygwin/math/fastmath.h
++++ b/winsup/cygwin/math/fastmath.h
+@@ -16,6 +16,8 @@
+ /* FIXME: We really should get rid of the code duplication using euther
+    C++ templates or tgmath-type macros.  */
+ 
++#ifdef __x86_64__
++
+ static __inline__ double __fast_sqrt (double x)
+ {
+   double res;
+@@ -117,4 +119,45 @@ static __inline__ float __fast_log1pf (float x)
+    return res;
+ }
+ 
++#else /* !__x86_64__ */
++
++/* AArch64 has no x87 FPU, so none of the "=t" stack-register asm above has
++   an analogue.  On this target long double is the same 64-bit IEEE double
++   as double (verified: sizeof (long double) == 8), so the "l" variants
++   delegate to the double-precision builtins rather than to *l symbols,
++   which avoids creating link dependencies on the x87-only routines.
++   __builtin_sqrt lowers to a single fsqrt instruction.  The log helpers
++   lower to calls to log/log1p, which are implemented elsewhere in this
++   library and do not call back into these helpers, so there is no
++   recursion. */
++
++static __inline__ double __fast_sqrt (double x)
++{ return __builtin_sqrt (x); }
++
++static __inline__ long double __fast_sqrtl (long double x)
++{ return __builtin_sqrt ((double) x); }
++
++static __inline__ float __fast_sqrtf (float x)
++{ return __builtin_sqrtf (x); }
++
++static __inline__ double __fast_log (double x)
++{ return __builtin_log (x); }
++
++static __inline__ long double __fast_logl (long double x)
++{ return __builtin_log ((double) x); }
++
++static __inline__ float __fast_logf (float x)
++{ return __builtin_logf (x); }
++
++static __inline__ double __fast_log1p (double x)
++{ return __builtin_log1p (x); }
++
++static __inline__ long double __fast_log1pl (long double x)
++{ return __builtin_log1p ((double) x); }
++
++static __inline__ float __fast_log1pf (float x)
++{ return __builtin_log1pf (x); }
++
++#endif /* __x86_64__ */
++
+ #endif
+diff --git a/winsup/cygwin/math/fmodl.c b/winsup/cygwin/math/fmodl.c
+index 462b6fa79..71eb431af 100644
+--- a/winsup/cygwin/math/fmodl.c
++++ b/winsup/cygwin/math/fmodl.c
+@@ -8,6 +8,7 @@ long double fmodl (long double x, long double y);
+ long double
+ fmodl (long double x, long double y)
+ {
++#ifdef __x86_64__
+   long double res = 0.0L;
+ 
+   asm volatile (
+@@ -18,4 +19,9 @@ fmodl (long double x, long double y)
+        "fstp    %%st(1)"
+        : "=t" (res) : "0" (x), "u" (y) : "ax", "st(1)");
+   return res;
++#else
++  /* AArch64 has no x87 fprem; long double is the same 64-bit IEEE double
++     as double here, so delegate to the double-precision fmod. */
++  return __builtin_fmod ((double) x, (double) y);
++#endif
+ }
+diff --git a/winsup/cygwin/math/ldexpl.c b/winsup/cygwin/math/ldexpl.c
+index 2438617c3..dbda4f0c8 100644
+--- a/winsup/cygwin/math/ldexpl.c
++++ b/winsup/cygwin/math/ldexpl.c
+@@ -12,9 +12,15 @@ long double ldexpl(long double x, int expn)
+   if (!isfinite (x) || x == 0.0L)
+     return x;
+ 
++#ifdef __x86_64__
+   __asm__ __volatile__ ("fscale"
+ 	    : "=t" (res)
+ 	    : "0" (x), "u" ((long double) expn));
++#else
++  /* AArch64 has no x87 fscale; long double is the same 64-bit IEEE double
++     as double here, so delegate to the double-precision ldexp. */
++  res = __builtin_ldexp ((double) x, expn);
++#endif
+ 
+   if (!isfinite (res) || res == 0.0L)
+     errno = ERANGE;
+diff --git a/winsup/cygwin/math/logbl.c b/winsup/cygwin/math/logbl.c
+index 5e533c07c..f3bbd56f4 100644
+--- a/winsup/cygwin/math/logbl.c
++++ b/winsup/cygwin/math/logbl.c
+@@ -14,10 +14,16 @@
+ long double
+ logbl (long double x)
+ {
++#ifdef __x86_64__
+   long double res = 0.0L;
+ 
+   asm volatile (
+        "fxtract\n\t"
+        "fstp	%%st" : "=t" (res) : "0" (x));
+   return res;
++#else
++  /* AArch64 has no x87 fxtract; long double is the same 64-bit IEEE
++     double as double here, so delegate to the double-precision logb. */
++  return __builtin_logb ((double) x);
++#endif
+ }
+diff --git a/winsup/cygwin/math/pow.def.h b/winsup/cygwin/math/pow.def.h
+index 2ea825720..93a09be00 100644
+--- a/winsup/cygwin/math/pow.def.h
++++ b/winsup/cygwin/math/pow.def.h
+@@ -91,7 +91,7 @@ internal_modf (__FLT_TYPE value, __FLT_TYPE *iptr)
+     "frndint\n"
+     "fldcw 4(%%rsp)\n"
+     "addq $8, %%rsp\npopq %%rax" : "=t" (int_part) : "0" (value)); /* round */
+-#else
++#elif defined (__i386__)
+   asm volatile ("push %%eax\n\tsubl $8, %%esp\n"
+     "fnstcw 4(%%esp)\n"
+     "movzwl 4(%%esp), %%eax\n"
+@@ -101,6 +101,12 @@ internal_modf (__FLT_TYPE value, __FLT_TYPE *iptr)
+     "frndint\n"
+     "fldcw 4(%%esp)\n"
+     "addl $8, %%esp\n\tpop %%eax\n" : "=t" (int_part) : "0" (value)); /* round */
++#else
++  /* The x87 sequences above set the rounding mode to truncate-toward-zero
++     (orb $12,%ah sets RC=11) and then call frndint, i.e. they compute
++     trunc().  AArch64 has no x87; __builtin_trunc lowers to a single
++     frintz instruction. */
++  int_part = (__FLT_TYPE) __builtin_trunc ((double) value);
+ #endif
+   if (iptr)
+     *iptr = int_part;
+@@ -204,7 +210,13 @@ __FLT_ABI(pow) (__FLT_TYPE x, __FLT_TYPE y)
+ 	}
+       if (y == __FLT_CST(0.5))
+ 	{
++#ifdef __x86_64__
+ 	  asm volatile ("fsqrt" : "=t" (rslt) : "0" (x));
++#else
++	  /* AArch64 has no x87 fsqrt; __builtin_sqrt lowers to the fsqrt
++	     instruction directly. */
++	  rslt = (__FLT_TYPE) __builtin_sqrt ((double) x);
++#endif
+ 	  return rslt;
+ 	}
+     }
+diff --git a/winsup/cygwin/math/sqrt.def.h b/winsup/cygwin/math/sqrt.def.h
+index 3d1a00908..f9a789b4b 100644
+--- a/winsup/cygwin/math/sqrt.def.h
++++ b/winsup/cygwin/math/sqrt.def.h
+@@ -87,6 +87,10 @@ __FLT_ABI (sqrt) (__FLT_TYPE x)
+    return __FLT_CST (1.0);
+ #if defined(__arm__) || defined(_ARM_)
+   __fsqrt_internal(x);
++#elif defined(__aarch64__)
++  /* AArch64 has no x87; __builtin_sqrt lowers to the fsqrt instruction.
++     long double is the same 64-bit IEEE double as double on this target. */
++  res = (__FLT_TYPE) __builtin_sqrt ((double) x);
+ #elif defined(_X86_) || defined(__i386__) || defined(_AMD64_) || defined(__x86_64__)
+   asm volatile ("fsqrt" : "=t" (res) : "0" (x));
+ #else
+diff --git a/winsup/cygwin/math/truncl.c b/winsup/cygwin/math/truncl.c
+index 9380f9571..8a1bff6b7 100644
+--- a/winsup/cygwin/math/truncl.c
++++ b/winsup/cygwin/math/truncl.c
+@@ -13,7 +13,7 @@
+ long double
+ truncl (long double _x)
+ {
+-#if defined(_ARM_) || defined(__arm__)
++#if defined(_ARM_) || defined(__arm__) || defined(__aarch64__)
+   return trunc(_x);
+ #else
+   long double retval = 0.0L;
+diff --git a/winsup/cygwin/mm/malloc_wrapper.cc b/winsup/cygwin/mm/malloc_wrapper.cc
+index de3cf7ddc..74ba345e2 100644
+--- a/winsup/cygwin/mm/malloc_wrapper.cc
++++ b/winsup/cygwin/mm/malloc_wrapper.cc
+@@ -50,6 +50,31 @@ import_address (void *imp)
+ {
+   __try
+     {
++#ifdef __aarch64__
++      /* __aarch64_import_thunk_decode__
++	 mkimport emits, for each imported symbol:
++	     adrp x16, __imp_sym
++	     ldr  x16, [x16, #:lo12:__imp_sym]
++	     br   x16
++	 Recover the IAT slot from the adrp/ldr pair and read the target.
++	 The x86 path below keys off the literal opcode bytes FF 25, which
++	 can never match AArch64 code, so without this the caller concludes
++	 "not an import" and malloc recurses into itself.  */
++      const uint32_t *insn = (const uint32_t *) imp;
++      if ((insn[0] & 0x9f00001f) == 0x90000010		/* adrp x16, ...     */
++	  && (insn[1] & 0xffc003ff) == 0xf9400210	/* ldr x16, [x16,#n] */
++	  && insn[2] == 0xd61f0200)			/* br  x16           */
++	{
++	  int64_t immlo = (insn[0] >> 29) & 0x3;
++	  int64_t immhi = (insn[0] >> 5) & 0x7ffff;
++	  int64_t imm = (immhi << 2) | immlo;
++	  imm = (imm << 43) >> 43;			/* sign-extend 21 bits */
++	  uintptr_t page = ((uintptr_t) imp & ~(uintptr_t) 0xfff)
++			   + (uintptr_t) (imm << 12);
++	  uintptr_t off = ((insn[1] >> 10) & 0xfff) * 8;
++	  return *(void **) (page + off);
++	}
++#else
+       if (*((uint16_t *) imp) == 0x25ff)
+ 	{
+ 	  const char *ptr = (const char *) imp;
+@@ -57,6 +82,7 @@ import_address (void *imp)
+ 				   (ptr + 6 + *(int32_t *)(ptr + 2));
+ 	  return (void *) *jmpto;
+ 	}
++#endif
+     }
+   __except (NO_ERROR) {}
+   __endtry
+diff --git a/winsup/cygwin/profil.c b/winsup/cygwin/profil.c
+index 30b37244a..24e6d934d 100644
+--- a/winsup/cygwin/profil.c
++++ b/winsup/cygwin/profil.c
+@@ -44,9 +44,11 @@ get_thrpc (HANDLE thr)
+   if (GetThreadContext (thr, &ctx)) {
+ #ifdef __x86_64__
+     pc = ctx.Rip;
+-#else
+-#error unimplemented for this target
+-#endif
++    #elif defined (__aarch64__)
++        pc = ctx.Pc;
++    #else
++    #error unimplemented for this target
++    #endif
+   }
+   ResumeThread (thr);
+   return pc;
+diff --git a/winsup/cygwin/pseudo-reloc.cc b/winsup/cygwin/pseudo-reloc.cc
+index 5a0eab936..a49cb6e52 100644
+--- a/winsup/cygwin/pseudo-reloc.cc
++++ b/winsup/cygwin/pseudo-reloc.cc
+@@ -309,12 +309,12 @@ do_pseudo_reloc (void * start, void * end, void * base)
+ 	  break;
+ 	case 32:
+ 	  reldata = (ptrdiff_t) (*((unsigned int *)reloc_target));
+-#if defined (__x86_64__) || defined (_WIN64)
++#if defined (__x86_64__) || defined (__aarch64__) || defined (_WIN64)
+ 	  if ((reldata & 0x80000000) != 0)
+ 	    reldata |= ~((ptrdiff_t) 0xffffffff);
+ #endif
+ 	  break;
+-#if defined (__x86_64__) || defined (_WIN64)
++#if defined (__x86_64__) || defined (__aarch64__) || defined (_WIN64)
+ 	case 64:
+ 	  reldata = (ptrdiff_t) (*((unsigned long long *)reloc_target));
+ 	  break;
+@@ -348,7 +348,7 @@ do_pseudo_reloc (void * start, void * end, void * base)
+ #endif
+ 	  __write_memory ((void *) reloc_target, &reldata, 4);
+ 	  break;
+-#if defined (__x86_64__) || defined (_WIN64)
++#if defined (__x86_64__) || defined (__aarch64__) || defined (_WIN64)
+ 	case 64:
+ 	  __write_memory ((void *) reloc_target, &reldata, 8);
+ 	  break;
+diff --git a/winsup/cygwin/scripts/gendef b/winsup/cygwin/scripts/gendef
+index 6328fe2fb..9d21c0637 100755
+--- a/winsup/cygwin/scripts/gendef
++++ b/winsup/cygwin/scripts/gendef
+@@ -22,6 +22,7 @@ if (!defined($cpu) || !defined($output_def)) {
+ }
+ 
+ my $is_x86_64 = $cpu eq 'x86_64';
++my $is_aarch64 = $cpu eq 'aarch64';
+ # FIXME? Do other (non-32 bit) arches on Windows still use symbol prefixes?
+ my $sym_prefix = '';
+ 
+@@ -30,7 +31,28 @@ while (<>) {
+     push(@top, cleanup $_);
+     last if /^\s*exports$/oi;
+ }
+-my @in = cleanup <>;
++my @raw_in = cleanup <>;
++my @in = ();
++my $skip = 0;
++for my $line (@raw_in) {
++    if ($line =~ m/^\s*\#ifndef\s+(\S+)/) {
++        my $sym = $1;
++        if (($sym eq '__aarch64__' && $is_aarch64) || ($sym eq '__x86_64__' && $is_x86_64)) {
++            $skip = 1;
++        }
++        next;
++    } elsif ($line =~ m/^\s*\#ifdef\s+(\S+)/) {
++        my $sym = $1;
++        unless (($sym eq '__aarch64__' && $is_aarch64) || ($sym eq '__x86_64__' && $is_x86_64)) {
++            $skip = 1;
++        }
++        next;
++    } elsif ($line =~ m/^\s*\#endif/) {
++        $skip = 0;
++        next;
++    }
++    push @in, $line unless $skip;
++}
+ 
+ my %sigfe = ();
+ my @data = ();
+@@ -89,7 +111,7 @@ sub fefunc {
+     my $func = $sym_prefix . shift;
+     my $fe = $sym_prefix . shift;
+     my $sigfe_func;
+-    if ($is_x86_64) {
++    if ($is_x86_64 || $is_aarch64) {
+ 	$sigfe_func = ($fe =~ /^(.*)_${func}$/)[0];
+     }
+     my $extra;
+@@ -107,6 +129,27 @@ $fe:
+ 	jmp	$sigfe_func
+ 	.seh_endproc
+ 
++EOF
++    }
++    if ($is_aarch64) {
++	# Per-export trampoline: save frame, push function address, branch to sigfe handler.
++	# The trampoline pushes [x29,x30] then [func_addr,padding] onto the stack.
++	# _sigfe/_sigfe_maybe will pop func_addr, patch the return address, and jump.
++	$res = <<EOF;
++	.extern	$func
++	.global	$fe
++	.seh_proc $fe
++$fe:
++	stp	x29, x30, [sp, #-16]!
++	.seh_save_regp_x x29, 16
++	adrp	x9, $func
++	add	x9, x9, :lo12:$func
++	str	x9, [sp, #-16]!
++	.seh_stackalloc 16
++	.seh_endprologue
++	b	$sigfe_func
++	.seh_endproc
++
+ EOF
+     }
+     if (!$main::first++) {
+@@ -340,6 +383,322 @@ stabilize_sig_stack:
+ 	popq	%r12
+ 	ret
+ 	.seh_endproc
++EOF
++	}
++	if ($is_aarch64) {
++	  $res = <<EOF . longjmp () . $res;
++	.include "tlsoffsets"
++	.text
++
++	/* AArch64 signal-interception trampolines for Cygwin/MSYS2.
++	 *
++	 * TEB access: mov	x16, x18 then ldr from [x16, #8].
++	 * This gives the NtTib.StackLimit, which is the TLS base.
++	 * x18 is the platform register - READ ONLY, never written.
++	 *
++	 * All TLS field accesses use register-offset addressing:
++	 *   mov xN, _cygtls.field     (load the .equ offset into a reg)
++	 *   ldr/str wM, [xbase, xN]   (base + offset)
++	 * because the offsets are large negatives (~-7000 to -12000) that
++	 * exceed ARM64 immediate-offset ranges.
++	 *
++	 * Stack-lock: ldaxr/stlxr loops (ARMv8 baseline, no LSE needed).
++	 *
++	 * ARM64 Windows calling convention:
++	 *   x0-x7: args; x8: indirect result; x9-x15: volatile
++	 *   x16-x17: IP0/IP1 scratch; x18: platform (TEB) — DO NOT WRITE
++	 *   x19-x28: callee-saved; x29: FP; x30: LR
++	 *   d0-d7,d16-d31: volatile NEON; d8-d15: callee-saved NEON
++	 */
++
++/* Helper macro: compute address of a TLS field into a register.
++   tls_base must hold the TLS base pointer.
++   Uses xdst as the destination (clobbers it). */
++.macro	tls_addr xdst, tls_base, field
++	mov	\\xdst, \\field
++	add	\\xdst, \\tls_base, \\xdst
++.endm
++
++	.global	_sigfe_maybe
++	.seh_proc _sigfe_maybe
++_sigfe_maybe:
++	.seh_endprologue
++	mov	x16, x18
++	ldr	x16, [x16, #8]			/* TLS base */
++	tls_addr x17, x16, _cygtls.initialized
++	cmp	sp, x17				/* sp above TLS? */
++	b.hs	0f				/* no TLS, just return */
++	ldr	w17, [x17]
++	mov	w15, #0x173f
++	movk	w15, #0xc763, lsl #16		/* CYGTLS_INITIALIZED */
++	cmp	w17, w15
++	b.eq	1f
++0:	ret
++	.seh_endproc
++
++	.global	_sigfe
++	.seh_proc _sigfe
++_sigfe:
++	.seh_endprologue
++	mov	x16, x18
++	ldr	x16, [x16, #8]			/* TLS base */
++1:	/* acquire stacklock */
++	tls_addr x17, x16, _cygtls.stacklock
++2:	ldaxr	w15, [x17]
++	cbnz	w15, 3f
++	mov	w14, #1
++	stlxr	w13, w14, [x17]
++	cbnz	w13, 2b
++	b	4f
++3:	yield
++	b	2b
++
++4:	/* lock acquired — push return addr onto signal stack */
++	tls_addr x17, x16, _cygtls.stackptr
++	ldr	x15, [x17]			/* old stackptr */
++	ldr	x14, [sp, #16]			/* real return addr (from trampoline frame) */
++	str	x14, [x15]			/* store on signal stack */
++	add	x15, x15, #8
++	str	x15, [x17]			/* update stackptr */
++	/* replace saved LR with _sigbe */
++	adrp	x14, _sigbe
++	add	x14, x14, :lo12:_sigbe
++	str	x14, [sp, #16]
++	/* increment incyg */
++	tls_addr x17, x16, _cygtls.incyg
++	ldr	w15, [x17]
++	add	w15, w15, #1
++	str	w15, [x17]
++	/* release stacklock */
++	tls_addr x17, x16, _cygtls.stacklock
++	stlr	wzr, [x17]
++	/* pop function address and restored frame, jump to real function */
++	ldr	x9, [sp], #16
++	ldp	x29, x30, [sp], #16
++	br	x9
++	.seh_endproc
++
++	.global _sigbe
++	.seh_proc _sigbe
++_sigbe:
++	.seh_endprologue
++	mov	x16, x18
++	ldr	x16, [x16, #8]
++	tls_addr x17, x16, _cygtls.stacklock
++1:	ldaxr	w15, [x17]
++	cbnz	w15, 2f
++	mov	w14, #1
++	stlxr	w13, w14, [x17]
++	cbnz	w13, 1b
++	b	3f
++2:	yield
++	b	1b
++3:	/* lock acquired — pop from signal stack */
++	tls_addr x17, x16, _cygtls.stackptr
++	ldr	x15, [x17]
++	sub	x15, x15, #8
++	str	x15, [x17]
++	ldr	x15, [x15]			/* real return address */
++	/* decrement incyg */
++	tls_addr x17, x16, _cygtls.incyg
++	ldr	w14, [x17]
++	sub	w14, w14, #1
++	str	w14, [x17]
++	/* release stacklock */
++	tls_addr x17, x16, _cygtls.stacklock
++	stlr	wzr, [x17]
++	br	x15
++	.seh_endproc
++
++	.global	sigdelayed
++	.seh_proc sigdelayed
++sigdelayed:
++	/* Save x29/x30 frame and the injected return address (x10). */
++	stp	x29, x30, [sp, #-32]!
++	.seh_save_regp_x x29, 32
++	mov	x29, sp
++	str	x10, [sp, #16]
++	.seh_save_reg x10, 16
++
++	/* Save ALL volatile + callee-saved registers (except x18).
++	 * x0-x17 (18 regs), x19-x28 (10 regs) = 28 * 8 = 224
++	 * NZCV + FPCR = 16
++	 * NEON q0-q31 = 512
++	 * Total = 752, already 16-byte aligned. */
++	sub	sp, sp, #752
++	.seh_stackalloc 752
++	.seh_endprologue
++
++	stp	x0, x1, [sp, #0]
++	stp	x2, x3, [sp, #16]
++	stp	x4, x5, [sp, #32]
++	stp	x6, x7, [sp, #48]
++	stp	x8, x9, [sp, #64]
++	stp	x10, x11, [sp, #80]
++	stp	x12, x13, [sp, #96]
++	stp	x14, x15, [sp, #112]
++	stp	x16, x17, [sp, #128]
++	stp	x19, x20, [sp, #144]
++	stp	x21, x22, [sp, #160]
++	stp	x23, x24, [sp, #176]
++	stp	x25, x26, [sp, #192]
++	stp	x27, x28, [sp, #208]
++	mrs	x0, nzcv
++	mrs	x1, fpcr
++	stp	x0, x1, [sp, #224]
++	stp	q0, q1, [sp, #240]
++	stp	q2, q3, [sp, #272]
++	stp	q4, q5, [sp, #304]
++	stp	q6, q7, [sp, #336]
++	stp	q8, q9, [sp, #368]
++	stp	q10, q11, [sp, #400]
++	stp	q12, q13, [sp, #432]
++	stp	q14, q15, [sp, #464]
++	stp	q16, q17, [sp, #496]
++	stp	q18, q19, [sp, #528]
++	stp	q20, q21, [sp, #560]
++	stp	q22, q23, [sp, #592]
++	stp	q24, q25, [sp, #624]
++	stp	q26, q27, [sp, #656]
++	stp	q28, q29, [sp, #688]
++	stp	q30, q31, [sp, #720]
++
++	/* Get TLS base into callee-saved x19 */
++	mov	x19, x18
++	ldr	x19, [x19, #8]
++	mov	x17, _cygtls.saved_errno
++	ldr	w20, [x19, x17]			/* save saved_errno in w20 */
++
++	/* Call signal handler: x0 = tls + start_offset */
++	mov	x0, _cygtls.start_offset
++	add	x0, x19, x0
++	bl	_ZN7_cygtls19call_signal_handlerEv
++
++	/* Acquire stacklock */
++	tls_addr x17, x19, _cygtls.stacklock
++1:	ldaxr	w15, [x17]
++	cbnz	w15, 2f
++	mov	w14, #1
++	stlxr	w13, w14, [x17]
++	cbnz	w13, 1b
++	b	3f
++2:	yield
++	b	1b
++3:	/* Restore errno if saved_errno >= 0 */
++	tbnz	w20, #31, 4f
++	mov	x17, _cygtls.errno_addr
++	ldr	x17, [x19, x17]
++	str	w20, [x17]
++4:	/* Pop return address from signal stack */
++	tls_addr x17, x19, _cygtls.stackptr
++	ldr	x15, [x17]
++	sub	x14, x15, #8
++	str	x14, [x17]
++	ldr	x10, [x14]
++
++	/* Clear incyg and release stacklock */
++	tls_addr x17, x19, _cygtls.incyg
++	str	wzr, [x17]
++	tls_addr x17, x19, _cygtls.stacklock
++	stlr	wzr, [x17]
++
++	/* Restore NEON */
++	ldp	q0, q1, [sp, #240]
++	ldp	q2, q3, [sp, #272]
++	ldp	q4, q5, [sp, #304]
++	ldp	q6, q7, [sp, #336]
++	ldp	q8, q9, [sp, #368]
++	ldp	q10, q11, [sp, #400]
++	ldp	q12, q13, [sp, #432]
++	ldp	q14, q15, [sp, #464]
++	ldp	q16, q17, [sp, #496]
++	ldp	q18, q19, [sp, #528]
++	ldp	q20, q21, [sp, #560]
++	ldp	q22, q23, [sp, #592]
++	ldp	q24, q25, [sp, #624]
++	ldp	q26, q27, [sp, #656]
++	ldp	q28, q29, [sp, #688]
++	ldp	q30, q31, [sp, #720]
++	/* Restore NZCV, FPCR */
++	ldp	x0, x1, [sp, #224]
++	msr	nzcv, x0
++	msr	fpcr, x1
++	/* Restore GPRs */
++	ldp	x0, x1, [sp, #0]
++	ldp	x2, x3, [sp, #16]
++	ldp	x4, x5, [sp, #32]
++	ldp	x6, x7, [sp, #48]
++	ldp	x8, x9, [sp, #64]
++	ldr	x11, [sp, #88]
++	ldp	x12, x13, [sp, #96]
++	ldp	x14, x15, [sp, #112]
++	ldp	x16, x17, [sp, #128]
++	ldp	x19, x20, [sp, #144]
++	ldp	x21, x22, [sp, #160]
++	ldp	x23, x24, [sp, #176]
++	ldp	x25, x26, [sp, #192]
++	ldp	x27, x28, [sp, #208]
++	add	sp, sp, #752
++
++	ldr	x10, [sp, #16]			/* restore injected return addr */
++	ldp	x29, x30, [sp], #32
++	br	x10
++	.seh_endproc
++
++_sigdelayed_end:
++	.global _sigdelayed_end
++
++	.global	stabilize_sig_stack
++	.seh_proc stabilize_sig_stack
++stabilize_sig_stack:
++	stp	x29, x30, [sp, #-32]!
++	.seh_save_regp_x x29, 32
++	mov	x29, sp
++	str	x19, [sp, #16]
++	.seh_save_reg x19, 16
++	.seh_endprologue
++
++	mov	x19, x18
++	ldr	x19, [x19, #8]
++	tls_addr x17, x19, _cygtls.stacklock
++1:	ldaxr	w15, [x17]
++	cbnz	w15, 2f
++	mov	w14, #1
++	stlxr	w13, w14, [x17]
++	cbnz	w13, 1b
++	b	3f
++2:	yield
++	b	1b
++3:	/* lock acquired */
++	tls_addr x17, x19, _cygtls.incyg
++	ldr	w15, [x17]
++	add	w15, w15, #1
++	str	w15, [x17]
++	tls_addr x17, x19, _cygtls.current_sig
++	ldr	w15, [x17]
++	cbz	w15, 4f
++	/* signal pending — release lock, call handler, retry */
++	tls_addr x17, x19, _cygtls.stacklock
++	stlr	wzr, [x17]
++	mov	x0, _cygtls.start_offset
++	add	x0, x19, x0
++	bl	_ZN7_cygtls19call_signal_handlerEv
++	tls_addr x17, x19, _cygtls.incyg
++	ldr	w15, [x17]
++	sub	w15, w15, #1
++	str	w15, [x17]
++	tls_addr x17, x19, _cygtls.stacklock
++	b	1b
++4:	/* no signal */
++	tls_addr x17, x19, _cygtls.incyg
++	ldr	w15, [x17]
++	sub	w15, w15, #1
++	str	w15, [x17]
++	mov	x11, x19
++	ldr	x19, [sp, #16]
++	ldp	x29, x30, [sp], #32
++	ret
++	.seh_endproc
+ EOF
+ 	}
+     }
+@@ -476,10 +835,144 @@ longjmp:
+ 	incl	%eax
+ 0:	ret
+ 	.seh_endproc
++EOF
++    }
++    if ($is_aarch64) {
++	return <<EOF;
++
++	/* AArch64 jmp_buf layout for Cygwin:
++	 *   0x00: tls stackptr (Frame slot)
++	 *   0x08-0x50: x19-x28 (callee-saved GPRs)
++	 *   0x58: x29 (fp), 0x60: x30 (lr/return addr)
++	 *   0x68: sp
++	 *   0x70: fpcr
++	 *   0x78-0xb7: d8-d15 (callee-saved NEON)
++	 *   0x100: savemask (sigsetjmp), 0x108: sigmask
++	 */
++
++	.globl	sigsetjmp
++	.seh_proc sigsetjmp
++sigsetjmp:
++	.seh_endprologue
++	str	w1, [x0, #0x100]
++	cbz	w1, setjmp
++	stp	x29, x30, [sp, #-32]!
++	mov	x29, sp
++	str	x0, [sp, #16]
++	add	x2, x0, #0x108
++	mov	x1, xzr
++	mov	w0, #0
++	bl	pthread_sigmask
++	ldr	x0, [sp, #16]
++	ldp	x29, x30, [sp], #32
++	b	setjmp
++	.seh_endproc
++
++	.globl	setjmp
++	.seh_proc setjmp
++setjmp:
++	stp	x29, x30, [sp, #-32]!
++	.seh_save_regp_x x29, 32
++	mov	x29, sp
++	str	x19, [sp, #16]
++	.seh_save_reg x19, 16
++	.seh_endprologue
++	/* Save callee-saved GPRs */
++	stp	x19, x20, [x0, #0x08]
++	stp	x21, x22, [x0, #0x18]
++	stp	x23, x24, [x0, #0x28]
++	stp	x25, x26, [x0, #0x38]
++	stp	x27, x28, [x0, #0x48]
++	/* Save caller's fp and lr (from our frame) */
++	ldp	x16, x17, [x29]
++	stp	x16, x17, [x0, #0x58]
++	/* Save caller's sp */
++	add	x16, x29, #32
++	str	x16, [x0, #0x68]
++	mrs	x16, fpcr
++	str	x16, [x0, #0x70]
++	stp	d8, d9, [x0, #0x78]
++	stp	d10, d11, [x0, #0x88]
++	stp	d12, d13, [x0, #0x98]
++	stp	d14, d15, [x0, #0xa8]
++
++	mov	x19, x0
++	bl	stabilize_sig_stack		/* x11 = tls, lock held */
++	mov	x17, _cygtls.stackptr
++	ldr	x16, [x11, x17]
++	str	x16, [x19, #0x00]
++	tls_addr x17, x11, _cygtls.stacklock
++	stlr	wzr, [x17]
++	mov	w0, #0
++	ldr	x19, [sp, #16]
++	ldp	x29, x30, [sp], #32
++	ret
++	.seh_endproc
++
++	.globl	siglongjmp
++	.seh_proc siglongjmp
++siglongjmp:
++	stp	x29, x30, [sp, #-48]!
++	.seh_save_regp_x x29, 48
++	mov	x29, sp
++	stp	x19, x20, [sp, #16]
++	.seh_save_regp x19, 16
++	.seh_endprologue
++	mov	x19, x0
++	mov	w20, w1
++	ldr	w16, [x0, #0x100]
++	cbz	w16, .Ldo_longjmp
++	mov	x2, xzr
++	add	x1, x0, #0x108
++	mov	w0, #0
++	bl	pthread_sigmask
++	b	.Ldo_longjmp
++	.seh_endproc
++
++	.globl	longjmp
++	.seh_proc longjmp
++longjmp:
++	stp	x29, x30, [sp, #-48]!
++	.seh_save_regp_x x29, 48
++	mov	x29, sp
++	stp	x19, x20, [sp, #16]
++	.seh_save_regp x19, 16
++	.seh_endprologue
++	mov	x19, x0
++	mov	w20, w1
++.Ldo_longjmp:
++	bl	stabilize_sig_stack		/* x11 = tls, lock held */
++	ldr	x16, [x19, #0x00]
++	mov	x17, _cygtls.stackptr
++	str	x16, [x11, x17]
++	tls_addr x17, x11, _cygtls.stacklock
++	stlr	wzr, [x17]
++	tls_addr x17, x11, _cygtls.incyg
++	str	wzr, [x17]
++	/* Restore callee-saved */
++	ldp	x21, x22, [x19, #0x18]
++	ldp	x23, x24, [x19, #0x28]
++	ldp	x25, x26, [x19, #0x38]
++	ldp	x27, x28, [x19, #0x48]
++	ldp	x29, x30, [x19, #0x58]
++	ldr	x16, [x19, #0x68]
++	ldr	x17, [x19, #0x70]
++	msr	fpcr, x17
++	ldp	d8, d9, [x19, #0x78]
++	ldp	d10, d11, [x19, #0x88]
++	ldp	d12, d13, [x19, #0x98]
++	ldp	d14, d15, [x19, #0xa8]
++	ldp	x19, x20, [x19, #0x08]
++	mov	sp, x16
++	mov	w0, w20
++	cmp	w0, #0
++	cinc	w0, w0, eq
++	ret
++	.seh_endproc
+ EOF
+     }
+ }
+ 
+ sub cleanup(@) {
+-    grep {s/\r//og; s/#.*//og; s/\s+\n//sog; !/^$/o && $_} @_;
++    grep {s/\r//og; unless (/^\s*\#(?:ifdef|ifndef|endif)/) { s/#.*//og; } s/\s+\n//sog; !/^$/o && $_} @_;
+ }
+diff --git a/winsup/cygwin/scripts/mkimport b/winsup/cygwin/scripts/mkimport
+index 9517c4e9e..175fa2506 100755
+--- a/winsup/cygwin/scripts/mkimport
++++ b/winsup/cygwin/scripts/mkimport
+@@ -24,6 +24,7 @@ my %import = ();
+ my %symfile = ();
+ 
+ my $is_x86_64 = ($cpu eq 'x86_64' ? 1 : 0);
++my $is_aarch64 = ($cpu eq 'aarch64' ? 1 : 0);
+ # FIXME? Do other (non-32 bit) arches on Windows still use symbol prefixes?
+ my $sym_prefix = '';
+ 
+@@ -58,7 +59,20 @@ for my $f (keys %text) {
+     } else {
+ 	$text{$f} = 1;
+ 	open my $as_fd, '|-', $as, '-o', "$dir/t-$f", "-";
+-	if ($is_x86_64) {
++	if ($is_aarch64) {
++	    # __aarch64_import_thunk__ : AArch64 has no jmp-through-memory, so
++	    # form the IAT slot address with adrp/ldr and branch via x16 (IP0),
++	    # the inter-procedure scratch register reserved for exactly this.
++	    print $as_fd <<EOF;
++	.text
++	.extern	$imp_sym
++	.global	$glob_sym
++$glob_sym:
++	adrp	x16, $imp_sym
++	ldr	x16, [x16, #:lo12:$imp_sym]
++	br	x16
++EOF
++	} elsif ($is_x86_64) {
+ 	    print $as_fd <<EOF;
+ 	.text
+ 	.extern	$imp_sym
+diff --git a/winsup/cygwin/thread.cc b/winsup/cygwin/thread.cc
+index d410b9575..84bb97ea6 100644
+--- a/winsup/cygwin/thread.cc
++++ b/winsup/cygwin/thread.cc
+@@ -647,9 +647,17 @@ pthread::cancel ()
+ 	  if ((context.Rsp & 8) == 0)
+ 	    context.Rsp -= 8;
+ 	  context.Rip = (ULONG_PTR) pthread::static_cancel_self;
+-#else
+-#error unimplemented for this target
+-#endif
++	  #elif defined (__aarch64__)
++	  	  /* AAPCS64 requires sp to be 16-byte aligned at all times.  Unlike
++	  	     x86_64 there is no return address pushed by the call, so the
++	  	     16n + 8 adjustment used above has no ARM64 counterpart; the
++	  	     return address lives in lr.  static_cancel_self() must not
++	  	     return, so lr is left as-is. */
++	  	  context.Sp &= ~0xfUL;
++	  	  context.Pc = (ULONG_PTR) pthread::static_cancel_self;
++	  #else
++	  #error unimplemented for this target
++	  #endif
+ 	  SetThreadContext (win32_obj_id, &context);
+ 	}
+       cygheap->unlock_tls (tl_entry);
+@@ -1966,7 +1974,11 @@ pthread_spinlock::lock ()
+       else if (spins < FAST_SPINS_LIMIT)
+         {
+           ++spins;
++#ifdef __aarch64__
++          __asm__ volatile ("yield":::);
++#else
+           __asm__ volatile ("pause":::);
++#endif
+         }
+       else
+ 	{
