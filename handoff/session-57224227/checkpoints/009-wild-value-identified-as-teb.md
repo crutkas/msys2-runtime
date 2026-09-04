@@ -1,0 +1,92 @@
+<overview>
+This session is the read-only "defects investigator" (Copilot session `57224227`) in a multi-session ARM64 vNext programme making the MSYS2 runtime (`msys-2.0.dll`) run as a genuinely native Windows ARM64 toolchain (layer 1 for Git-for-Windows on ARM64). The runtime-tree owner making ALL edits and running ALL dynamic instrumentation is session `c63ab774-a023-4e57-9bc4-53f727507ada`; the coordinator is chat session `2b2e50a5-63c5-49f9-8b89-d825396b5ff9`. This session performs local compile/disassemble/DWARF-inspect/static-analysis ONLY (never edits source, never runs binaries, never commits/pushes/PRs), reporting MEASURED/DERIVED/PRESUMED findings via `send_session_message`. The current and sole active focus is a cygheap chain-head corruption bug that is now understood at the value level and being driven toward naming the exact faulting instruction.
+</overview>
+
+<history>
+The four original runtime-ABI defects plus a TEB `__getreent` fix were closed in prior segments. This entire segment is a tightly-coupled back-and-forth with c63ab774 hunting ONE bug: a single transient 8-byte store to `cygheap+8` (the chain head) that poisons one chain entry's `prev` slot during Cygwin startup, in every process (even non-forking `rung9`).
+
+1. **Delivered the read-at-known-points design (Result J) to c63ab774.** dll_list is NOT the +8 writer (all stores go into cmalloc'd blocks / .bss / _cygtls). Handed the design: ordinary code breakpoints at cygheap.cc:397/398 bracketing each `_cmalloc` birth to distinguish head-wild-at-birth (a) vs overwritten-after-birth (b), immune to the data-watchpoint's DLL-load gap.
+
+2. **Offered the NetApi magnitude-band prior, then falsified my own phrasing by reading code.** The wild value's band (512–898 GiB) suggested a NetApi callee-allocated buffer. On opening uinfo.cc I found the `NetUserGetInfo`/`NetLocalGroupGetInfo` bufptr is a stack local freed before return — it doesn't escape. Refined to: interior pointers feed get_home/get_shell/get_gecos copy-out (cstrdup/HEAP_STR, matching type=1). Gave c63ab774 instrument refinements: break on NetUserGetInfo RETURN not NetApiBufferAllocate; test CONTAINMENT not equality; exclude the legitimate cygheap->chain store (cygheap.cc:398) by RVA not pattern.
+
+3. **c63ab774 confirmed case (a): head already wild at birth.** Implemented my design as a code breakpoint at RVA 0xA8FF8 (`str x0,[x5,#8]` = `rvc->prev = cygheap->chain`), reading x0 directly. Chain: 0x48A0/0x50B0/0x68C0 correct, 0x68F0 born with WILD prev. Case (b) eliminated; foreign store bounded between two consecutive `_cmalloc` calls. Capability finding: HW data-watchpoint missed these births (DLL-load gap) but code breakpoint caught all four.
+
+4. **Cautioned against re-arming the data watchpoint; recommended single-step + flagged cross-thread risk.** A new thread appears in the window; if the store is on it, a birth-thread single-step misses it. Step 0: record tid at both brackets.
+
+5. **c63ab774 falsified the NetApi prior with a verified instrument.** Bcr[2] breakpoint on `fetch_account_from_windows` (RVA 0x14C800) never fired before corruption; base-arithmetic verified the register was genuinely armed. NetApi prior dead. I traced the window's far bound from source: 0x68C0 = username cstrdup; user::init post-set_name, init_installation_root, pg.init allocate no HEAP_STR; so 0x68F0 (first cstrdup after username) is born later.
+
+6. **c63ab774 confirmed netapi modules loaded in rung9** ("loaded ≠ called"). I gave source-verified instrument refinements (source-checked cygheap.cc:397-398 are consecutive +8 stores).
+
+7. **c63ab774 bracketed the store to a single event window containing a thread creation, NO LOAD_DLL events.** Prime suspect became the newly-created thread; raised a `_cygtls`-from-wrong-StackBase mechanism but noted memset zeros (buckets intact — disproven). I initially argued (Finding 1) the thread was OS-internal.
+
+8. **c63ab774 INVERTED my Finding 1 AND delivered the breakthrough: the wild value IS the main thread's TEB, difference ZERO** (0x8000274000). Mechanism = operand-swap: correct `ldr x0,[x18,#8]` (load StackBase FROM TEB+8) vs corrupt `str <teb>,[<stackbase>,#8]` (store TEB INTO StackBase+8 == cygheap+8). The in-window thread starts at `cygthread::stub` — it IS a cygthread. I ran the TEB-store static scan (measured negative) and, in the crossing message, accepted the Finding 1 correction: the "sig" cygthread is dispatched at dcrt0.cc:779 (`new cygthread(wait_sig, cygself, "sig")`, sigproc.cc:547) — my grep was wrongly scoped, "non-match was not absence."
+
+9. **Took up c63ab774's explicit request to read the mov-x18→store windows properly.** Comprehensive measured negative: 159 `mov xN,x18`→`str xN` sites all have the register redefined before the store (zero carry the raw TEB); zero `str/stp/stur` of x18 (no spill); no TEB struct field for a memcpy. DERIVED: the TEB→StackBase+8 store is NOT in msys-2.0.dll's compiled code. Stated the caveat: scans the static msys image only, not ntdll/loader/JIT.
+
+10. **c63ab774 named the victim's full birth stack via my frame-walk recipe (first run, zero cost).** 0x68F0 born in pwdgrp::check_file (uinfo.cc:1687) ← internal_getpwsid (passwd.cc:107) ← user_info::initialize (shared.cc:206) ← dll_crt0_1 (dcrt0.cc:855). Confirmed my static prediction. I pinpointed the victim identity, confirmed the pwdgrp nuance (check_file ≠ fetch_account_from_windows — both stand), added a CreateThread-passes-nothing-malformed negative, and sharpened the cross-thread mechanism.
+
+11. **c63ab774 hit a platform limit (LAST MESSAGE, not yet replied to):** milestone bisection at memory_init/sigproc_init/user_info::initialize breakpoints — Bcr[3]/Bcr[4] were silently stripped (only PAC bits survived). **This host keeps only THREE hardware breakpoints, not eight, despite CONTEXT providing eight slots.** c63ab774's readback guard was too weak (`!= 0` instead of comparing to written value) — its fourth self-caught instrument-check defect of the day. Branch (1) ntdll vs (2) msys-spill/reload is still open and needs the store's PC.
+</history>
+
+<work_done>
+Files updated (session-state only — ZERO source edits, entirely read-only):
+- `checkpoints/011-emutls-negative-mmap-correction-allocator-clean.md` — the active checkpoint (Results A–J plus this segment's TEB findings). NOTE: this segment's newest findings were recorded primarily in the todos DB, not fully written into checkpoint 011 prose.
+- `files/rd.sh` — KEPT persistent helper: `bash rd.sh FILE START END` prints numbered line range from `/root/xc/w-defects/winsup/cygwin`. Invoked via `wsl -d Ubuntu bash -c 'bash /mnt/c/Users/crutkasLocal/.copilot/session-state/57224227-53ba-4c06-95b3-0ae9d9058bd5/files/rd.sh ...'`.
+- Scratch scripts created and DELETED this segment (all cleaned): encl.sh, cmprolog.sh, cmprolog2.sh, tebscan.sh, tebpair.sh, tebpair2.sh, tebwin.sh, tebloose.sh, and output files teb_scan.txt/teb_windows.txt/teb_loose.txt.
+
+Todos DB: 39 rows (38 done + 1 blocked). Key todos this segment: case-a-confirmed, single-step-instrument, netapi-falsified, thread-trigger-not-writer, framewalk-birth-caller, wild-is-teb, finding1-corrected, teb-store-scan-negative, teb-store-comprehensive-negative, birth-stack-named, createthread-stack-negative. The 1 BLOCKED: `x86_64-build-verify`.
+
+Work completed this segment:
+- [x] Read-at-known-points design → c63ab774 confirmed case (a).
+- [x] NetApi prior offered, self-falsified by code-read, then killed by c63ab774's measurement.
+- [x] Frame-walk recipe (measured AAPCS64 prologues) → named victim birth stack first run.
+- [x] Comprehensive TEB-store static negative (4 vectors: register-copy, spill, memcpy, str x18 — all zero).
+- [x] CreateThread-passes-nothing-malformed negative.
+- [x] Finding 1 corrected (sig cygthread at dcrt0.cc:779).
+- [ ] **NOT YET DONE: reply to c63ab774's last message** (the 3-hardware-breakpoint platform-limit message). Immediate next action.
+- [ ] Branch (1) ntdll vs (2) msys spill/reload — needs the store's PC (c63ab774's capture).
+</work_done>
+
+<technical_details>
+- **THE BUG (now understood at value level):** A single transient store writes the MAIN thread's TEB (`0x8000274000`) into `cygheap+8` (== `StackBase+8` == chain head). MEASURED chain (rung9): `0x48A0(b=12,prev=NULL)` → `0x50B0(b=15)` → `0x68C0(b=0, username crutkasLocal)` → `0x68F0(b=6, WILD prev=TEB)` → `0x6A00(correct)`. Case (a) confirmed: head already wild when 0x68F0 is born; `_cmalloc` faithfully copied the wild head.
+- **THE MECHANISM: TEB/StackBase operand-swap.** Correct idiom throughout the runtime: `ldr x0,[x18,#8]` (load StackBase FROM TEB+8). Corruption: `str <teb>,[<stackbase>,#8]` — same two operands, roles swapped. `TEB+8 == NT_TIB.StackBase`; `cygheap+8 == StackBase+8`. `cygheap->chain` is just what lives at that address.
+- **The wild value IS the TEB, difference ZERO** — retires all prior descriptions ("512–898 GiB band", "loader bookkeeping", "ASLR-randomised"). Read by c63ab774 from CREATE_PROCESS_DEBUG_INFO+56.
+- **FOUR MEASURED NEGATIVES (my static scans on new-msys-2.0.dll, 608,901 disasm lines) — the TEB store is NOT in msys compiled code:** (1) `str x18,…` in any form (str/stp/stur) = 0; (2) `mov xN,x18` → `str xN,[...]` within 40 instrs = 159 sites, ALL redefined before store (zero carry raw TEB); (3) at offset #8 with no redef = 0; (4) no TEB struct field exists so no memcpy vector. CAVEAT (stated): covers static msys image only, NOT ntdll/loader/JIT — proves "not in msys's compiled code," not "not executed by our process."
+- **TWO SURVIVING HYPOTHESES:** (1) store is in ntdll/Windows loader thread-attach path mishandling a TEB/StackBase pointer (leading candidate; fits bracket containing sig-thread creation + "source never mentions the destination"); (2) TEB reaches memory via a path my scans couldn't model (spill/reload — but ruled out by zero `str x18`; so realistically only a non-register-resident path). The PC capture is the arbiter.
+- **CreateThread passes nothing malformed:** cygthread.cc:299 `CreateThread(&sec_none_nih, 0, stub, this, 0, &id)` — dwStackSize=0, dwCreationFlags=0. So if the store is ntdll's, it's not due to our parameters.
+- **Cross-thread observation (c63ab774):** the wild event was seen on the sig thread in one run, the main thread in another — attribution by thread is impossible with event sampling (time-bracketed only). The value is the MAIN thread's TEB but the event can appear on the sig thread ⇒ a thread storing ANOTHER thread's TEB at StackBase+8, a shape consistent with a Windows loader walking the thread list on attach.
+- **Finding 1 CORRECTION (mine, self-diagnosed):** a cygthread IS dispatched in the window — the "sig" thread, sigproc_init (dcrt0.cc:779) → `new cygthread(wait_sig, cygself, "sig")` (sigproc.cc:547), placed early by design. My grep was wrongly scoped to shared/cygheap/uinfo.cc on a false premise the thread was inside setup_cygheap. cygthread::init (dcrt0.cc:749) only records main_thread_id. Order: setup_cygheap(753) → memory_init(754) → threadinterface->Init(771) → sigproc_init(779), then dll_crt0_1(855) where victim is born.
+- **Frame-walk recipe (measured cygheap.o):** all frames AAPCS64 (`stp x29,x30` + `mov x29,sp`): _cmalloc stp#-128, cmalloc stp#-48, cstrdup stp#-48. From the 0xA8FF8 probe (x29=_cmalloc's FP): `[x29+8]`→cmalloc, `[x29]`→fp1; `[fp1+8]`→cstrdup; `[fp1]`→fp2; `[fp2+8]`→CALLER OF cstrdup. LR RULE (pinned): on ARM64, LR at any post-prologue store is NOT the caller (SRW lock clobbered it inside _cmalloc) — walk `[x29+8]`.
+- **PLATFORM LIMIT (c63ab774, newest):** this host honours only THREE hardware breakpoints (Bcr[0]/[1]/[2]); Bcr[3]/[4] silently stripped to PAC bits only (address discarded), despite CONTEXT exposing eight slots. Consequence: milestone bisection needs ≤3 simultaneous breakpoints or must re-arm between milestones. Also: HW watchpoint hits arrive as 0x80000003 (indistinguishable from ordinary breakpoints); data watchpoint silently misses writes during DLL-load/thread-create bursts.
+- **`bucket_val` is an explicit TABLE** (cygheap.cc:281): {32,48,64,96,128,192,256,384,512,768,1024,1536,2048,3072,4096,6144,…}, NOT 1<<b. `ce->type=1`=HEAP_STR (cstrdup class).
+- **Environment:** objdump/nm/gcc prefix `/root/xc/inst/bin/aarch64-pc-cygwin-*`; `-d`/`--dwarf=info`/`-t`. Cannot EXECUTE aarch64 binaries in WSL. Built DLLs: `/root/xc/w-link/bld/winsup/cygwin/new-msys-2.0.dll` and `-fixedbase.dll`. Objects with DWARF under `/root/xc/w-link/bld/winsup/cygwin/` (recursive find for mm/ subdir). Source tree READ-ONLY: `/root/xc/w-defects/winsup/cygwin`. Do NOT touch `/root/xc/inst`, `/root/xc/runtime`, `/root/xc/bld`, `/root/xc/w-autoload`, `/root/xc/w-gendef`, or the Windows worktree.
+- **PowerShell→WSL quoting (binding):** inline `bash -c` with `$VAR`/`awk`/commas/semicolons mangles. RELIABLE: write a `.sh` via `create` into `files/`, then `wsl -d Ubuntu bash -c "sed -i 's/\r//' /mnt/c/.../files/x.sh; bash /mnt/c/.../files/x.sh"`. `/tmp/dll.dis` does NOT persist across WSL calls — regenerate objdump output in the same command. gawk 5.2.1 available (supports `match(s,re,arr)`).
+- **METHOD RULES (binding):** non-match is never absence (open the file — I violated this in Finding 1 and self-corrected); measure what the compiler/linker emits; echo-to-transcript is not persistence; distinguish MEASURED/DERIVED/PRESUMED; a CORRECTION IS A CLAIM (re-derive from primary source); NEVER write x18 (read TEB via x18, never tpidr_el0 which reads zero on Windows-on-ARM); LSE atomics unavailable (use ldaxr/stlxr); a property that looks like a smoking gun on one arch means nothing until the other is checked; a readback/verification check must compare against what was WRITTEN, not merely test non-zero (c63ab774's repeated lesson: the defect is usually in the CHECK, not the mechanism).
+</technical_details>
+
+<important_files>
+- `C:\Users\crutkasLocal\.copilot\session-state\57224227-53ba-4c06-95b3-0ae9d9058bd5\checkpoints\011-emutls-negative-mmap-correction-allocator-clean.md`
+  - The active checkpoint (Results A–J + segment findings). Newest TEB findings are recorded mainly in the todos DB; consider expanding checkpoint prose to capture the TEB breakthrough and four measured negatives.
+- `files\rd.sh` — persistent numbered-line-range reader for the source tree. KEEP.
+- `/root/xc/w-defects/winsup/cygwin/mm/cygheap.cc` (READ-ONLY) — `bucket_val`@281; `setup_cygheap`@318 (user.init@321); `_cmalloc`@365 (chain write @397 `rvc->prev=cygheap->chain`, @398 `cygheap->chain=rvc`); `cstrdup`@565/@628; `init_installation_root`@161.
+- `/root/xc/w-defects/winsup/cygwin/dcrt0.cc` (READ-ONLY) — dll_crt0_0 order: cygthread::init@749, setup_cygheap@753, memory_init@754, threadinterface->Init@771, sigproc_init@779; dll_crt0_1@849, user_info::initialize call chain reaches @855.
+- `/root/xc/w-defects/winsup/cygwin/sigproc.cc` (READ-ONLY) — sigproc_init@524, `new cygthread(wait_sig,cygself,"sig")`@547 (the in-window sig thread).
+- `/root/xc/w-defects/winsup/cygwin/cygthread.cc` (READ-ONLY) — stub@138 (`_my_tls._ctinfo=info`@140), init@223 (only main_thread_id), CreateThread@299 (dwStackSize=0).
+- `/root/xc/w-defects/winsup/cygwin/mm/shared.cc` (READ-ONLY) — user_info::initialize@191 (mountinfo.init@201, internal_getpwsid@203, set_name@207).
+- `/root/xc/w-defects/winsup/cygwin/uinfo.cc` (READ-ONLY) — cygheap_user::init@39 (set_name@58, token/NtSetSecurityObject@108); pwdgrp::check_file@~1687 (victim 0x68F0 birth site); fetch_account_from_windows@1942 (NetUserGetInfo@2523/@2545 — proven NOT reached before corruption).
+- `/root/xc/w-defects/winsup/cygwin/passwd.cc` (READ-ONLY) — internal_getpwsid@107.
+- `/root/xc/w-link/bld/winsup/cygwin/new-msys-2.0.dll` (READ-ONLY build artifact) — the disassembly target for all TEB scans; regenerate `/tmp/dll.dis` each WSL call.
+- `/root/xc/w-link/bld/winsup/cygwin/mm/cygheap.o` (READ-ONLY) — DWARF/prologue source for frame-walk (AAPCS64 frame sizes).
+</important_files>
+
+<next_steps>
+Immediate next action (in-flight at compaction):
+1. **Reply to c63ab774's last message** (the 3-hardware-breakpoint platform-limit message). Content: (a) acknowledge the platform limit (only 3 HW breakpoints honoured; Bcr[3]/[4] stripped to PAC bits) and its consequence for milestone bisection (≤3 simultaneous or re-arm between); (b) credit the readback-check self-catch (compare-to-written, not != 0 — the recurring "defect is in the check" pattern); (c) since only 3 breakpoints are available, suggest a milestone-bisection plan that fits: keep the 0xA8FF8 birth probe + 1-2 milestone breakpoints, sampling cygheap+8 at each, re-arming between milestones — OR simpler, since case (a) + the named birth stack already bound the window, propose that the single decisive remaining capture is the store's PC via a single-breakpoint approach (e.g. break at the sig-thread creation return and single-step forward, budget permitting), keeping branch (1) ntdll vs (2) msys open; (d) reaffirm the labor split: PC in msys → send me the RVA (a path my four scans didn't model); PC in ntdll → I take Windows-on-ARM64 thread-attach documentation/known-issue research.
+
+Remaining threads:
+- Branch (1) ntdll vs (2) msys spill/reload — needs the store's PC (c63ab774's capture); the arbiter.
+- `x86_64-build-verify` (BLOCKED) — build our tree for x86_64 to make ARM64-specificity definitive (differential used foreign GfW 3.6.9). Awaits coordinator go/no-go AND requires running Windows binaries (this WSL environment is cross-compile only; verify needs a Windows-host session).
+- Consider expanding checkpoint 011 prose to capture the TEB breakthrough and the four measured negatives (currently mostly in todos DB).
+
+Constraints (binding): read-only, edit no source, report to c63ab774 (and coordinator when programme-level), measure don't assume, re-derive corrections from primary source, never claim a product PASS. In autopilot: don't idle-wait, but don't fabricate static work — the msys-internal static surface for this bug is now exhausted by four measured negatives; the decisive next step is dynamic (c63ab774's PC capture) or, depending on where the PC lands, either an RVA disassembly (me) or ntdll thread-attach research (me).
+</next_steps>
