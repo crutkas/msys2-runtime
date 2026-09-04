@@ -638,7 +638,13 @@ child_info_fork::handle_fork ()
 bool
 child_info_spawn::get_parent_handle ()
 {
+  /* Close the handle being replaced, on success only.  Leaving it open leaks
+     one process handle per call.  On failure keep the previous behaviour
+     exactly: parent is NULL and we report failure.  */
+  HANDLE prev = parent;
   parent = OpenProcess (PROCESS_VM_READ, FALSE, parent_winpid);
+  if (parent && prev && prev != parent)
+    CloseHandle (prev);
   return !!parent;
 }
 
