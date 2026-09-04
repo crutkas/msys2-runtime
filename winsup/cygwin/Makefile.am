@@ -606,6 +606,30 @@ $(LDSCRIPT): $(LDSCRIPT).in
 
 # msys-2.0 dll
 # Set PE and export table header timestamps to zero for reproducible builds.
+#
+# ARM64 NOTE -- DO NOT ADD -Wl,--disable-dynamicbase TO THIS LINK LINE.
+#
+# It is a locally reasonable inference from DllCharacteristics 0x0160 plus a
+# randomised-looking load base, and it has been independently derived at least
+# three times during ARM64 bring-up.  It is wrong, and it makes the DLL
+# UNLOADABLE.
+#
+# MEASURED: Windows on Arm MANDATES DYNAMIC_BASE.  Six stock Microsoft ARM64
+# system DLLs (version, winmm, bcrypt, wintrust, cryptbase, profapi) with ONLY
+# that one bit cleared all fail LoadLibrary with err 193 ERROR_BAD_EXE_FORMAT.
+# Controls: pristine copies load 6/6; byte-identical rewrites load 6/6;
+# checksum-zeroed variants still fail 6/6.  Only DYNAMIC_BASE is mandated --
+# HIGH_ENTROPY_VA is not, and clearing it alone still loads 5/6.
+#
+# AND fork() DOES NOT NEED A FIXED BASE.  DLL ASLR is per-image-per-boot:
+# measured on an ASLR-enabled image, 5 concurrent processes and 3 sequential
+# loads after full unload all received base 0x7ffe4ed60000 -- one distinct
+# base, and not the preferred one, so relocation demonstrably occurred.
+# Parent and child therefore share a base and fork's invariant holds.
+#
+# The ARM64 fork failure that motivates this idea has a different cause:
+# cygheap allocation-chain corruption, reproducible in programs that never
+# call fork at all.
 $(NEW_DLL_NAME): $(LDSCRIPT) libdll.a $(VERSION_OFILES) $(LIBSERVER)\
 		  $(newlib_build)/libm.a $(newlib_build)/libc.a
 	$(AM_V_CXXLD)$(CXX) $(CXXFLAGS) \
