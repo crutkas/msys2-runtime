@@ -1,0 +1,1764 @@
+LIBRARY "msys-2.0.dll" BASE=0x180040000
+EXPORTS
+__argc DATA
+__argv DATA
+__check_rhosts_file DATA
+__ctype_ptr__ DATA
+__cygwin_user_data DATA
+__mb_cur_max DATA
+__progname DATA
+__rcmd_errstr DATA
+__stack_chk_guard DATA
+_check_for_executable DATA
+_daylight DATA
+_fe_dfl_env DATA
+_impure_ptr DATA
+_sys_errlist DATA
+_sys_nerr DATA
+_timezone DATA
+_tzname DATA
+environ DATA
+error_message_count DATA
+error_one_per_line DATA
+error_print_progname DATA
+h_errno DATA
+in6addr_any DATA
+in6addr_loopback DATA
+optarg DATA
+opterr DATA
+optind DATA
+optopt DATA
+optreset DATA
+program_invocation_name DATA
+program_invocation_short_name DATA
+reent_data DATA
+sys_errlist = _sys_errlist DATA
+sys_nerr = _sys_nerr DATA
+sys_sigabbrev DATA
+sys_siglist DATA
+__assert
+__assert_func
+__assertfail
+__b64_ntop
+__b64_pton
+__bsd_qsort_r
+__chk_fail = _sigfe___chk_fail
+__cpuset_alloc = _sigfe___cpuset_alloc
+__cpuset_free = _sigfe___cpuset_free
+__cxa_atexit = _sigfe_cygwin__cxa_atexit
+__cxa_finalize = _sigfe___cxa_finalize
+__dn_comp = _sigfe___dn_comp
+__dn_expand = _sigfe___dn_expand
+__dn_skipname = _sigfe___dn_skipname
+__eprintf = _sigfe___eprintf
+__errno
+__fbufsize
+__flbf
+__fpclassifyd
+__fpclassifyf
+__fpending
+__fpurge = _sigfe___fpurge
+__freadable
+__freading
+__fsetlocking = _sigfe___fsetlocking
+__fwritable
+__fwriting
+__getpagesize = _sigfe_getpagesize
+__getreent
+__gets_chk = _sigfe___gets_chk
+__gnu_basename
+__infinity
+__isinfd = isinf
+__isinff = isinff
+__isnand = isnan
+__isnanf = isnanf
+__locale_ctype_ptr
+__locale_ctype_ptr_l
+__locale_mb_cur_max
+__main
+__memcpy_chk
+__memmove_chk
+__mempcpy = mempcpy
+__mempcpy_chk
+__memset_chk
+__opendir_with_d_ino = _sigfe___opendir_with_d_ino
+__res_close = _sigfe___res_close
+__res_init = _sigfe___res_init
+__res_mkquery = _sigfe___res_mkquery
+__res_nclose = _sigfe___res_nclose
+__res_ninit = _sigfe___res_ninit
+__res_nmkquery = _sigfe___res_nmkquery
+__res_nquery = _sigfe___res_nquery
+__res_nquerydomain = _sigfe___res_nquerydomain
+__res_nsearch = _sigfe___res_nsearch
+__res_nsend = _sigfe___res_nsend
+__res_query = _sigfe___res_query
+__res_querydomain = _sigfe___res_querydomain
+__res_search = _sigfe___res_search
+__res_send = _sigfe___res_send
+__res_state = _sigfe___res_state
+__sched_getaffinity_sys = _sigfe___sched_getaffinity_sys
+__signbitd
+__signbitf
+__signgam
+__snprintf_chk = _sigfe___snprintf_chk
+__sprintf_chk = _sigfe___sprintf_chk
+__srget = _sigfe___srget
+__srget_r = _sigfe___srget_r
+__stack_chk_fail = _sigfe___stack_chk_fail
+__stack_chk_fail_local = _sigfe___stack_chk_fail
+__stpcpy_chk
+__stpncpy_chk
+__strcat_chk
+__strcpy_chk
+__strncat_chk
+__strncpy_chk
+__swbuf = _sigfe___swbuf
+__swbuf_r = _sigfe___swbuf_r
+__vsnprintf_chk = _sigfe___vsnprintf_chk
+__vsprintf_chk = _sigfe___vsprintf_chk
+__wrap__ZdaPv
+__wrap__ZdaPvRKSt9nothrow_t
+__wrap__ZdlPv
+__wrap__ZdlPvRKSt9nothrow_t
+__wrap__Znam
+__wrap__ZnamRKSt9nothrow_t
+__wrap__Znwm
+__wrap__ZnwmRKSt9nothrow_t
+__xdrrec_getrec = _sigfe___xdrrec_getrec
+__xdrrec_setnonblock = _sigfe___xdrrec_setnonblock
+__xpg_sigpause = _sigfe___xpg_sigpause
+__xpg_strerror_r = _sigfe___xpg_strerror_r
+_dll_crt0
+_Exit = _sigfe__Exit
+_exit = _sigfe__exit
+_feinitialise
+_fscanf_r = _sigfe__fscanf_r
+_get_osfhandle = _sigfe__get_osfhandle
+_longjmp = longjmp
+_pipe = _sigfe__pipe
+_pthread_cleanup_pop = _sigfe__pthread_cleanup_pop
+_pthread_cleanup_push = _sigfe__pthread_cleanup_push
+_setjmp = setjmp
+_setmode = _sigfe_cygwin_setmode
+a64l
+abort
+abs
+accept = _sigfe_cygwin_accept
+accept4 = _sigfe_accept4
+access = _sigfe_access
+acl = _sigfe_acl
+acl_add_perm
+acl_calc_mask = _sigfe_acl_calc_mask
+acl_check
+acl_clear_perms
+acl_cmp = _sigfe_acl_cmp
+acl_copy_entry
+acl_copy_ext
+acl_copy_int
+acl_create_entry = _sigfe_acl_create_entry
+acl_delete_def_file = _sigfe_acl_delete_def_file
+acl_delete_entry
+acl_delete_perm
+acl_dup = _sigfe_acl_dup
+acl_entries
+acl_equiv_mode = _sigfe_acl_equiv_mode
+acl_error
+acl_extended_fd = _sigfe_acl_extended_fd
+acl_extended_file = _sigfe_acl_extended_file
+acl_extended_file_nofollow = _sigfe_acl_extended_file_nofollow
+acl_free = _sigfe_acl_free
+acl_from_mode
+acl_from_text = _sigfe_acl_from_text
+acl_get_entry
+acl_get_fd = _sigfe_acl_get_fd
+acl_get_file = _sigfe_acl_get_file
+acl_get_perm
+acl_get_permset
+acl_get_qualifier = _sigfe_acl_get_qualifier
+acl_get_tag_type
+acl_init = _sigfe_acl_init
+acl_set_fd = _sigfe_acl_set_fd
+acl_set_file = _sigfe_acl_set_file
+acl_set_permset
+acl_set_qualifier
+acl_set_tag_type
+acl_size
+acl_to_any_text = _sigfe_acl_to_any_text
+acl_to_text = _sigfe_acl_to_text
+acl_valid
+aclcheck
+aclfrommode = _sigfe_aclfrommode
+aclfrompbits = _sigfe_aclfrompbits
+aclfromtext = _sigfe_aclfromtext
+aclsort = _sigfe_aclsort
+acltomode = _sigfe_acltomode
+acltopbits = _sigfe_acltopbits
+acltotext = _sigfe_acltotext
+acos
+acosf
+acosh
+acoshf
+acoshl
+acosl
+aio_cancel = _sigfe_aio_cancel
+aio_error
+aio_fsync = _sigfe_aio_fsync
+aio_read = _sigfe_aio_read
+aio_return
+aio_suspend = _sigfe_aio_suspend
+aio_write = _sigfe_aio_write
+alarm = _sigfe_alarm
+aligned_alloc = _sigfe_aligned_alloc
+alphasort
+arc4random
+arc4random_addrandom
+arc4random_buf
+arc4random_stir
+arc4random_uniform
+argz_add = _sigfe_argz_add
+argz_add_sep = _sigfe_argz_add_sep
+argz_append = _sigfe_argz_append
+argz_count
+argz_create = _sigfe_argz_create
+argz_create_sep = _sigfe_argz_create_sep
+argz_delete = _sigfe_argz_delete
+argz_extract
+argz_insert = _sigfe_argz_insert
+argz_next
+argz_replace = _sigfe_argz_replace
+argz_stringify
+asctime = _sigfe_asctime
+asctime_r = _sigfe_asctime_r
+asin
+asinf
+asinh
+asinhf
+asinhl
+asinl
+asnprintf = _sigfe_asnprintf
+asprintf = _sigfe_asprintf
+at_quick_exit = _sigfe_at_quick_exit
+atan
+atan2
+atan2f
+atan2l
+atanf
+atanh
+atanhf
+atanhl
+atanl
+atexit = _sigfe_cygwin_atexit
+atof = _sigfe_atof
+atoff = _sigfe_atoff
+atoi
+atol
+atoll
+basename
+bcmp
+bcopy
+bind = _sigfe_cygwin_bind
+bindresvport = _sigfe_cygwin_bindresvport
+bindresvport_sa = _sigfe_cygwin_bindresvport_sa
+bsearch
+btowc
+bzero
+c16rtomb
+c32rtomb
+cabs
+cabsf
+cabsl
+cacos
+cacosf
+cacosh
+cacoshf
+cacoshl
+cacosl
+call_once = _sigfe_call_once
+calloc = _sigfe_calloc
+canonicalize_file_name = _sigfe_canonicalize_file_name
+carg
+cargf
+cargl
+casin
+casinf
+casinh
+casinhf
+casinhl
+casinl
+catan
+catanf
+catanh
+catanhf
+catanhl
+catanl
+catclose = _sigfe_catclose
+catgets = _sigfe_catgets
+catopen = _sigfe_catopen
+cbrt
+cbrtf
+cbrtl
+ccos
+ccosf
+ccosh
+ccoshf
+ccoshl
+ccosl
+ceil
+ceilf
+ceill
+cexp
+cexpf
+cexpl
+cfgetispeed
+cfgetospeed
+cfmakeraw
+cfsetispeed = _sigfe_cfsetispeed
+cfsetospeed = _sigfe_cfsetospeed
+cfsetspeed = _sigfe_cfsetspeed
+chdir = _sigfe_chdir
+chmod = _sigfe_chmod
+chown = _sigfe_chown
+chroot = _sigfe_chroot
+cimag
+cimagf
+cimagl
+clearenv = _sigfe_clearenv
+clearerr = _sigfe_clearerr
+clearerr_unlocked = _sigfe_clearerr_unlocked
+clock = _sigfe_clock
+clock_getcpuclockid = _sigfe_clock_getcpuclockid
+clock_getres = _sigfe_clock_getres
+clock_gettime = _sigfe_clock_gettime
+clock_nanosleep = _sigfe_clock_nanosleep
+clock_setres = _sigfe_clock_setres
+clock_settime = _sigfe_clock_settime
+clog
+clog10
+clog10f
+clog10l
+clogf
+clogl
+close = _sigfe_close
+close_range = _sigfe_close_range
+closedir = _sigfe_closedir
+closelog = _sigfe_closelog
+cnd_broadcast = _sigfe_cnd_broadcast
+cnd_destroy = _sigfe_cnd_destroy
+cnd_init = _sigfe_cnd_init
+cnd_signal = _sigfe_cnd_signal
+cnd_timedwait = _sigfe_cnd_timedwait
+cnd_wait = _sigfe_cnd_wait
+confstr
+conj
+conjf
+conjl
+connect = _sigfe_cygwin_connect
+copysign
+copysignf
+copysignl
+cos
+cosf
+cosh
+coshf
+coshl
+cosl
+cpow
+cpowf
+cpowl
+cproj
+cprojf
+cprojl
+creal
+crealf
+creall
+creat = _sigfe_creat
+csin
+csinf
+csinh
+csinhf
+csinhl
+csinl
+csqrt
+csqrtf
+csqrtl
+ctan
+ctanf
+ctanh
+ctanhf
+ctanhl
+ctanl
+ctermid = _sigfe_ctermid
+ctime = _sigfe_ctime
+ctime_r = _sigfe_ctime_r
+cuserid
+cwait = _sigfe_cwait
+cygwin_attach_handle_to_fd = _sigfe_cygwin_attach_handle_to_fd
+cygwin_conv_path = _sigfe_cygwin_conv_path
+cygwin_conv_path_list = _sigfe_cygwin_conv_path_list
+cygwin_create_path = _sigfe_cygwin_create_path
+msys_detach_dll = _sigfe_maybe_cygwin_detach_dll
+msys_dll_init = cygwin_dll_init
+cygwin_internal
+cygwin_logon_user = _sigfe_cygwin_logon_user
+cygwin_posix_path_list_p
+cygwin_set_impersonation_token = _sigfe_cygwin_set_impersonation_token
+cygwin_split_path
+cygwin_stackdump = _sigfe_cygwin_stackdump
+cygwin_umount = _sigfe_cygwin_umount
+cygwin_winpid_to_pid = _sigfe_cygwin_winpid_to_pid
+daemon = _sigfe_daemon
+dbm_clearerr = _sigfe_dbm_clearerr
+dbm_close = _sigfe_dbm_close
+dbm_delete = _sigfe_dbm_delete
+dbm_dirfno = _sigfe_dbm_dirfno
+dbm_error = _sigfe_dbm_error
+dbm_fetch = _sigfe_dbm_fetch
+dbm_firstkey = _sigfe_dbm_firstkey
+dbm_nextkey = _sigfe_dbm_nextkey
+dbm_open = _sigfe_dbm_open
+dbm_store = _sigfe_dbm_store
+difftime
+dirfd = _sigfe_dirfd
+dirname
+div
+dladdr = _sigfe_dladdr
+dlclose = _sigfe_dlclose
+dlerror
+dlfork
+dll_crt0__FP11per_process
+dll_dllcrt0
+dll_entry
+dlopen = _sigfe_dlopen
+dlsym = _sigfe_dlsym
+dn_comp = _sigfe___dn_comp
+dn_expand = _sigfe___dn_expand
+dn_skipname = _sigfe___dn_skipname
+dprintf = _sigfe_dprintf
+drand48
+drem = remainder
+dremf= remainderf
+dreml= remainderl
+dup = _sigfe_dup
+dup2 = _sigfe_dup2
+dup3 = _sigfe_dup3
+duplocale = _sigfe_duplocale
+eaccess = _sigfe_euidaccess
+ecvt = _sigfe_ecvt
+ecvtbuf = _sigfe_ecvtbuf
+ecvtf = _sigfe_ecvtf
+endgrent
+endhostent
+endmntent
+endprotoent = _sigfe_cygwin_endprotoent
+endpwent
+endservent = _sigfe_cygwin_endservent
+endusershell = _sigfe_endusershell
+endutent = _sigfe_endutent
+endutxent = _sigfe_endutxent
+envz_add = _sigfe_envz_add
+envz_entry
+envz_get
+envz_merge = _sigfe_envz_merge
+envz_remove = _sigfe_envz_remove
+envz_strip = _sigfe_envz_strip
+erand48
+erf
+erfc
+erfcf
+erfcl
+erff
+erfl
+err = _sigfe_err
+error = _sigfe_error
+error_at_line = _sigfe_error_at_line
+errx = _sigfe_errx
+euidaccess = _sigfe_euidaccess
+execl = _sigfe_execl
+execle = _sigfe_execle
+execlp = _sigfe_execlp
+execv = _sigfe_execv
+execve = _sigfe_execve
+execvp = _sigfe_execvp
+execvpe = _sigfe_execvpe
+exit = _sigfe_cygwin_exit
+exp
+exp10
+exp10f
+exp10l
+exp2
+exp2f
+exp2l
+expf
+expl
+explicit_bzero
+expm1
+expm1f
+expm1l
+fabs
+fabsf
+fabsl
+faccessat = _sigfe_faccessat
+facl = _sigfe_facl
+fallocate = _sigfe_fallocate
+fchdir = _sigfe_fchdir
+fchmod = _sigfe_fchmod
+fchmodat = _sigfe_fchmodat
+fchown = _sigfe_fchown
+fchownat = _sigfe_fchownat
+fclose = _sigfe_fclose
+fcloseall = _sigfe_fcloseall
+fcntl = _sigfe_fcntl
+fcvt = _sigfe_fcvt
+fcvtbuf = _sigfe_fcvtbuf
+fcvtf = _sigfe_fcvtf
+fdatasync = _sigfe_fdatasync
+fdclosedir = _sigfe_fdclosedir
+fdim
+fdimf
+fdiml
+fdopen = _sigfe_fdopen
+fdopendir = _sigfe_fdopendir
+feclearexcept
+fedisableexcept
+feenableexcept = _sigfe_feenableexcept
+fegetenv
+fegetexcept
+fegetexceptflag
+fegetround
+feholdexcept = _sigfe_feholdexcept
+feof = _sigfe_feof
+feof_unlocked = _sigfe_feof_unlocked
+feraiseexcept
+ferror = _sigfe_ferror
+ferror_unlocked = _sigfe_ferror_unlocked
+fesetenv = _sigfe_fesetenv
+fesetexceptflag = _sigfe_fesetexceptflag
+fesetround
+fetestexcept
+feupdateenv = _sigfe_feupdateenv
+fexecve = _sigfe_fexecve
+fflush = _sigfe_fflush
+fflush_unlocked = _sigfe_fflush_unlocked
+ffs
+ffsl
+ffsll
+fgetc = _sigfe_fgetc
+fgetc_unlocked = _sigfe_fgetc_unlocked
+fgetpos = _sigfe_fgetpos
+fgets = _sigfe_fgets
+fgets_unlocked = _sigfe_fgets_unlocked
+fgetwc = _sigfe_fgetwc
+fgetwc_unlocked = _sigfe_fgetwc_unlocked
+fgetws = _sigfe_fgetws
+fgetws_unlocked = _sigfe_fgetws_unlocked
+fgetxattr = _sigfe_fgetxattr
+fileno = _sigfe_fileno
+fileno_unlocked = _sigfe_fileno_unlocked
+finite
+finitef
+finitel
+fiprintf = _sigfe_fiprintf
+flistxattr = _sigfe_flistxattr
+flock = _sigfe_flock
+flockfile = _sigfe_flockfile
+floor
+floorf
+floorl
+fls
+flsl
+flsll
+fma
+fmaf
+fmal
+fmax
+fmaxf
+fmaxl
+fmemopen = _sigfe_fmemopen
+fmin
+fminf
+fminl
+fmod
+fmodf
+fmodl
+fnmatch
+fopen = _sigfe_fopen
+fopencookie = _sigfe_fopencookie
+fork = _sigfe_fork
+forkpty = _sigfe_forkpty
+fpathconf = _sigfe_fpathconf
+fprintf = _sigfe_fprintf
+fpurge = _sigfe_fpurge
+fputc = _sigfe_fputc
+fputc_unlocked = _sigfe_fputc_unlocked
+fputs = _sigfe_fputs
+fputs_unlocked = _sigfe_fputs_unlocked
+fputwc = _sigfe_fputwc
+fputwc_unlocked = _sigfe_fputwc_unlocked
+fputws = _sigfe_fputws
+fputws_unlocked = _sigfe_fputws_unlocked
+fread = _sigfe_fread
+fread_unlocked = _sigfe_fread_unlocked
+free = _sigfe_free
+freeaddrinfo = _sigfe_cygwin_freeaddrinfo
+freeifaddrs = _sigfe_freeifaddrs
+freelocale = _sigfe_freelocale
+fremovexattr = _sigfe_fremovexattr
+freopen = _sigfe_freopen
+frexp
+frexpf
+frexpl
+fscanf = _sigfe_fscanf
+fseek = _sigfe_fseek
+fseeko = _sigfe_fseeko
+fsetpos = _sigfe_fsetpos
+fsetxattr = _sigfe_fsetxattr
+fstat = _sigfe_fstat
+fstatat = _sigfe_fstatat
+fstatfs = _sigfe_fstatfs
+fstatvfs = _sigfe_fstatvfs
+fsync = _sigfe_fsync
+ftell = _sigfe_ftell
+ftello = _sigfe_ftello
+ftime = _sigfe_ftime
+ftok = _sigfe_ftok
+ftruncate = _sigfe_ftruncate
+ftrylockfile = _sigfe_ftrylockfile
+fts_children = _sigfe_fts_children
+fts_close = _sigfe_fts_close
+fts_get_clientptr
+fts_get_stream
+fts_open = _sigfe_fts_open
+fts_read = _sigfe_fts_read
+fts_set
+fts_set_clientptr
+ftw = _sigfe_ftw
+funlockfile = _sigfe_funlockfile
+funopen = _sigfe_funopen
+futimens = _sigfe_futimens
+futimes = _sigfe_futimes
+futimesat = _sigfe_futimesat
+fwide = _sigfe_fwide
+fwprintf = _sigfe_fwprintf
+fwrite = _sigfe_fwrite
+fwrite_unlocked = _sigfe_fwrite_unlocked
+fwscanf = _sigfe_fwscanf
+gai_strerror = cygwin_gai_strerror
+gamma
+gamma_r
+gammaf
+gammaf_r
+gcvt = _sigfe_gcvt
+gcvtf = _sigfe_gcvtf
+get_avphys_pages = _sigfe_get_avphys_pages
+get_current_dir_name = _sigfe_get_current_dir_name
+get_nprocs = _sigfe_get_nprocs
+get_nprocs_conf = _sigfe_get_nprocs_conf
+get_phys_pages = _sigfe_get_phys_pages
+getaddrinfo = _sigfe_cygwin_getaddrinfo
+getc = _sigfe_getc
+getc_unlocked = _sigfe_getc_unlocked
+getchar = _sigfe_getchar
+getchar_unlocked = _sigfe_getchar_unlocked
+GetCommandLineA@0 = cygwin_GetCommandLineA@0
+GetCommandLineW@0 = cygwin_GetCommandLineW@0
+getcontext
+getcwd = _sigfe_getcwd
+getdelim = _sigfe___getdelim
+getdomainname = _sigfe_getdomainname
+getdtablesize
+getegid
+getentropy = _sigfe_getentropy
+getenv
+geteuid
+getgid
+getgrent = _sigfe_getgrent
+getgrgid = _sigfe_getgrgid
+getgrgid_r = _sigfe_getgrgid_r
+getgrnam = _sigfe_getgrnam
+getgrnam_r = _sigfe_getgrnam_r
+getgrouplist = _sigfe_getgrouplist
+getgroups = _sigfe_getgroups
+gethostbyaddr = _sigfe_cygwin_gethostbyaddr
+gethostbyname = _sigfe_cygwin_gethostbyname
+gethostbyname2 = _sigfe_gethostbyname2
+gethostid = _sigfe_gethostid
+gethostname = _sigfe_cygwin_gethostname
+getifaddrs = _sigfe_getifaddrs
+getitimer = _sigfe_getitimer
+getline = _sigfe___getline
+getloadavg = _sigfe_getloadavg
+getlocalename_l = _sigfe_getlocalename_l
+getlogin
+getlogin_r
+getmntent = _sigfe_getmntent
+getmntent_r = _sigfe_getmntent_r
+getmode = _sigfe_getmode
+getnameinfo = _sigfe_cygwin_getnameinfo
+getopt = _sigfe_getopt
+getopt_long = _sigfe_getopt_long
+getopt_long_only = _sigfe_getopt_long_only
+getpagesize = _sigfe_getpagesize
+getpass = _sigfe_getpass
+getpeereid = _sigfe_getpeereid
+getpeername = _sigfe_cygwin_getpeername
+getpgid = _sigfe_getpgid
+getpgrp = _sigfe_getpgrp
+getpid
+getppid
+getpriority = _sigfe_getpriority
+getprogname
+getprotobyname = _sigfe_cygwin_getprotobyname
+getprotobynumber = _sigfe_cygwin_getprotobynumber
+getprotoent = _sigfe_cygwin_getprotoent
+getpt = _sigfe_getpt
+getpwent = _sigfe_getpwent
+getpwnam = _sigfe_getpwnam
+getpwnam_r = _sigfe_getpwnam_r
+getpwuid = _sigfe_getpwuid
+getpwuid_r = _sigfe_getpwuid_r
+getrandom = _sigfe_getrandom
+getrlimit = _sigfe_getrlimit
+getrusage = _sigfe_getrusage
+gets = _sigfe_gets
+getservbyname = _sigfe_cygwin_getservbyname
+getservbyport = _sigfe_cygwin_getservbyport
+getservent = _sigfe_cygwin_getservent
+getsid = _sigfe_getsid
+getsockname = _sigfe_cygwin_getsockname
+getsockopt = _sigfe_cygwin_getsockopt
+getsubopt
+gettimeofday = _sigfe_gettimeofday
+getuid
+getusershell = _sigfe_getusershell
+getutent = _sigfe_getutent
+getutid = _sigfe_getutid
+getutline = _sigfe_getutline
+getutxent = _sigfe_getutxent
+getutxid = _sigfe_getutxid
+getutxline = _sigfe_getutxline
+getw = _sigfe_getw
+getwc = _sigfe_getwc
+getwc_unlocked = _sigfe_getwc_unlocked
+getwchar = _sigfe_getwchar
+getwchar_unlocked = _sigfe_getwchar_unlocked
+getwd = _sigfe_getwd
+getxattr = _sigfe_getxattr
+glob = _sigfe_glob
+glob_pattern_p = _sigfe_glob_pattern_p
+globfree = _sigfe_globfree
+gmtime = _sigfe_gmtime
+gmtime_r = _sigfe_gmtime_r
+grantpt
+hcreate = _sigfe_hcreate
+hcreate_r = _sigfe_hcreate_r
+hdestroy = _sigfe_hdestroy
+hdestroy_r = _sigfe_hdestroy_r
+herror = _sigfe_cygwin_herror
+hsearch = _sigfe_hsearch
+hsearch_r = _sigfe_hsearch_r
+hstrerror = cygwin_hstrerror
+htonl
+htons
+hypot
+hypotf
+hypotl
+if_freenameindex = _sigfe_if_freenameindex
+if_indextoname = _sigfe_cygwin_if_indextoname
+if_nameindex = _sigfe_if_nameindex
+if_nametoindex = _sigfe_cygwin_if_nametoindex
+ilogb
+ilogbf
+ilogbl
+imaxabs = llabs
+imaxdiv = lldiv
+index
+inet_addr = _sigfe_cygwin_inet_addr
+inet_aton = _sigfe_cygwin_inet_aton
+inet_makeaddr
+inet_netof
+inet_network = _sigfe_cygwin_inet_network
+inet_ntoa = _sigfe_cygwin_inet_ntoa
+inet_ntop = _sigfe_cygwin_inet_ntop
+inet_pton = _sigfe_cygwin_inet_pton
+infinity
+infinityf
+initgroups = _sigfe_initgroups
+initstate
+insque
+ioctl = _sigfe_ioctl
+iprintf = _sigfe_iprintf
+iruserok = _sigfe_iruserok
+iruserok_sa = _sigfe_iruserok_sa
+isalnum
+isalnum_l
+isalpha
+isalpha_l
+isascii
+isascii_l
+isatty = _sigfe_isatty
+isblank
+isblank_l
+iscntrl
+iscntrl_l
+isdigit
+isdigit_l
+isgraph
+isgraph_l
+isinf
+isinff
+isinfl
+islower
+islower_l
+isnan
+isnanf
+isnanl
+isprint
+isprint_l
+ispunct
+ispunct_l
+issetugid
+isspace
+isspace_l
+isupper
+isupper_l
+iswalnum
+iswalnum_l
+iswalpha
+iswalpha_l
+iswblank
+iswblank_l
+iswcntrl
+iswcntrl_l
+iswctype
+iswctype_l
+iswdigit
+iswdigit_l
+iswgraph
+iswgraph_l
+iswlower
+iswlower_l
+iswprint
+iswprint_l
+iswpunct
+iswpunct_l
+iswspace
+iswspace_l
+iswupper
+iswupper_l
+iswxdigit
+iswxdigit_l
+isxdigit
+isxdigit_l
+j0
+j0f
+j1
+j1f
+jn
+jnf
+jrand48
+kill = _sigfe_kill
+killpg = _sigfe_killpg
+l64a
+labs
+lchown = _sigfe_lchown
+lcong48
+ldexp
+ldexpf
+ldexpl
+ldiv
+lfind
+lgamma
+lgamma_r
+lgammaf
+lgammaf_r
+lgammal
+lgammal_r
+lgetxattr = _sigfe_lgetxattr
+link = _sigfe_link
+linkat = _sigfe_linkat
+lio_listio = _sigfe_lio_listio
+listen = _sigfe_cygwin_listen
+listxattr = _sigfe_listxattr
+llabs
+lldiv
+llistxattr = _sigfe_llistxattr
+llrint
+llrintf
+llrintl
+llround
+llroundf
+llroundl
+localeconv
+localtime = _sigfe_localtime
+localtime_r = _sigfe_localtime_r
+lockf = _sigfe_lockf
+log
+log10
+log10f
+log10l
+log1p
+log1pf
+log1pl
+log2
+log2f
+log2l
+logb
+logbf
+logbl
+logf
+login = _sigfe_login
+login_tty = _sigfe_login_tty
+logl
+logout = _sigfe_logout
+logwtmp = _sigfe_logwtmp
+longjmp
+lrand48
+lremovexattr = _sigfe_lremovexattr
+lrint
+lrintf
+lrintl
+lround
+lroundf
+lroundl
+lsearch
+lseek = _sigfe_lseek
+lsetxattr = _sigfe_lsetxattr
+lstat = _sigfe_lstat
+lutimes = _sigfe_lutimes
+madvise = _sigfe_posix_madvise
+makecontext
+mallinfo = _sigfe_mallinfo
+malloc = _sigfe_malloc
+malloc_stats = _sigfe_malloc_stats
+malloc_trim = _sigfe_malloc_trim
+malloc_usable_size = _sigfe_malloc_usable_size
+mallopt = _sigfe_mallopt
+mblen
+mbrtoc16
+mbrtoc32
+mbrlen
+mbrtowc
+mbsinit
+mbsnrtowcs
+mbsrtowcs
+mbstowcs
+mbtowc
+memalign = _sigfe_memalign
+memccpy
+memchr
+memcmp
+memcpy
+memmem
+memmove
+mempcpy
+memrchr
+memset
+mkdir = _sigfe_mkdir
+mkdirat = _sigfe_mkdirat
+mkdtemp = _sigfe_mkdtemp
+mkfifo = _sigfe_mkfifo
+mkfifoat = _sigfe_mkfifoat
+mknod = _sigfe_mknod
+mknodat = _sigfe_mknodat
+mkostemp = _sigfe_mkostemp
+mkostemps = _sigfe_mkostemps
+mkstemp = _sigfe_mkstemp
+mkstemps = _sigfe_mkstemps
+mktemp = _sigfe_mktemp
+mktime = _sigfe_mktime
+mlock = _sigfe_mlock
+mmap = _sigfe_mmap
+modf
+modff
+modfl
+mount = _sigfe_mount
+mprotect = _sigfe_mprotect
+mq_close = _sigfe_mq_close
+mq_getattr = _sigfe_mq_getattr
+mq_notify = _sigfe_mq_notify
+mq_open = _sigfe_mq_open
+mq_receive = _sigfe_mq_receive
+mq_send = _sigfe_mq_send
+mq_setattr = _sigfe_mq_setattr
+mq_timedreceive = _sigfe_mq_timedreceive
+mq_timedsend = _sigfe_mq_timedsend
+mq_unlink = _sigfe_mq_unlink
+mrand48
+msgctl = _sigfe_msgctl
+msgget = _sigfe_msgget
+msgrcv = _sigfe_msgrcv
+msgsnd = _sigfe_msgsnd
+msync = _sigfe_msync
+mtx_destroy = _sigfe_mtx_destroy
+mtx_init = _sigfe_mtx_init
+mtx_lock = _sigfe_mtx_lock
+mtx_timedlock = _sigfe_mtx_timedlock
+mtx_trylock = _sigfe_mtx_trylock
+mtx_unlock = _sigfe_mtx_unlock
+munlock = _sigfe_munlock
+munmap = _sigfe_munmap
+nan
+nanf
+nanl
+nanosleep = _sigfe_nanosleep
+nearbyint
+nearbyintf
+nearbyintl
+newlocale = _sigfe_newlocale
+nextafter
+nextafterf
+nextafterl
+nexttoward
+nexttowardf
+nexttowardl
+nftw = _sigfe_nftw
+nice = _sigfe_nice
+nl_langinfo = _sigfe_nl_langinfo
+nl_langinfo_l = _sigfe_nl_langinfo_l
+nrand48
+ntohl
+ntohs
+on_exit = _sigfe_on_exit
+open = _sigfe_open
+open_memstream = _sigfe_open_memstream
+open_wmemstream = _sigfe_open_wmemstream
+openat = _sigfe_openat
+opendir = _sigfe_opendir
+openlog = _sigfe_openlog
+openpty = _sigfe_openpty
+pathconf = _sigfe_pathconf
+pause = _sigfe_pause
+pclose = _sigfe_pclose
+perror = _sigfe_perror
+pipe = _sigfe_pipe
+pipe2 = _sigfe_pipe2
+poll = _sigfe_poll
+popen = _sigfe_popen
+posix_close = _sigfe_posix_close
+posix_fadvise = _sigfe_posix_fadvise
+posix_fallocate = _sigfe_posix_fallocate
+posix_getdents = _sigfe_posix_getdents
+posix_madvise = _sigfe_posix_madvise
+posix_memalign = _sigfe_posix_memalign
+posix_openpt = _sigfe_posix_openpt
+posix_spawn = _sigfe_posix_spawn
+posix_spawn_file_actions_addchdir = _sigfe_posix_spawn_file_actions_addchdir_np
+posix_spawn_file_actions_addchdir_np = _sigfe_posix_spawn_file_actions_addchdir_np
+posix_spawn_file_actions_addclose = _sigfe_posix_spawn_file_actions_addclose
+posix_spawn_file_actions_adddup2 = _sigfe_posix_spawn_file_actions_adddup2
+posix_spawn_file_actions_addfchdir = _sigfe_posix_spawn_file_actions_addfchdir_np
+posix_spawn_file_actions_addfchdir_np = _sigfe_posix_spawn_file_actions_addfchdir_np
+posix_spawn_file_actions_addopen = _sigfe_posix_spawn_file_actions_addopen
+posix_spawn_file_actions_destroy = _sigfe_posix_spawn_file_actions_destroy
+posix_spawn_file_actions_init = _sigfe_posix_spawn_file_actions_init
+posix_spawnattr_destroy = _sigfe_posix_spawnattr_destroy
+posix_spawnattr_getflags
+posix_spawnattr_getpgroup
+posix_spawnattr_getschedparam
+posix_spawnattr_getschedpolicy
+posix_spawnattr_getsigdefault
+posix_spawnattr_getsigmask
+posix_spawnattr_init = _sigfe_posix_spawnattr_init
+posix_spawnattr_setflags
+posix_spawnattr_setpgroup
+posix_spawnattr_setschedparam
+posix_spawnattr_setschedpolicy
+posix_spawnattr_setsigdefault
+posix_spawnattr_setsigmask
+posix_spawnp = _sigfe_posix_spawnp
+pow
+pow10
+pow10f
+pow10l
+powf
+powl
+ppoll = _sigfe_ppoll
+pread = _sigfe_pread
+printf = _sigfe_printf
+pselect = _sigfe_pselect
+psiginfo = _sigfe_psiginfo
+psignal = _sigfe_psignal
+pthread_atfork = _sigfe_pthread_atfork
+pthread_attr_destroy = _sigfe_pthread_attr_destroy
+pthread_attr_getdetachstate = _sigfe_pthread_attr_getdetachstate
+pthread_attr_getguardsize = _sigfe_pthread_attr_getguardsize
+pthread_attr_getinheritsched = _sigfe_pthread_attr_getinheritsched
+pthread_attr_getschedparam = _sigfe_pthread_attr_getschedparam
+pthread_attr_getschedpolicy = _sigfe_pthread_attr_getschedpolicy
+pthread_attr_getscope = _sigfe_pthread_attr_getscope
+pthread_attr_getstack = _sigfe_pthread_attr_getstack
+pthread_attr_getstackaddr = _sigfe_pthread_attr_getstackaddr
+pthread_attr_getstacksize = _sigfe_pthread_attr_getstacksize
+pthread_attr_init = _sigfe_pthread_attr_init
+pthread_attr_setdetachstate = _sigfe_pthread_attr_setdetachstate
+pthread_attr_setguardsize = _sigfe_pthread_attr_setguardsize
+pthread_attr_setinheritsched = _sigfe_pthread_attr_setinheritsched
+pthread_attr_setschedparam = _sigfe_pthread_attr_setschedparam
+pthread_attr_setschedpolicy = _sigfe_pthread_attr_setschedpolicy
+pthread_attr_setscope = _sigfe_pthread_attr_setscope
+pthread_attr_setstack = _sigfe_pthread_attr_setstack
+pthread_attr_setstackaddr = _sigfe_pthread_attr_setstackaddr
+pthread_attr_setstacksize = _sigfe_pthread_attr_setstacksize
+pthread_barrier_destroy = _sigfe_pthread_barrier_destroy
+pthread_barrier_init = _sigfe_pthread_barrier_init
+pthread_barrier_wait = _sigfe_pthread_barrier_wait
+pthread_barrierattr_destroy = _sigfe_pthread_barrierattr_destroy
+pthread_barrierattr_getpshared = _sigfe_pthread_barrierattr_getpshared
+pthread_barrierattr_init = _sigfe_pthread_barrierattr_init
+pthread_barrierattr_setpshared = _sigfe_pthread_barrierattr_setpshared
+pthread_cancel = _sigfe_pthread_cancel
+pthread_cond_broadcast = _sigfe_pthread_cond_broadcast
+pthread_cond_clockwait = _sigfe_pthread_cond_clockwait
+pthread_cond_destroy = _sigfe_pthread_cond_destroy
+pthread_cond_init = _sigfe_pthread_cond_init
+pthread_cond_signal = _sigfe_pthread_cond_signal
+pthread_cond_timedwait = _sigfe_pthread_cond_timedwait
+pthread_cond_wait = _sigfe_pthread_cond_wait
+pthread_condattr_destroy = _sigfe_pthread_condattr_destroy
+pthread_condattr_getclock = _sigfe_pthread_condattr_getclock
+pthread_condattr_getpshared = _sigfe_pthread_condattr_getpshared
+pthread_condattr_init = _sigfe_pthread_condattr_init
+pthread_condattr_setclock = _sigfe_pthread_condattr_setclock
+pthread_condattr_setpshared = _sigfe_pthread_condattr_setpshared
+pthread_continue = _sigfe_pthread_continue
+pthread_create = _sigfe_pthread_create
+pthread_detach = _sigfe_pthread_detach
+pthread_equal = _sigfe_pthread_equal
+pthread_exit = _sigfe_pthread_exit
+pthread_getaffinity_np = _sigfe_pthread_getaffinity_np
+pthread_getattr_np = _sigfe_pthread_getattr_np
+pthread_getconcurrency = _sigfe_pthread_getconcurrency
+pthread_getcpuclockid = _sigfe_pthread_getcpuclockid
+pthread_getname_np = _sigfe_pthread_getname_np
+pthread_getschedparam = _sigfe_pthread_getschedparam
+pthread_getsequence_np = _sigfe_pthread_getsequence_np
+pthread_getspecific = _sigfe_pthread_getspecific
+pthread_join = _sigfe_pthread_join
+pthread_key_create = _sigfe_pthread_key_create
+pthread_key_delete = _sigfe_pthread_key_delete
+pthread_kill = _sigfe_pthread_kill
+pthread_mutex_clocklock = _sigfe_pthread_mutex_clocklock
+pthread_mutex_destroy = _sigfe_pthread_mutex_destroy
+pthread_mutex_getprioceiling = _sigfe_pthread_mutex_getprioceiling
+pthread_mutex_init = _sigfe_pthread_mutex_init
+pthread_mutex_lock = _sigfe_pthread_mutex_lock
+pthread_mutex_setprioceiling = _sigfe_pthread_mutex_setprioceiling
+pthread_mutex_timedlock = _sigfe_pthread_mutex_timedlock
+pthread_mutex_trylock = _sigfe_pthread_mutex_trylock
+pthread_mutex_unlock = _sigfe_pthread_mutex_unlock
+pthread_mutexattr_destroy = _sigfe_pthread_mutexattr_destroy
+pthread_mutexattr_getprioceiling = _sigfe_pthread_mutexattr_getprioceiling
+pthread_mutexattr_getprotocol = _sigfe_pthread_mutexattr_getprotocol
+pthread_mutexattr_getpshared = _sigfe_pthread_mutexattr_getpshared
+pthread_mutexattr_gettype = _sigfe_pthread_mutexattr_gettype
+pthread_mutexattr_init = _sigfe_pthread_mutexattr_init
+pthread_mutexattr_setprioceiling = _sigfe_pthread_mutexattr_setprioceiling
+pthread_mutexattr_setprotocol = _sigfe_pthread_mutexattr_setprotocol
+pthread_mutexattr_setpshared = _sigfe_pthread_mutexattr_setpshared
+pthread_mutexattr_settype = _sigfe_pthread_mutexattr_settype
+pthread_once = _sigfe_pthread_once
+pthread_rwlock_clockrdlock = _sigfe_pthread_rwlock_clockrdlock
+pthread_rwlock_clockwrlock = _sigfe_pthread_rwlock_clockwrlock
+pthread_rwlock_destroy = _sigfe_pthread_rwlock_destroy
+pthread_rwlock_init = _sigfe_pthread_rwlock_init
+pthread_rwlock_rdlock = _sigfe_pthread_rwlock_rdlock
+pthread_rwlock_timedrdlock = _sigfe_pthread_rwlock_timedrdlock
+pthread_rwlock_timedwrlock = _sigfe_pthread_rwlock_timedwrlock
+pthread_rwlock_tryrdlock = _sigfe_pthread_rwlock_tryrdlock
+pthread_rwlock_trywrlock = _sigfe_pthread_rwlock_trywrlock
+pthread_rwlock_unlock = _sigfe_pthread_rwlock_unlock
+pthread_rwlock_wrlock = _sigfe_pthread_rwlock_wrlock
+pthread_rwlockattr_destroy = _sigfe_pthread_rwlockattr_destroy
+pthread_rwlockattr_getpshared = _sigfe_pthread_rwlockattr_getpshared
+pthread_rwlockattr_init = _sigfe_pthread_rwlockattr_init
+pthread_rwlockattr_setpshared = _sigfe_pthread_rwlockattr_setpshared
+pthread_self = _sigfe_pthread_self
+pthread_setaffinity_np = _sigfe_pthread_setaffinity_np
+pthread_setcancelstate = _sigfe_pthread_setcancelstate
+pthread_setcanceltype = _sigfe_pthread_setcanceltype
+pthread_setconcurrency = _sigfe_pthread_setconcurrency
+pthread_setname_np = _sigfe_pthread_setname_np
+pthread_setschedparam = _sigfe_pthread_setschedparam
+pthread_setschedprio = _sigfe_pthread_setschedprio
+pthread_setspecific = _sigfe_pthread_setspecific
+pthread_sigmask = _sigfe_pthread_sigmask
+pthread_sigqueue = _sigfe_pthread_sigqueue
+pthread_spin_destroy = _sigfe_pthread_spin_destroy
+pthread_spin_init = _sigfe_pthread_spin_init
+pthread_spin_lock = _sigfe_pthread_spin_lock
+pthread_spin_trylock = _sigfe_pthread_spin_trylock
+pthread_spin_unlock = _sigfe_pthread_spin_unlock
+pthread_suspend = _sigfe_pthread_suspend
+pthread_testcancel = _sigfe_pthread_testcancel
+pthread_timedjoin_np = _sigfe_pthread_timedjoin_np
+pthread_tryjoin_np = _sigfe_pthread_tryjoin_np
+pthread_yield = _sigfe_pthread_yield
+ptsname = _sigfe_ptsname
+ptsname_r = _sigfe_ptsname_r
+putc = _sigfe_putc
+putc_unlocked = _sigfe_putc_unlocked
+putchar = _sigfe_putchar
+putchar_unlocked = _sigfe_putchar_unlocked
+putenv = _sigfe_putenv
+puts = _sigfe_puts
+pututline = _sigfe_pututline
+pututxline = _sigfe_pututxline
+putw = _sigfe_putw
+putwc = _sigfe_putwc
+putwc_unlocked = _sigfe_putwc_unlocked
+putwchar = _sigfe_putwchar
+putwchar_unlocked = _sigfe_putwchar_unlocked
+pwrite = _sigfe_pwrite
+qsort
+qsort_r
+quick_exit = _sigfe_quick_exit
+quotactl = _sigfe_quotactl
+raise = _sigfe_raise
+rand
+rand_r
+random
+rawmemchr
+rcmd = _sigfe_cygwin_rcmd
+rcmd_af = _sigfe_cygwin_rcmd_af
+read = _sigfe_read
+readdir = _sigfe_readdir
+readdir_r = _sigfe_readdir_r
+readlink = _sigfe_readlink
+readlinkat = _sigfe_readlinkat
+readv = _sigfe_readv
+realloc = _sigfe_realloc
+reallocarray = _sigfe_reallocarray
+reallocf = _sigfe_reallocf
+realpath = _sigfe_realpath
+recv = _sigfe_cygwin_recv
+recvfrom = _sigfe_cygwin_recvfrom
+recvmsg = _sigfe_cygwin_recvmsg
+regcomp = _sigfe_regcomp
+regerror = _sigfe_regerror
+regexec = _sigfe_regexec
+regfree = _sigfe_regfree
+remainder
+remainderf
+remainderl
+remove = _sigfe_remove
+removexattr = _sigfe_removexattr
+remque
+remquo
+remquof
+remquol
+rename = _sigfe_rename
+renameat = _sigfe_renameat
+renameat2 = _sigfe_renameat2
+res_close = _sigfe___res_close
+res_init = _sigfe___res_init
+res_mkquery = _sigfe___res_mkquery
+res_nclose = _sigfe___res_nclose
+res_ninit = _sigfe___res_ninit
+res_nmkquery = _sigfe___res_nmkquery
+res_nquery = _sigfe___res_nquery
+res_nquerydomain = _sigfe___res_nquerydomain
+res_nsearch = _sigfe___res_nsearch
+res_nsend = _sigfe___res_nsend
+res_query = _sigfe___res_query
+res_querydomain = _sigfe___res_querydomain
+res_search = _sigfe___res_search
+res_send = _sigfe___res_send
+revoke = _sigfe_revoke
+rewind = _sigfe_rewind
+rewinddir = _sigfe_rewinddir
+rexec = _sigfe_cygwin_rexec
+rindex
+rint
+rintf
+rintl
+rmdir = _sigfe_rmdir
+round
+roundf
+roundl
+rpmatch = _sigfe_rpmatch
+rresvport = _sigfe_cygwin_rresvport
+rresvport_af = _sigfe_cygwin_rresvport_af
+ruserok = _sigfe_ruserok
+sbrk = _sigfe_sbrk
+scalb
+scalbf
+scalbl
+scalbln
+scalblnf
+scalblnl
+scalbn
+scalbnf
+scalbnl
+scandir = _sigfe_scandir
+scandirat = _sigfe_scandirat
+scanf = _sigfe_scanf
+sched_get_priority_max = _sigfe_sched_get_priority_max
+sched_get_priority_min = _sigfe_sched_get_priority_min
+sched_getaffinity = _sigfe_sched_getaffinity
+sched_getcpu = _sigfe_sched_getcpu
+sched_getparam = _sigfe_sched_getparam
+sched_getscheduler
+sched_rr_get_interval = _sigfe_sched_rr_get_interval
+sched_setaffinity = _sigfe_sched_setaffinity
+sched_setparam = _sigfe_sched_setparam
+sched_setscheduler = _sigfe_sched_setscheduler
+sched_yield = _sigfe_sched_yield
+secure_getenv
+seed48
+seekdir = _sigfe_seekdir
+select = _sigfe_cygwin_select
+sem_clockwait = _sigfe_sem_clockwait
+sem_close = _sigfe_sem_close
+sem_destroy = _sigfe_sem_destroy
+sem_getvalue = _sigfe_sem_getvalue
+sem_init = _sigfe_sem_init
+sem_open = _sigfe_sem_open
+sem_post = _sigfe_sem_post
+sem_timedwait = _sigfe_sem_timedwait
+sem_trywait = _sigfe_sem_trywait
+sem_unlink = _sigfe_sem_unlink
+sem_wait = _sigfe_sem_wait
+semctl = _sigfe_semctl
+semget = _sigfe_semget
+semop = _sigfe_semop
+send = _sigfe_cygwin_send
+sendmsg = _sigfe_cygwin_sendmsg
+sendto = _sigfe_cygwin_sendto
+setbuf = _sigfe_setbuf
+setbuffer = _sigfe_setbuffer
+setcontext
+setdtablesize = _sigfe_setdtablesize
+setegid = _sigfe_setegid
+setenv = _sigfe_setenv
+seteuid = _sigfe_seteuid
+setgid = _sigfe_setgid
+setgrent
+setgroups = _sigfe_setgroups
+sethostent
+sethostname = _sigfe_sethostname
+setitimer = _sigfe_setitimer
+setjmp
+setlinebuf = _sigfe_setlinebuf
+setlocale
+setlogmask
+setmntent = _sigfe_setmntent
+setpassent
+setpgid = _sigfe_setpgid
+setpgrp = _sigfe_setpgrp
+setpriority = _sigfe_setpriority
+setproctitle = _sigfe_setproctitle
+setprogname
+setprotoent = _sigfe_cygwin_setprotoent
+setpwent
+setregid = _sigfe_setregid
+setreuid = _sigfe_setreuid
+setrlimit = _sigfe_setrlimit
+setservent = _sigfe_cygwin_setservent
+setsid = _sigfe_setsid
+setsockopt = _sigfe_cygwin_setsockopt
+setstate
+settimeofday = _sigfe_settimeofday
+setuid = _sigfe_setuid
+setusershell = _sigfe_setusershell
+setutent = _sigfe_setutent
+setutxent = _sigfe_setutxent
+setvbuf = _sigfe_setvbuf
+setxattr = _sigfe_setxattr
+shm_open = _sigfe_shm_open
+shm_unlink = _sigfe_shm_unlink
+shmat = _sigfe_shmat
+shmctl = _sigfe_shmctl
+shmdt = _sigfe_shmdt
+shmget = _sigfe_shmget
+shutdown = _sigfe_cygwin_shutdown
+sig2str = _sigfe_sig2str
+sigaction = _sigfe_sigaction
+sigaddset = _sigfe_sigaddset
+sigaltstack = _sigfe_sigaltstack
+sigdelset = _sigfe_sigdelset
+sigemptyset
+sigfillset
+sighold = _sigfe_sighold
+sigignore = _sigfe_sigignore
+siginterrupt = _sigfe_siginterrupt
+sigismember = _sigfe_sigismember
+siglongjmp
+signal = _sigfe_signal
+signalfd = _sigfe_signalfd
+significand
+significandf
+sigpause = _sigfe_sigpause
+sigpending = _sigfe_sigpending
+sigprocmask = _sigfe_sigprocmask
+sigqueue = _sigfe_sigqueue
+sigrelse = _sigfe_sigrelse
+sigset = _sigfe_sigset
+sigsetjmp
+sigsuspend = _sigfe_sigsuspend
+sigtimedwait = _sigfe_sigtimedwait
+sigwait = _sigfe_sigwait
+sigwaitinfo = _sigfe_sigwaitinfo
+sin
+sincos
+sincosf
+sincosl
+sinf
+sinh
+sinhf
+sinhl
+sinl
+siprintf = _sigfe_siprintf
+sleep = _sigfe_sleep
+snprintf = _sigfe_snprintf
+sockatmark = _sigfe_sockatmark
+socket = _sigfe_cygwin_socket
+socketpair = _sigfe_socketpair
+spawnl = _sigfe_spawnl
+spawnle = _sigfe_spawnle
+spawnlp = _sigfe_spawnlp
+spawnlpe = _sigfe_spawnlpe
+spawnv = _sigfe_spawnv
+spawnve = _sigfe_spawnve
+spawnvp = _sigfe_spawnvp
+spawnvpe = _sigfe_spawnvpe
+sprintf = _sigfe_sprintf
+sqrt
+sqrtf
+sqrtl
+srand
+srand48
+srandom
+sscanf = _sigfe_sscanf
+stat = _sigfe_stat
+statfs = _sigfe_statfs
+statvfs = _sigfe_statvfs
+stime = _sigfe_stime
+stpcpy
+stpncpy
+str2sig = _sigfe_str2sig
+strcasecmp
+strcasecmp_l
+strcasestr
+strcat
+strchr
+strchrnul
+strcmp
+strcoll
+strcoll_l
+strcpy
+strcspn
+strdup = _sigfe_strdup
+strerror = _sigfe_strerror
+strerror_l = _sigfe_strerror_l
+strerror_r = _sigfe_strerror_r
+strfmon = _sigfe_strfmon
+strfmon_l = _sigfe_strfmon_l
+strftime = _sigfe_strftime
+strftime_l = _sigfe_strftime_l
+strlcat
+strlcpy
+strlen
+strlwr
+strncasecmp
+strncasecmp_l
+strncat
+strncmp
+strncpy
+strndup = _sigfe_strndup
+strnlen
+strnstr
+strpbrk
+strptime = _sigfe_strptime
+strptime_l = _sigfe_strptime_l
+strrchr
+strsep
+strsignal = _sigfe_strsignal
+strspn
+strstr
+strtod = _sigfe_strtod
+strtod_l = _sigfe_strtod_l
+strtof = _sigfe_strtof
+strtof_l = _sigfe_strtof_l
+strtoimax = strtoll
+strtok
+strtok_r
+strtol
+strtol_l
+strtold = _sigfe_strtold
+strtold_l = _sigfe_strtold_l
+strtoll
+strtoll_l
+strtosigno
+strtoul
+strtoul_l
+strtoull
+strtoull_l
+strtoumax = strtoull
+strupr
+strverscmp
+strxfrm
+strxfrm_l
+swab
+swapcontext
+swprintf = _sigfe_swprintf
+swscanf = _sigfe_swscanf
+symlink = _sigfe_symlink
+symlinkat = _sigfe_symlinkat
+sync = _sigfe_sync
+sysconf = _sigfe_sysconf
+sysinfo = _sigfe_sysinfo
+syslog = _sigfe_syslog
+system = _sigfe_system
+tan
+tanf
+tanh
+tanhf
+tanhl
+tanl
+tcdrain = _sigfe_tcdrain
+tcflow = _sigfe_tcflow
+tcflush = _sigfe_tcflush
+tcgetattr = _sigfe_tcgetattr
+tcgetpgrp = _sigfe_tcgetpgrp
+tcgetsid = _sigfe_tcgetsid
+tcgetwinsize = _sigfe_tcgetwinsize
+tcsendbreak = _sigfe_tcsendbreak
+tcsetattr = _sigfe_tcsetattr
+tcsetpgrp = _sigfe_tcsetpgrp
+tcsetwinsize = _sigfe_tcsetwinsize
+tdelete = _sigfe_tdelete
+tdestroy
+telldir = _sigfe_telldir
+tempnam = _sigfe_tempnam
+tfind
+tgamma
+tgammaf
+tgammal
+thrd_create = _sigfe_thrd_create
+thrd_current = _sigfe_thrd_current
+thrd_detach = _sigfe_thrd_detach
+thrd_equal = _sigfe_thrd_equal
+thrd_exit = _sigfe_thrd_exit
+thrd_join = _sigfe_thrd_join
+thrd_sleep = _sigfe_thrd_sleep
+thrd_yield = _sigfe_thrd_yield
+time = _sigfe_time
+timegm
+timelocal = _sigfe_timelocal
+timer_create = _sigfe_timer_create
+timer_delete = _sigfe_timer_delete
+timer_getoverrun = _sigfe_timer_getoverrun
+timer_gettime = _sigfe_timer_gettime
+timer_settime = _sigfe_timer_settime
+timerfd_create = _sigfe_timerfd_create
+timerfd_gettime = _sigfe_timerfd_gettime
+timerfd_settime = _sigfe_timerfd_settime
+times = _sigfe_times
+timespec_get = _sigfe_timespec_get
+timezone = _sigfe_timezone
+timingsafe_bcmp
+timingsafe_memcmp
+tmpfile = _sigfe_tmpfile
+tmpnam = _sigfe_tmpnam
+toascii
+toascii_l
+tolower
+tolower_l
+toupper
+toupper_l
+towctrans
+towctrans_l
+towlower
+towlower_l
+towupper
+towupper_l
+trunc
+truncate = _sigfe_truncate
+truncf
+truncl
+tsearch = _sigfe_tsearch
+tss_create = _sigfe_tss_create
+tss_delete = _sigfe_tss_delete
+tss_get = _sigfe_tss_get
+tss_set = _sigfe_tss_set
+ttyname = _sigfe_ttyname
+ttyname_r = _sigfe_ttyname_r
+ttyslot
+twalk
+tzset = _sigfe_tzset
+ualarm = _sigfe_ualarm
+umask
+umount = _sigfe_umount
+uname = _sigfe_uname
+uname_x = _sigfe_uname_x
+ungetc = _sigfe_ungetc
+ungetwc = _sigfe_ungetwc
+unlink = _sigfe_unlink
+unlinkat = _sigfe_unlinkat
+unlockpt
+unsetenv = _sigfe_unsetenv
+updwtmp = _sigfe_updwtmp
+updwtmpx = _sigfe_updwtmpx
+uselocale = _sigfe_uselocale
+usleep = _sigfe_usleep
+utime = _sigfe_utime
+utimensat = _sigfe_utimensat
+utimes = _sigfe_utimes
+utmpname = _sigfe_utmpname
+utmpxname = _sigfe_utmpxname
+valloc = _sigfe_valloc
+vasnprintf = _sigfe_vasnprintf
+vasprintf = _sigfe_vasprintf
+vdprintf = _sigfe_vdprintf
+verr = _sigfe_verr
+verrx = _sigfe_verrx
+versionsort
+vfiprintf = _sigfe_vfiprintf
+vfork = _sigfe_vfork
+vfprintf = _sigfe_vfprintf
+vfscanf = _sigfe_vfscanf
+vfwprintf = _sigfe_vfwprintf
+vfwscanf = _sigfe_vfwscanf
+vhangup = _sigfe_vhangup
+vprintf = _sigfe_vprintf
+vscanf = _sigfe_vscanf
+vsnprintf = _sigfe_vsnprintf
+vsprintf = _sigfe_vsprintf
+vsscanf = _sigfe_vsscanf
+vswprintf = _sigfe_vswprintf
+vswscanf = _sigfe_vswscanf
+vsyslog = _sigfe_vsyslog
+vwarn = _sigfe_vwarn
+vwarnx = _sigfe_vwarnx
+vwprintf = _sigfe_vwprintf
+vwscanf = _sigfe_vwscanf
+wait = _sigfe_wait
+wait3 = _sigfe_wait3
+wait4 = _sigfe_wait4
+waitpid = _sigfe_waitpid
+warn = _sigfe_warn
+warnx = _sigfe_warnx
+wcpcpy
+wcpncpy
+wcrtomb
+wcscasecmp
+wcscasecmp_l
+wcscat
+wcschr
+wcscmp
+wcscoll
+wcscoll_l
+wcscpy
+wcscspn
+wcsdup
+wcsftime = _sigfe_wcsftime
+wcsftime_l = _sigfe_wcsftime_l
+wcslcat
+wcslcpy
+wcslen
+wcsncasecmp
+wcsncasecmp_l
+wcsncat
+wcsncmp
+wcsncpy
+wcsnlen
+wcsnrtombs
+wcspbrk
+wcsrchr
+wcsrtombs
+wcsspn
+wcsstr
+wcstod
+wcstod_l
+wcstof
+wcstof_l
+wcstoimax = wcstoll
+wcstok
+wcstol
+wcstol_l
+wcstold
+wcstold_l
+wcstoll
+wcstoll_l
+wcstombs
+wcstoul
+wcstoul_l
+wcstoull
+wcstoull_l
+wcstoumax = wcstoull
+wcswidth
+wcsxfrm
+wcsxfrm_l
+wctob
+wctomb
+wctrans
+wctrans_l
+wctype
+wctype_l
+wcwidth
+wmemchr
+wmemcmp
+wmemcpy
+wmemmove
+wmempcpy
+wmemset
+wordexp
+wordfree
+wprintf = _sigfe_wprintf
+write = _sigfe_write
+writev = _sigfe_writev
+wscanf = _sigfe_wscanf
+xdr_array = _sigfe_xdr_array
+xdr_bool = _sigfe_xdr_bool
+xdr_bytes = _sigfe_xdr_bytes
+xdr_char = _sigfe_xdr_char
+xdr_double = _sigfe_xdr_double
+xdr_enum = _sigfe_xdr_enum
+xdr_float = _sigfe_xdr_float
+xdr_free = _sigfe_xdr_free
+xdr_hyper = _sigfe_xdr_hyper
+xdr_int = _sigfe_xdr_int
+xdr_int16_t = _sigfe_xdr_int16_t
+xdr_int32_t = _sigfe_xdr_int32_t
+xdr_int64_t = _sigfe_xdr_int64_t
+xdr_int8_t = _sigfe_xdr_int8_t
+xdr_long = _sigfe_xdr_long
+xdr_longlong_t = _sigfe_xdr_longlong_t
+xdr_netobj = _sigfe_xdr_netobj
+xdr_opaque = _sigfe_xdr_opaque
+xdr_pointer = _sigfe_xdr_pointer
+xdr_reference = _sigfe_xdr_reference
+xdr_short = _sigfe_xdr_short
+xdr_sizeof = _sigfe_xdr_sizeof
+xdr_string = _sigfe_xdr_string
+xdr_u_char = _sigfe_xdr_u_char
+xdr_u_hyper = _sigfe_xdr_u_hyper
+xdr_u_int = _sigfe_xdr_u_int
+xdr_u_int16_t = _sigfe_xdr_u_int16_t
+xdr_u_int32_t = _sigfe_xdr_u_int32_t
+xdr_u_int64_t = _sigfe_xdr_u_int64_t
+xdr_u_int8_t = _sigfe_xdr_u_int8_t
+xdr_u_long = _sigfe_xdr_u_long
+xdr_u_longlong_t = _sigfe_xdr_u_longlong_t
+xdr_u_short = _sigfe_xdr_u_short
+xdr_uint16_t = _sigfe_xdr_uint16_t
+xdr_uint32_t = _sigfe_xdr_uint32_t
+xdr_uint64_t = _sigfe_xdr_uint64_t
+xdr_uint8_t = _sigfe_xdr_uint8_t
+xdr_union = _sigfe_xdr_union
+xdr_vector = _sigfe_xdr_vector
+xdr_void = _sigfe_xdr_void
+xdr_wrapstring = _sigfe_xdr_wrapstring
+xdrmem_create = _sigfe_xdrmem_create
+xdrrec_create = _sigfe_xdrrec_create
+xdrrec_endofrecord = _sigfe_xdrrec_endofrecord
+xdrrec_eof = _sigfe_xdrrec_eof
+xdrrec_skiprecord = _sigfe_xdrrec_skiprecord
+xdrstdio_create = _sigfe_xdrstdio_create
+y0
+y0f
+y1
+y1f
+yn
+ynf
