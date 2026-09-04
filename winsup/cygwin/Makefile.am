@@ -614,12 +614,19 @@ $(LDSCRIPT): $(LDSCRIPT).in
 # three times during ARM64 bring-up.  It is wrong, and it makes the DLL
 # UNLOADABLE.
 #
-# MEASURED: Windows on Arm MANDATES DYNAMIC_BASE.  Six stock Microsoft ARM64
-# system DLLs (version, winmm, bcrypt, wintrust, cryptbase, profapi) with ONLY
-# that one bit cleared all fail LoadLibrary with err 193 ERROR_BAD_EXE_FORMAT.
+# MEASURED, AND THE SCOPE MATTERS.  Six stock Microsoft ARM64 *system* DLLs
+# (version, winmm, bcrypt, wintrust, cryptbase, profapi) with ONLY that one
+# bit cleared all fail LoadLibrary with err 193 ERROR_BAD_EXE_FORMAT.
 # Controls: pristine copies load 6/6; byte-identical rewrites load 6/6;
-# checksum-zeroed variants still fail 6/6.  Only DYNAMIC_BASE is mandated --
+# checksum-zeroed variants still fail 6/6.  Only DYNAMIC_BASE is implicated --
 # HIGH_ENTROPY_VA is not, and clearing it alone still loads 5/6.
+#
+# Those six are all SYSTEM DLLs, and msys-2.0.dll is not, so the same test was
+# run on this DLL itself: take a working msys-2.0.dll and clear ONLY bit 0x40
+# (DllCharacteristics 0x0160 -> 0x0120, exactly two bytes differ).  The result
+# is STATUS_INVALID_IMAGE_FORMAT 0xC000007B and the process does not start,
+# while a byte-identical rewrite with the bit untouched runs normally.  So the
+# behaviour is demonstrated on a non-system ARM64 DLL, not extrapolated to one.
 #
 # AND fork() DOES NOT NEED A FIXED BASE.  DLL ASLR is per-image-per-boot:
 # measured on an ASLR-enabled image, 5 concurrent processes and 3 sequential
@@ -627,9 +634,15 @@ $(LDSCRIPT): $(LDSCRIPT).in
 # base, and not the preferred one, so relocation demonstrably occurred.
 # Parent and child therefore share a base and fork's invariant holds.
 #
-# The ARM64 fork failure that motivates this idea has a different cause:
-# cygheap allocation-chain corruption, reproducible in programs that never
-# call fork at all.
+# AND THE ARM64 fork() FAILURE THAT MOTIVATES THIS IDEA HAS A DIFFERENT CAUSE
+# ENTIRELY, now found and fixed: the aarch64 arm of the main-stack switch in
+# dcrt0.cc omitted the stack-pointer subtraction that the x86_64 arm performs.
+# x86_64 addresses locals at negative offsets from rbp, so it tolerates that;
+# AArch64 spills at POSITIVE offsets from sp, so the frame sat ABOVE the stack
+# top and this function's own TEB spill, "str x4,[sp,#24]", landed on
+# cygheap->chain -- reach 32 bytes against 16 available.  It corrupted the
+# allocator chain in programs that never call fork; fork was merely the only
+# code that walked the chain and noticed.
 $(NEW_DLL_NAME): $(LDSCRIPT) libdll.a $(VERSION_OFILES) $(LIBSERVER)\
 		  $(newlib_build)/libm.a $(newlib_build)/libc.a
 	$(AM_V_CXXLD)$(CXX) $(CXXFLAGS) \
