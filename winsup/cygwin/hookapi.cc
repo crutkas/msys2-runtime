@@ -44,6 +44,7 @@ PEHeaderFromHModule (HMODULE hModule)
   switch (pNTHeader->FileHeader.Machine)
     {
     case IMAGE_FILE_MACHINE_AMD64:
+    case IMAGE_FILE_MACHINE_ARM64:
       break;
     default:
       return NULL;
