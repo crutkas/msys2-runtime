@@ -32,10 +32,12 @@ libltp_a_SOURCES = \
 	libltp/lib/write_log.c
 
 check_PROGRAMS = \
+	winsup.api/argv-personality \
 	winsup.api/checksignal \
 	winsup.api/crlf \
 	winsup.api/devdsp \
 	winsup.api/devzero \
+	winsup.api/execvp-path \
 	winsup.api/iospeed \
 	winsup.api/mmaptest01 \
 	winsup.api/mmaptest02 \

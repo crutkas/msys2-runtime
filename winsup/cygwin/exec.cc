@@ -61,6 +61,7 @@ execlp (const char *file, const char *arg0, ...)
   va_list args;
   const char *argv[1024];
   path_conv buf;
+  const char *path;
 
   va_start (args, arg0);
   argv[0] = arg0;
@@ -69,8 +70,10 @@ execlp (const char *file, const char *arg0, ...)
       argv[i] = va_arg (args, const char *);
   while (argv[i++] != NULL);
   va_end (args);
-  return spawnve (_P_OVERLAY | _P_PATH_TYPE_EXEC,
-		  find_exec (file, buf, "PATH", FE_NNF) ?: "",
+  path = find_exec (file, buf, "PATH", FE_NNF);
+  if (!path)
+    return -1;
+  return spawnve (_P_OVERLAY | _P_PATH_TYPE_EXEC, path,
 		  (char * const  *) argv, environ);
 }
 
@@ -90,20 +93,24 @@ extern "C" int
 execvp (const char *file, char * const *argv)
 {
   path_conv buf;
+  const char *path = find_exec (file, buf, "PATH", FE_NNF);
 
+  if (!path)
+    return -1;
   return spawnve (_P_OVERLAY | _P_PATH_TYPE_EXEC,
-		  find_exec (file, buf, "PATH", FE_NNF) ?: "",
-		  argv, environ);
+		  path, argv, environ);
 }
 
 extern "C" int
 execvpe (const char *file, char * const *argv, char *const *envp)
 {
   path_conv buf;
+  const char *path = find_exec (file, buf, "PATH", FE_NNF);
 
+  if (!path)
+    return -1;
   return spawnve (_P_OVERLAY | _P_PATH_TYPE_EXEC,
-		  find_exec (file, buf, "PATH", FE_NNF) ?: "",
-		  argv, envp);
+		  path, argv, envp);
 }
 
 extern "C" int
