@@ -453,12 +453,25 @@ localtime.patched.c: tzcode/localtime.c tzcode/localtime.c.patch
 $(srcdir)/devices.cc: scripts/gendevices devices.in local_includes/devices.h
 	$(wordlist 1,2,$^) $@
 
-tlsoffsets: scripts/gentls_offsets config.h \
+runtime_generation_guard = $(srcdir)/scripts/guard-runtime-generation
+EXTRA_DIST = scripts/guard-runtime-generation
+GENTLS_OFFSETS = $(srcdir)/scripts/gentls_offsets
+SIGNAL_GENERATOR = $(srcdir)/scripts/gendef
+runtime_tls_inputs = config.h \
 	$(wildcard $(srcdir)/local_includes/*.h) \
 	$(wildcard $(srcdir)/include/cygwin/*.h) \
 	$(newlib_build)/targ-include/newlib.h
-	$(AM_V_GEN)CXXCOMPILE="$(CXXCOMPILE)" $(srcdir)/scripts/gentls_offsets \
-		$(srcdir)/local_includes/cygtls.h $@
+
+# Always validate receipt-bound outputs, even when make's timestamps look fresh.
+# The guard preserves output timestamps when every input and output is unchanged.
+.PHONY: runtime-generation-force
+runtime-generation-force:
+
+tlsoffsets: $(GENTLS_OFFSETS) $(runtime_generation_guard) $(runtime_tls_inputs) runtime-generation-force
+	$(AM_V_GEN)CXXCOMPILE="$(CXXCOMPILE)" perl $(runtime_generation_guard) \
+		--mode=tls --cpu=@target_cpu@ --generator="$(GENTLS_OFFSETS)" \
+		--header="$(srcdir)/local_includes/cygtls.h" --offsets="$@" \
+		$(foreach file,$(runtime_tls_inputs),--input="$(file)")
 
 sigfe.o: tlsoffsets
 exceptions.o: local_includes/signal-frame-arm64.h
@@ -689,13 +702,15 @@ $(NEW_DLL_NAME): $(LDSCRIPT) $(DEF_FILE) libdll.a $(VERSION_OFILES) $(LIBSERVER)
 # msys-2.0 import library
 toolopts=--cpu=@target_cpu@ --ar=@AR@ --as=@AS@ --nm=@NM@ --objcopy=@OBJCOPY@
 
-$(DEF_FILE): scripts/gendef cygwin.din
-	$(AM_V_GEN)$(srcdir)/scripts/gendef --cpu=@target_cpu@ --output-def=$(DEF_FILE) $(srcdir)/cygwin.din
+signal_generation_args = --mode=signals --cpu=@target_cpu@ \
+	--generator="$(SIGNAL_GENERATOR)" --exports="$(srcdir)/cygwin.din" \
+	--definition="$(DEF_FILE)" --assembly=sigfe.s --offsets=tlsoffsets
+
+$(DEF_FILE): $(SIGNAL_GENERATOR) cygwin.din $(runtime_generation_guard) tlsoffsets runtime-generation-force
+	$(AM_V_GEN)perl $(runtime_generation_guard) $(signal_generation_args)
 
 sigfe.s: $(DEF_FILE)
-	@[ -s $@ ] || \
-	{ rm -f $(DEF_FILE); $(MAKE) -s -j1 $(DEF_FILE); }; \
-	[ -s $@ ] && touch $@
+	$(AM_V_GEN)perl $(runtime_generation_guard) $(signal_generation_args)
 
 LIBCOS=$(addsuffix .o,$(basename $(LIB_FILES)))
 $(LIB_NAME): $(DEF_FILE) $(LIBCOS) | $(NEW_DLL_NAME)
@@ -761,6 +776,7 @@ clean-local:
 	-rm -f $(LIB_NAME) $(SUBLIBS)
 	-rm -f version.cc
 	-rm -f tlsoffsets
+	-rm -f tlsoffsets.generation.json sigfe.s.generation.json
 
 maintainer-clean-local:
 	-rm -f $(srcdir)/devices.cc
