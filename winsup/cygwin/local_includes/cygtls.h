@@ -16,6 +16,14 @@ details. */
 #include <setjmp.h>
 #include <ucontext.h>
 
+#ifdef __aarch64__
+/* scripts/gendef owns the register save area and following signal slots. */
+static_assert (sizeof (jmp_buf) == 0x100);
+static_assert (sizeof (sigjmp_buf) == 0x110);
+static_assert (_SAVEMASK * sizeof (_JBTYPE) == 0x100);
+static_assert (_SIGMASK * sizeof (_JBTYPE) == 0x108);
+#endif
+
 #define CYGTLS_INITIALIZED 0xc763173f
 
 #ifndef CYG_MAX_PATH
@@ -246,13 +254,25 @@ public: /* Do NOT remove this public: line, it's a marker for gentls_offsets. */
       {
 #ifdef __x86_64__
 	__asm__ ("pause");
+#elif defined (__aarch64__)
+	/* AArch64 spin-wait hint.  This is purely a scheduling hint with no
+	   ordering implications; the acquire side of the lock is already
+	   provided by the InterlockedExchange above. */
+	__asm__ __volatile__ ("yield" ::: "memory");
 #else
 #error unimplemented for this target
 #endif
 	Sleep (0);
       }
   }
+#ifdef __aarch64__
+  /* AArch64 is weakly ordered, so unlike x86 a plain store is not a
+     release.  Without release semantics the stackptr accesses guarded by
+     this lock could be observed after the lock has been dropped. */
+  void unlock () { __atomic_store_n (&stacklock, 0, __ATOMIC_RELEASE); }
+#else
   void unlock () { stacklock = 0; }
+#endif
   bool locked () { return !!stacklock; }
   HANDLE get_signal_arrived (bool wait_for_lock = true)
   {
@@ -298,6 +318,24 @@ private:
 };
 #pragma pack(pop)
 
+/* _my_tls is placed at StackBase - __CYGTLS_PADSIZE__, so the struct MUST fit
+   inside the pad.  If it ever grows past it, the tail overruns StackBase and
+   lands in whatever the memory layout puts immediately above the stack arena.
+   The reserved stack/cygheap gap now catches such overruns instead of
+   letting them silently corrupt the cygheap allocation chain.  Keep this
+   compile-time check as well: an overrun is invalid for every stack,
+   including application-provided stacks outside the reserved arena.
+
+   Nothing else in the tree checks this.  It matters most for a new port,
+   where _cygtls embeds ucontext_t -> __mcontext, which is target-defined
+   (signal.h has '#error unimplemented for this target' for anything the port
+   has not filled in).  Measured on aarch64: sizeof(_cygtls) 5016 versus a
+   12800 pad, so 7784 bytes of headroom -- but that is a fact about today's
+   struct, not a guarantee.  */
+static_assert (sizeof (_cygtls) <= __CYGTLS_PADSIZE__,
+	       "_cygtls exceeds __CYGTLS_PADSIZE__: it would overrun StackBase "
+	       "and corrupt the cygheap");
+
 #include "cygerrno.h"
 #include "ntdll.h"
 
@@ -323,7 +361,19 @@ public:
        address of the _except block to restore the context correctly.
        See comment preceeding myfault_altstack_handler in exception.cc. */
     ret = (DWORD64) _ret;
+#ifdef __x86_64__
     __asm__ volatile ("movq %%rsp,%0": "=o" (frame));
+#elif defined (__aarch64__)
+    /* AArch64 cannot move sp straight to memory, so read it into a
+       register and let the compiler perform the store. */
+    {
+      DWORD64 __sp;
+      __asm__ volatile ("mov %0, sp": "=r" (__sp));
+      frame = __sp;
+    }
+#else
+#error unimplemented for this target
+#endif
   }
   ~san () __attribute__ ((always_inline))
   {
@@ -336,6 +386,23 @@ public:
 };
 
 /* Exception handling macros. This is a handmade SEH try/except. */
+/* Mangled name of exception::myfault for the .seh_handler directive below.
+   It embeds the parameter type name, which differs per target: on ARM64
+   winnt.h names the struct _DISPATCHER_CONTEXT_ARM64.  __try is a macro,
+   so this cannot be an #ifdef inside it; it is concatenated instead. */
+#ifdef __x86_64__
+#define _CYG_SEH_MYFAULT_SYM \
+  "_ZN9exception7myfaultEP17_EXCEPTION_RECORDPvP8_CONTEXTP19_DISPATCHER_CONTEXT"
+/* .seh_code switches back to the code section after .seh_handlerdata.  It is
+   an x86-only directive; on AArch64 a plain .text does the same job. */
+#define _CYG_SEH_CODE "  .seh_code							\n"
+#elif defined (__aarch64__)
+#define _CYG_SEH_MYFAULT_SYM \
+  "_ZN9exception7myfaultEP17_EXCEPTION_RECORDPvP8_CONTEXTP19_DISPATCHER_CONTEXT"
+#define _CYG_SEH_CODE "  .text								\n"
+#else
+#error unimplemented for this target
+#endif
 #define __mem_barrier	__asm__ __volatile__ ("" ::: "memory")
 #define __try \
   { \
@@ -343,11 +410,11 @@ public:
     __mem_barrier; \
     san __sebastian (&&__l_except); \
     __asm__ goto ("\n" \
-      "  .seh_handler _ZN9exception7myfaultEP17_EXCEPTION_RECORDPvP8_CONTEXTP19_DISPATCHER_CONTEXT, @except						\n" \
+      "  .seh_handler " _CYG_SEH_MYFAULT_SYM ", @except			\n" \
       "  .seh_handlerdata						\n" \
       "  .long 1							\n" \
       "  .rva %l[__l_try],%l[__l_endtry],%l[__l_except],%l[__l_except]	\n" \
-      "  .seh_code							\n" \
+      _CYG_SEH_CODE \
       : : : : __l_try, __l_endtry, __l_except); \
     { \
       __l_try: \

@@ -22,7 +22,13 @@ _BEGIN_STD_C
 #endif
 
 #if defined(__aarch64__)
+#ifdef __CYGWIN__
+/* Match the runtime's 0x100-byte register area, followed by the signal
+   save-mask flag at 0x100 and sigset_t at 0x108. */
+#define _JBLEN 32
+#else
 #define _JBLEN 22
+#endif
 #define _JBTYPE long long
 #endif
 

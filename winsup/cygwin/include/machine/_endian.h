@@ -26,17 +26,28 @@ _ELIDABLE_INLINE __uint16_t __ntohs(__uint16_t);
 _ELIDABLE_INLINE __uint32_t
 __ntohl(__uint32_t _x)
 {
+#ifdef __x86_64__
 	__asm__("bswap %0" : "=r" (_x) : "0" (_x));
 	return _x;
+#else
+	/* AArch64 has no bswap; __builtin_bswap32 lowers to a single rev
+	   instruction and additionally allows constant folding. */
+	return __builtin_bswap32 (_x);
+#endif
 }
 
 _ELIDABLE_INLINE __uint16_t
 __ntohs(__uint16_t _x)
 {
+#ifdef __x86_64__
 	__asm__("xchgb %b0,%h0"		/* swap bytes		*/
 		: "=Q" (_x)
 		:  "0" (_x));
 	return _x;
+#else
+	/* AArch64 equivalent lowers to rev16. */
+	return __builtin_bswap16 (_x);
+#endif
 }
 
 #define __htonl(_x) __ntohl(_x)

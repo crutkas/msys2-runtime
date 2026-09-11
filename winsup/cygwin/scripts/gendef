@@ -22,6 +22,7 @@ if (!defined($cpu) || !defined($output_def)) {
 }
 
 my $is_x86_64 = $cpu eq 'x86_64';
+my $is_aarch64 = $cpu eq 'aarch64';
 # FIXME? Do other (non-32 bit) arches on Windows still use symbol prefixes?
 my $sym_prefix = '';
 
@@ -30,7 +31,28 @@ while (<>) {
     push(@top, cleanup $_);
     last if /^\s*exports$/oi;
 }
-my @in = cleanup <>;
+my @raw_in = cleanup <>;
+my @in = ();
+my $skip = 0;
+for my $line (@raw_in) {
+    if ($line =~ m/^\s*\#ifndef\s+(\S+)/) {
+        my $sym = $1;
+        if (($sym eq '__aarch64__' && $is_aarch64) || ($sym eq '__x86_64__' && $is_x86_64)) {
+            $skip = 1;
+        }
+        next;
+    } elsif ($line =~ m/^\s*\#ifdef\s+(\S+)/) {
+        my $sym = $1;
+        unless (($sym eq '__aarch64__' && $is_aarch64) || ($sym eq '__x86_64__' && $is_x86_64)) {
+            $skip = 1;
+        }
+        next;
+    } elsif ($line =~ m/^\s*\#endif/) {
+        $skip = 0;
+        next;
+    }
+    push @in, $line unless $skip;
+}
 
 my %sigfe = ();
 my @data = ();
@@ -89,7 +111,7 @@ sub fefunc {
     my $func = $sym_prefix . shift;
     my $fe = $sym_prefix . shift;
     my $sigfe_func;
-    if ($is_x86_64) {
+    if ($is_x86_64 || $is_aarch64) {
 	$sigfe_func = ($fe =~ /^(.*)_${func}$/)[0];
     }
     my $extra;
@@ -105,6 +127,21 @@ $fe:
 	.seh_pushreg %r10
 	.seh_endprologue
 	jmp	$sigfe_func
+	.seh_endproc
+
+EOF
+    }
+    if ($is_aarch64) {
+	# Leaf tail thunks leave frame ownership and unwind information to _sigfe.
+	$res = <<EOF;
+	.extern	$func
+	.global	$fe
+	.seh_proc $fe
+$fe:
+	.seh_endprologue
+	adrp	x9, $func
+	add	x9, x9, :lo12:$func
+	b	$sigfe_func
 	.seh_endproc
 
 EOF
@@ -342,6 +379,302 @@ stabilize_sig_stack:
 	.seh_endproc
 EOF
 	}
+	if ($is_aarch64) {
+	  $res = <<EOF . longjmp () . $res;
+	.include "tlsoffsets"
+	.text
+
+	/* AArch64 signal-interception trampolines for Cygwin/MSYS2.
+	 *
+	 * TEB access: mov	x16, x18 then ldr from [x16, #8].
+	 * This gives NtTib.StackBase, which is the TLS base.
+	 * x18 is the platform register - READ ONLY, never written.
+	 *
+	 * All TLS field accesses use register-offset addressing:
+	 *   mov xN, _cygtls.field     (load the .equ offset into a reg)
+	 *   ldr/str wM, [xbase, xN]   (base + offset)
+	 * because the offsets are large negatives (~-7000 to -12000) that
+	 * exceed ARM64 immediate-offset ranges.
+	 *
+	 * Stack-lock: ldaxr/stlxr loops (ARMv8 baseline, no LSE needed).
+	 *
+	 * ARM64 Windows calling convention:
+	 *   x0-x7: args; x8: indirect result; x9-x15: volatile
+	 *   x16-x17: IP0/IP1 scratch; x18: platform (TEB) — DO NOT WRITE
+	 *   x19-x28: callee-saved; x29: FP; x30: LR
+	 *   d0-d7,d16-d31: volatile NEON; d8-d15: callee-saved NEON
+	 */
+
+/* Helper macro: compute address of a TLS field into a register.
+   tls_base must hold the TLS base pointer.
+   Uses xdst as the destination (clobbers it). */
+.macro	tls_addr xdst, tls_base, field
+	mov	\\xdst, \\field
+	add	\\xdst, \\tls_base, \\xdst
+.endm
+
+	.global	_sigfe_maybe
+	.seh_proc _sigfe_maybe
+_sigfe_maybe:
+	.seh_endprologue
+	mov	x16, x18
+	ldr	x16, [x16, #8]			/* TLS base */
+	tls_addr x17, x16, _cygtls.initialized
+	cmp	sp, x17				/* sp above TLS? */
+	b.hs	0f				/* no TLS, just return */
+	ldr	w17, [x17]
+	mov	w15, #0x173f
+	movk	w15, #0xc763, lsl #16		/* CYGTLS_INITIALIZED */
+	cmp	w17, w15
+	b.eq	_sigfe
+0:	br	x9				/* no TLS: tail-call the real function */
+	.seh_endproc
+
+	.global	_sigfe
+	.seh_proc _sigfe
+_sigfe:
+	stp	x29, x30, [sp, #-16]!
+	.seh_save_fplr_x 16
+	str	x9, [sp, #-16]!
+	.seh_stackalloc 16
+	.seh_endprologue
+	mov	x16, x18
+	ldr	x16, [x16, #8]			/* TLS base */
+1:	/* acquire stacklock */
+	tls_addr x17, x16, _cygtls.stacklock
+2:	ldaxr	w15, [x17]
+	cbnz	w15, 3f
+	mov	w14, #1
+	stlxr	w13, w14, [x17]
+	cbnz	w13, 2b
+	b	4f
+3:	yield
+	b	2b
+
+4:	/* lock acquired — push return addr onto signal stack */
+	tls_addr x17, x16, _cygtls.stackptr
+	ldr	x15, [x17]			/* old stackptr */
+	ldr	x14, [sp, #24]			/* saved LR, not the saved FP at +16 */
+	str	x14, [x15]			/* store on signal stack */
+	add	x15, x15, #8
+	str	x15, [x17]			/* update stackptr */
+	/* replace saved LR with _sigbe */
+	adrp	x14, _sigbe
+	add	x14, x14, :lo12:_sigbe
+	str	x14, [sp, #24]
+	/* increment incyg */
+	tls_addr x17, x16, _cygtls.incyg
+	ldr	w15, [x17]
+	add	w15, w15, #1
+	str	w15, [x17]
+	/* release stacklock */
+	tls_addr x17, x16, _cygtls.stacklock
+	stlr	wzr, [x17]
+	/* Pop our frame and tail-call the real function. */
+	.seh_startepilogue
+	ldr	x9, [sp], #16
+	.seh_stackalloc 16
+	ldp	x29, x30, [sp], #16
+	.seh_save_fplr_x 16
+	.seh_endepilogue
+	br	x9
+	.seh_endproc
+
+	.global _sigbe
+	.seh_proc _sigbe
+_sigbe:
+	.seh_endprologue
+	mov	x16, x18
+	ldr	x16, [x16, #8]
+	tls_addr x17, x16, _cygtls.stacklock
+1:	ldaxr	w15, [x17]
+	cbnz	w15, 2f
+	mov	w14, #1
+	stlxr	w13, w14, [x17]
+	cbnz	w13, 1b
+	b	3f
+2:	yield
+	b	1b
+3:	/* lock acquired — pop from signal stack */
+	tls_addr x17, x16, _cygtls.stackptr
+	ldr	x15, [x17]
+	sub	x15, x15, #8
+	str	x15, [x17]
+	ldr	x15, [x15]			/* real return address */
+	/* decrement incyg */
+	tls_addr x17, x16, _cygtls.incyg
+	ldr	w14, [x17]
+	sub	w14, w14, #1
+	str	w14, [x17]
+	/* release stacklock */
+	tls_addr x17, x16, _cygtls.stacklock
+	stlr	wzr, [x17]
+	br	x15
+	.seh_endproc
+
+	.global	sigdelayed
+	.seh_proc sigdelayed
+sigdelayed:
+	/* The header retains FP/LR, the platform register, and FPSR. */
+	stp	x29, x30, [sp, #-32]!
+	.seh_save_fplr_x 32
+	mov	x29, sp
+	.seh_set_fp
+	str	x18, [sp, #16]
+	.seh_nop
+
+	/* Save ALL volatile + callee-saved registers (except x18).
+	 * x0-x17 (18 regs), x19-x28 (10 regs) = 28 * 8 = 224
+	 * NZCV + FPCR = 16
+	 * NEON q0-q31 = 512
+	 * Total = 752, already 16-byte aligned. */
+	sub	sp, sp, #752
+	.seh_stackalloc 752
+	.seh_endprologue
+
+	stp	x0, x1, [sp, #0]
+	stp	x2, x3, [sp, #16]
+	stp	x4, x5, [sp, #32]
+	stp	x6, x7, [sp, #48]
+	stp	x8, x9, [sp, #64]
+	stp	x10, x11, [sp, #80]
+	stp	x12, x13, [sp, #96]
+	stp	x14, x15, [sp, #112]
+	stp	x16, x17, [sp, #128]
+	stp	x19, x20, [sp, #144]
+	stp	x21, x22, [sp, #160]
+	stp	x23, x24, [sp, #176]
+	stp	x25, x26, [sp, #192]
+	stp	x27, x28, [sp, #208]
+	mrs	x0, fpsr
+	str	x0, [sp, #776]
+	mrs	x0, nzcv
+	mrs	x1, fpcr
+	stp	x0, x1, [sp, #224]
+	stp	q0, q1, [sp, #240]
+	stp	q2, q3, [sp, #272]
+	stp	q4, q5, [sp, #304]
+	stp	q6, q7, [sp, #336]
+	stp	q8, q9, [sp, #368]
+	stp	q10, q11, [sp, #400]
+	stp	q12, q13, [sp, #432]
+	stp	q14, q15, [sp, #464]
+	stp	q16, q17, [sp, #496]
+	stp	q18, q19, [sp, #528]
+	stp	q20, q21, [sp, #560]
+	stp	q22, q23, [sp, #592]
+	stp	q24, q25, [sp, #624]
+	stp	q26, q27, [sp, #656]
+	stp	q28, q29, [sp, #688]
+	stp	q30, q31, [sp, #720]
+
+	/* Get TLS base into callee-saved x19 */
+	mov	x19, x18
+	ldr	x19, [x19, #8]
+	mov	x17, _cygtls.saved_errno
+	ldr	w20, [x19, x17]			/* save saved_errno in w20 */
+
+	/* Call signal handler: x0 = tls + start_offset */
+	mov	x0, _cygtls.start_offset
+	add	x0, x19, x0
+	bl	_ZN7_cygtls19call_signal_handlerEv
+
+	/* Acquire stacklock */
+	tls_addr x17, x19, _cygtls.stacklock
+1:	ldaxr	w15, [x17]
+	cbnz	w15, 2f
+	mov	w14, #1
+	stlxr	w13, w14, [x17]
+	cbnz	w13, 1b
+	b	3f
+2:	yield
+	b	1b
+3:	/* Restore errno if saved_errno >= 0 */
+	tbnz	w20, #31, 4f
+	mov	x17, _cygtls.errno_addr
+	ldr	x17, [x19, x17]
+	str	w20, [x17]
+4:	/* Pop return address from signal stack */
+	tls_addr x17, x19, _cygtls.stackptr
+	ldr	x15, [x17]
+	sub	x14, x15, #8
+	str	x14, [x17]
+	ldr	x10, [x14]
+
+	/* Clear incyg and release stacklock */
+	tls_addr x17, x19, _cygtls.incyg
+	str	wzr, [x17]
+	tls_addr x17, x19, _cygtls.stacklock
+	stlr	wzr, [x17]
+
+	/* A separate PC must be restored without sacrificing a live register. */
+	mov	x0, sp
+	mov	x1, x10
+	bl	arm64_restore_signal_frame
+	brk	#0				/* the restore helper must not return */
+	.seh_endproc
+
+_sigdelayed_end:
+	.global _sigdelayed_end
+
+	.global	stabilize_sig_stack
+	.seh_proc stabilize_sig_stack
+stabilize_sig_stack:
+	stp	x29, x30, [sp, #-32]!
+	.seh_save_fplr_x 32
+	mov	x29, sp
+	.seh_set_fp
+	str	x19, [sp, #16]
+	.seh_save_reg x19, 16
+	.seh_endprologue
+
+	mov	x19, x18
+	ldr	x19, [x19, #8]
+	tls_addr x17, x19, _cygtls.stacklock
+1:	ldaxr	w15, [x17]
+	cbnz	w15, 2f
+	mov	w14, #1
+	stlxr	w13, w14, [x17]
+	cbnz	w13, 1b
+	b	3f
+2:	yield
+	b	1b
+3:	/* lock acquired */
+	tls_addr x17, x19, _cygtls.incyg
+	ldr	w15, [x17]
+	add	w15, w15, #1
+	str	w15, [x17]
+	tls_addr x17, x19, _cygtls.current_sig
+	ldr	w15, [x17]
+	cbz	w15, 4f
+	/* signal pending — release lock, call handler, retry */
+	tls_addr x17, x19, _cygtls.stacklock
+	stlr	wzr, [x17]
+	mov	x0, _cygtls.start_offset
+	add	x0, x19, x0
+	bl	_ZN7_cygtls19call_signal_handlerEv
+	tls_addr x17, x19, _cygtls.incyg
+	ldr	w15, [x17]
+	sub	w15, w15, #1
+	str	w15, [x17]
+	tls_addr x17, x19, _cygtls.stacklock
+	b	1b
+4:	/* no signal */
+	tls_addr x17, x19, _cygtls.incyg
+	ldr	w15, [x17]
+	sub	w15, w15, #1
+	str	w15, [x17]
+	mov	x11, x19
+	.seh_startepilogue
+	ldr	x19, [sp, #16]
+	.seh_save_reg x19, 16
+	ldp	x29, x30, [sp], #32
+	.seh_save_fplr_x 32
+	.seh_endepilogue
+	ret
+	.seh_endproc
+EOF
+	}
     }
     return $res;
 }
@@ -478,8 +811,157 @@ longjmp:
 	.seh_endproc
 EOF
     }
+    if ($is_aarch64) {
+	return <<EOF;
+
+	/* AArch64 jmp_buf layout for Cygwin:
+	 *   0x00: tls stackptr (Frame slot)
+	 *   0x08-0x50: x19-x28 (callee-saved GPRs)
+	 *   0x58: x29 (fp), 0x60: x30 (lr/return addr)
+	 *   0x68: sp
+	 *   0x70: fpcr
+	 *   0x78-0xb7: d8-d15 (callee-saved NEON)
+	 *   0x100: savemask (sigsetjmp), 0x108: sigmask
+	 */
+
+	.globl	sigsetjmp
+	.seh_proc sigsetjmp
+sigsetjmp:
+	stp	x29, x30, [sp, #-32]!
+	.seh_save_fplr_x 32
+	mov	x29, sp
+	.seh_set_fp
+	str	x0, [sp, #16]
+	.seh_nop
+	.seh_endprologue
+	str	w1, [x0, #0x100]
+	cbz	w1, .Lsigsetjmp_done
+	add	x2, x0, #0x108
+	mov	x1, xzr
+	mov	w0, #0
+	bl	pthread_sigmask
+.Lsigsetjmp_done:
+	ldr	x0, [sp, #16]
+	.seh_startepilogue
+	ldp	x29, x30, [sp], #32
+	.seh_save_fplr_x 32
+	.seh_endepilogue
+	b	setjmp
+	.seh_endproc
+
+	.globl	setjmp
+	.seh_proc setjmp
+setjmp:
+	stp	x29, x30, [sp, #-32]!
+	.seh_save_fplr_x 32
+	mov	x29, sp
+	.seh_set_fp
+	str	x19, [sp, #16]
+	.seh_save_reg x19, 16
+	.seh_endprologue
+	/* Save callee-saved GPRs */
+	stp	x19, x20, [x0, #0x08]
+	stp	x21, x22, [x0, #0x18]
+	stp	x23, x24, [x0, #0x28]
+	stp	x25, x26, [x0, #0x38]
+	stp	x27, x28, [x0, #0x48]
+	/* Save caller's fp and lr (from our frame) */
+	ldp	x16, x17, [x29]
+	stp	x16, x17, [x0, #0x58]
+	/* Save caller's sp */
+	add	x16, x29, #32
+	str	x16, [x0, #0x68]
+	mrs	x16, fpcr
+	str	x16, [x0, #0x70]
+	stp	d8, d9, [x0, #0x78]
+	stp	d10, d11, [x0, #0x88]
+	stp	d12, d13, [x0, #0x98]
+	stp	d14, d15, [x0, #0xa8]
+
+	mov	x19, x0
+	bl	stabilize_sig_stack		/* x11 = tls, lock held */
+	mov	x17, _cygtls.stackptr
+	ldr	x16, [x11, x17]
+	str	x16, [x19, #0x00]
+	tls_addr x17, x11, _cygtls.stacklock
+	stlr	wzr, [x17]
+	mov	w0, #0
+	.seh_startepilogue
+	ldr	x19, [sp, #16]
+	.seh_save_reg x19, 16
+	ldp	x29, x30, [sp], #32
+	.seh_save_fplr_x 32
+	.seh_endepilogue
+	ret
+	.seh_endproc
+
+	.globl	siglongjmp
+	.seh_proc siglongjmp
+siglongjmp:
+	stp	x29, x30, [sp, #-48]!
+	.seh_save_fplr_x 48
+	mov	x29, sp
+	.seh_set_fp
+	stp	x19, x20, [sp, #16]
+	.seh_save_regp x19, 16
+	.seh_endprologue
+	mov	x19, x0
+	mov	w20, w1
+	ldr	w16, [x0, #0x100]
+	cbz	w16, .Ldo_longjmp
+	mov	x2, xzr
+	add	x1, x0, #0x108
+	mov	w0, #0
+	bl	pthread_sigmask
+	b	.Ldo_longjmp
+	.seh_endproc
+
+	.globl	longjmp
+	.seh_proc longjmp
+longjmp:
+	stp	x29, x30, [sp, #-48]!
+	.seh_save_fplr_x 48
+	mov	x29, sp
+	.seh_set_fp
+	stp	x19, x20, [sp, #16]
+	.seh_save_regp x19, 16
+	.seh_endprologue
+	mov	x19, x0
+	mov	w20, w1
+.Ldo_longjmp:
+	bl	stabilize_sig_stack		/* x11 = tls, lock held */
+	ldr	x16, [x19, #0x00]
+	mov	x17, _cygtls.stackptr
+	str	x16, [x11, x17]
+	tls_addr x17, x11, _cygtls.stacklock
+	stlr	wzr, [x17]
+	tls_addr x17, x11, _cygtls.incyg
+	str	wzr, [x17]
+	/* Restore callee-saved */
+	ldp	x21, x22, [x19, #0x18]
+	ldp	x23, x24, [x19, #0x28]
+	ldp	x25, x26, [x19, #0x38]
+	ldp	x27, x28, [x19, #0x48]
+	ldp	x29, x30, [x19, #0x58]
+	ldr	x16, [x19, #0x68]
+	ldr	x17, [x19, #0x70]
+	msr	fpcr, x17
+	ldp	d8, d9, [x19, #0x78]
+	ldp	d10, d11, [x19, #0x88]
+	ldp	d12, d13, [x19, #0x98]
+	ldp	d14, d15, [x19, #0xa8]
+	/* Capture the requested value before restoring the saved x20. */
+	mov	w0, w20
+	ldp	x19, x20, [x19, #0x08]
+	mov	sp, x16
+	cmp	w0, #0
+	cinc	w0, w0, eq
+	ret
+	.seh_endproc
+EOF
+    }
 }
 
 sub cleanup(@) {
-    grep {s/\r//og; s/#.*//og; s/\s+\n//sog; !/^$/o && $_} @_;
+    grep {s/\r//og; unless (/^\s*\#(?:ifdef|ifndef|endif)/) { s/#.*//og; } s/\s+\n//sog; !/^$/o && $_} @_;
 }

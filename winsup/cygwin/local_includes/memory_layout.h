@@ -32,7 +32,12 @@ details. */
 
 /* Storage area for thread stacks. */
 #define THREAD_STORAGE_LOW		0x600000000UL
-#define THREAD_STORAGE_HIGH		0x800000000UL
+#define THREAD_STORAGE_HIGH		0x7ffff0000UL
+
+/* Reserve an allocation-granularity gap, never committed, above the stacks.
+   PAGE_GUARD would be cleared by the first fault; PAGE_NOACCESS is permanent. */
+#define CYGHEAP_GUARD_LOW		THREAD_STORAGE_HIGH
+#define CYGHEAP_GUARD_HIGH		0x800000000UL
 
 /* That's where the cygheap is located. CYGHEAP_STORAGE_INITIAL defines the
    end of the initially committed heap area. */

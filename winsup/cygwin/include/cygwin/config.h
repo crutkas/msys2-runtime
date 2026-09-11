@@ -38,6 +38,18 @@ extern inline struct _reent *__getreent (void)
   register char *ret;
 #ifdef __x86_64__
   __asm __volatile__ ("movq %%gs:8,%0" : "=r" (ret));
+#elif defined (__aarch64__)
+  /* On Windows on Arm the TEB pointer is held in x18, the reserved
+     "platform register", which the OS maintains.  tpidr_el0 is the
+     ELF/Linux TLS register and is NOT populated by Windows for user-mode
+     threads -- reading it yields 0, so dereferencing it faults on address 8.
+     NT_TIB.StackBase lives at offset 8 on every 64-bit Windows target, so
+     this is the exact analogue of the %gs:8 access used above. */
+  {
+    char *__teb;
+    __asm __volatile__ ("mov %0, x18" : "=r" (__teb));
+    ret = *(char **) (__teb + 8);
+  }
 #else
 #error unimplemented for this target
 #endif

@@ -67,6 +67,10 @@ srcroot = $(top_srcdir)/..
 tooldir = $(exec_prefix)/$(host_alias)
 toollibdir = $(tooldir)/lib$(MULTISUBDIR)
 
+# Keep archive members and the ranlib symbol index deterministic together.
+ARFLAGS = cr$${SOURCE_DATE_EPOCH:+D}
+override RANLIB := $(RANLIB)$${SOURCE_DATE_EPOCH:+ -D}
+
 # These are useful for standalone object files like crt0.o.
 AM_CFLAGS = $(AM_CFLAGS_$(subst /,_,$(@D))) $(AM_CFLAGS_$(subst /,_,$(@D)_$(<F)))
 AM_CCASFLAGS = $(AM_CCASFLAGS_$(subst /,_,$(@D))) $(AM_CCASFLAGS_$(subst /,_,$(@D)_$(<F)))
@@ -112,27 +116,35 @@ rwildcard=$(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2)$(filter $(subst *
 # The functions ldexp, frexp and modf are traditionally supplied in
 # both libc.a and libm.a.  We build them in libm.a and copy them over,
 # along with some required supporting routines.
-MATHOBJS_IN_LIBC = \
-	libm_a-s_fpclassify.o libm_a-sf_fpclassify.o \
-	libm_a-s_isinf.o libm_a-sf_isinf.o \
-	libm_a-s_isnan.o libm_a-sf_isnan.o \
-	libm_a-s_isinfd.o libm_a-sf_isinff.o \
-	libm_a-s_isnand.o libm_a-sf_isnanf.o \
-	libm_a-s_nan.o libm_a-sf_nan.o \
-	libm_a-s_ldexp.o libm_a-sf_ldexp.o \
-	libm_a-s_frexp.o libm_a-sf_frexp.o libm_a-frexpl.o \
-	libm_a-s_modf.o \
-	libm_a-sf_modf.o libm_a-s_scalbn.o \
-	libm_a-sf_scalbn.o \
-	libm_a-s_finite.o libm_a-sf_finite.o \
-	libm_a-s_copysign.o libm_a-sf_copysign.o
+MATH_NAMES_IN_LIBC = \
+	s_fpclassify.o sf_fpclassify.o \
+	s_isinf.o sf_isinf.o \
+	s_isnan.o sf_isnan.o \
+	s_isinfd.o sf_isinff.o \
+	s_isnand.o sf_isnanf.o \
+	s_nan.o sf_nan.o \
+	s_ldexp.o sf_ldexp.o \
+	s_frexp.o sf_frexp.o frexpl.o \
+	s_modf.o \
+	sf_modf.o s_scalbn.o \
+	sf_scalbn.o \
+	s_finite.o sf_finite.o \
+	s_copysign.o sf_copysign.o
+
+# Automake versions use different per-library object prefixes.
+MATHOBJS_IN_LIBC = $(sort $(filter $(addprefix %-,$(MATH_NAMES_IN_LIBC)),$(notdir $(libm_a_OBJECTS))))
 
 ## Place the libm_a objects in libc/ to keep the top dir tidy.
-stamp-libc-math-objects: libm.a
+stamp-libc-math-objects: libm.a Makefile
+	@test $(words $(MATHOBJS_IN_LIBC)) -eq $(words $(MATH_NAMES_IN_LIBC)) || \
+	  { echo "Incomplete libm object selection for libc" >&2; exit 1; }
 	$(AM_V_GEN)cd libc && $(AR) x ../$< $(MATHOBJS_IN_LIBC)
+	@for object in $(MATHOBJS_IN_LIBC); do \
+	  test -f libc/$$object || { echo "Missing extracted object: $$object" >&2; exit 1; }; \
+	done
 	$(AM_V_at)touch $@
 
-CLEANFILES += $(MATHOBJS_IN_LIBC)
+CLEANFILES += $(MATHOBJS_IN_LIBC:%=libc/%)
 
 libc_a_SOURCES =
 libc_a_CFLAGS = $(AM_CFLAGS) $(libc_a_CFLAGS_$(subst /,_,$(@D))) $(libc_a_CFLAGS_$(subst /,_,$(@D)_$(<F)))

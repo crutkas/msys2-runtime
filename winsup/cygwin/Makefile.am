@@ -16,6 +16,9 @@ COMMON_CFLAGS=-Wimplicit-fallthrough=5 -Werror -fmerge-constants -ftracer
 if TARGET_X86_64
 COMMON_CFLAGS+=-mcmodel=small
 endif
+if TARGET_AARCH64
+COMMON_CFLAGS+=-mcmodel=small
+endif
 
 VERSION_CFLAGS = -DMSYS2_RUNTIME_COMMIT="\"@MSYS2_RUNTIME_COMMIT@\""
 VERSION_CFLAGS += -DMSYS2_RUNTIME_COMMIT_SHORT="\"@MSYS2_RUNTIME_COMMIT_SHORT@\""
@@ -29,6 +32,10 @@ if TARGET_X86_64
 # Needed by mcountFunc.S to choose the right code path and symbol names
 AM_CCASFLAGS=-D_WIN64
 endif
+if TARGET_AARCH64
+# Needed by mcountFunc.S to choose the right code path and symbol names
+AM_CCASFLAGS=-D_WIN64
+endif
 
 target_builddir=@target_builddir@
 newlib_build=$(target_builddir)/newlib
@@ -39,6 +46,7 @@ newlib_build=$(target_builddir)/newlib
 # installed there by newlib.
 #
 
+tooldir=$(exec_prefix)/$(target_alias)
 toollibdir=$(tooldir)/lib
 toolincludedir=$(tooldir)/include
 
@@ -66,6 +74,10 @@ TARGET_FILES= \
 	x86_64/wmemcpy.S \
 	x86_64/wmemmove.S \
 	x86_64/wmempcpy.S
+endif
+if TARGET_AARCH64
+# Newlib supplies the AArch64 memory/string implementations.
+TARGET_FILES=
 endif
 
 LIB_FILES= \
@@ -151,7 +163,18 @@ LIBC_FILES= \
 	libc/tss.c \
 	libc/xsique.cc
 
-MATH_FILES= \
+# These extensions are not supplied by newlib's binary64 long double math.
+MATH_COMMON_FILES= \
+	math/clog10l.c \
+	math/exp10l.c \
+	math/pow10l.c
+
+# Both the assembly and the C implementations below depend on x87 extended
+# precision (including Cephes coefficient tables and nextafterl's layout).
+# On AArch64, newlib supplies the real and complex long double functions
+# with _LDBL_EQ_DBL, as well as the double/float rounding functions.
+if TARGET_X86_64
+MATH_TARGET_FILES= \
 	math/acoshl.c \
 	math/acosl.c \
 	math/asinhl.c \
@@ -166,17 +189,13 @@ MATH_FILES= \
 	math/catanl.c \
 	math/cbrtl.c \
 	math/ccosl.c \
-	math/ceill.S \
 	math/cephes_emath.c \
 	math/cexpl.c \
 	math/cimagl.c \
-	math/clog10l.c \
 	math/clogl.c \
 	math/conjl.c \
-	math/copysignl.S \
 	math/coshl.c \
 	math/cosl.c \
-	math/cosl_internal.S \
 	math/cossin.c \
 	math/cpowl.c \
 	math/cprojl.c \
@@ -185,22 +204,16 @@ MATH_FILES= \
 	math/csqrtl.c \
 	math/ctanl.c \
 	math/erfl.c \
-	math/exp10l.c \
-	math/exp2l.S \
 	math/expl.c \
 	math/expm1l.c \
 	math/fabsl.c \
 	math/fdiml.c \
 	math/finite.c \
-	math/floorl.S \
 	math/fmal.c \
 	math/fmaxl.c \
 	math/fminl.c \
 	math/fmodl.c \
-	math/frexpl.S \
 	math/hypotl.c \
-	math/ilogbl.S \
-	math/internal_logl.S \
 	math/isinf.c \
 	math/isnan.c \
 	math/ldexpl.c \
@@ -209,9 +222,6 @@ MATH_FILES= \
 	math/llrintf.c \
 	math/llrintl.c \
 	math/llroundl.c \
-	math/log10l.S \
-	math/log1pl.S \
-	math/log2l.S \
 	math/logbl.c \
 	math/logl.c \
 	math/lrint.c \
@@ -219,33 +229,53 @@ MATH_FILES= \
 	math/lrintl.c \
 	math/lroundl.c \
 	math/modfl.c \
-	math/nearbyint.S \
-	math/nearbyintf.S \
-	math/nearbyintl.S \
 	math/nextafterl.c \
 	math/nexttoward.c \
 	math/nexttowardf.c \
-	math/pow10l.c \
 	math/powil.c \
 	math/powl.c \
-	math/remainder.S \
-	math/remainderf.S \
-	math/remainderl.S \
-	math/remquol.S \
 	math/rint.c \
 	math/rintf.c \
 	math/rintl.c \
 	math/roundl.c \
-	math/scalbl.S \
-	math/scalbnl.S \
 	math/sinhl.c \
 	math/sinl.c \
-	math/sinl_internal.S \
 	math/sqrtl.c \
 	math/tanhl.c \
-	math/tanl.S \
 	math/tgammal.c \
-	math/truncl.c
+	math/truncl.c \
+	math/ceill.S \
+	math/copysignl.S \
+	math/cosl_internal.S \
+	math/exp2l.S \
+	math/floorl.S \
+	math/frexpl.S \
+	math/ilogbl.S \
+	math/internal_logl.S \
+	math/log10l.S \
+	math/log1pl.S \
+	math/log2l.S \
+	math/nearbyint.S \
+	math/nearbyintf.S \
+	math/nearbyintl.S \
+	math/remainder.S \
+	math/remainderf.S \
+	math/remainderl.S \
+	math/remquol.S \
+	math/scalbl.S \
+	math/scalbnl.S \
+	math/sinl_internal.S \
+	math/tanl.S
+endif
+if TARGET_AARCH64
+MATH_TARGET_FILES= \
+	math/aarch64/fenv_extern_aarch64.c \
+	math/aarch64/longdouble.c
+endif
+
+MATH_FILES= \
+	$(MATH_COMMON_FILES) \
+	$(MATH_TARGET_FILES)
 
 MM_FILES = \
 	mm/cygheap.cc \
@@ -372,6 +402,10 @@ if TARGET_X86_64
 GMON_TARGET_FILES = \
 	x86_64/mcountFunc.S
 endif
+if TARGET_AARCH64
+GMON_TARGET_FILES = \
+	aarch64/mcount.c
+endif
 
 GMON_FILES= \
 	$(GMON_TARGET_FILES) \
@@ -403,10 +437,10 @@ libdll_a_SOURCES= \
 #
 
 shared_info_magic.h: scripts/cygmagic local_includes/shared_info.h
-	$(AM_V_GEN)$(srcdir)/scripts/cygmagic $@ "$(CC) $(INCLUDES) $(CPPFLAGS) -E -x c++" $(word 2,$^) SHARED_MAGIC 'class shared_info' USER_MAGIC 'class user_info'
+	$(AM_V_GEN)$(srcdir)/scripts/cygmagic $@ "$(CC) $(AM_CPPFLAGS) $(CPPFLAGS) -E -x c++" $(word 2,$^) SHARED_MAGIC 'class shared_info' USER_MAGIC 'class user_info'
 
 child_info_magic.h: scripts/cygmagic local_includes/child_info.h
-	$(AM_V_GEN)$(srcdir)/scripts/cygmagic $@ "$(CC) $(INCLUDES) $(CPPFLAGS) -E -x c++" $(word 2,$^) CHILD_INFO_MAGIC 'class child_info'
+	$(AM_V_GEN)$(srcdir)/scripts/cygmagic $@ "$(CC) $(AM_CPPFLAGS) $(CPPFLAGS) -E -x c++" $(word 2,$^) CHILD_INFO_MAGIC 'class child_info'
 
 globals.h: scripts/mkglobals_h globals.cc
 	$(AM_V_GEN)$^ > $@
@@ -419,8 +453,15 @@ localtime.patched.c: tzcode/localtime.c tzcode/localtime.c.patch
 $(srcdir)/devices.cc: scripts/gendevices devices.in local_includes/devices.h
 	$(wordlist 1,2,$^) $@
 
-tlsoffsets: scripts/gentls_offsets local_includes/cygtls.h
-	$(AM_V_GEN)CXXCOMPILE="$(CXXCOMPILE)" $^ $@
+tlsoffsets: scripts/gentls_offsets config.h \
+	$(wildcard $(srcdir)/local_includes/*.h) \
+	$(wildcard $(srcdir)/include/cygwin/*.h) \
+	$(newlib_build)/targ-include/newlib.h
+	$(AM_V_GEN)CXXCOMPILE="$(CXXCOMPILE)" $(srcdir)/scripts/gentls_offsets \
+		$(srcdir)/local_includes/cygtls.h $@
+
+sigfe.o: tlsoffsets
+exceptions.o: local_includes/signal-frame-arm64.h
 
 BUILT_SOURCES = \
 	child_info_magic.h \
@@ -430,18 +471,17 @@ BUILT_SOURCES = \
 
 # Every time we touch a source file, the version info has to be rebuilt
 # to maintain a correct build date, especially in uname release output
-dirs = $(srcdir) $(srcdir)/fhandler $(srcdir)/lib $(srcdir)/libc $(srcdir)/math $(srcdir)/mm $(srcdir)/regex $(srcdir)/sec $(srcdir)/tzcode
+dirs = $(srcdir) $(srcdir)/fhandler $(srcdir)/lib $(srcdir)/libc $(srcdir)/math $(srcdir)/math/aarch64 $(srcdir)/local_includes $(srcdir)/mm $(srcdir)/regex $(srcdir)/sec $(srcdir)/tzcode
 find_src_files = $(wildcard $(dir)/*.[chS]) $(wildcard $(dir)/*.cc)
 src_files := $(foreach dir,$(dirs),$(find_src_files))
 
 # Regenerate uname_version.c only if it doesn't exist or if it differs
 # from the former uname_version.c
+UNAME_DEV_VERSION ?= $(shell cd $(srcdir) && git describe --abbrev=12 --long --match 'cygwin*' --dirty 2>/dev/null | sed -e 's/cygwin-//')
 uname_version.c: .FORCE
 	$(AM_V_GEN)cd $(srcdir) && \
 	echo "const char *uname_dev_version = \
-	\"$$(git rev-parse --git-dir >/dev/null 2>&1 && \
-	     git describe --abbrev=12 --long --match 'cygwin*' --dirty | \
-	     sed -e 's/cygwin-//')\";" \
+	\"$(UNAME_DEV_VERSION)\";" \
 	     > $(abs_builddir)/uname_version-pre.c && \
 	if [ -f $(abs_builddir)/uname_version.c ] && \
 	   cmp $(abs_builddir)/uname_version.c \
@@ -456,7 +496,7 @@ uname_version.c: .FORCE
 version.cc: scripts/mkvers.sh include/cygwin/version.h winver.rc $(src_files)
 	@echo "Making version.cc and winver.o";\
 	export CC="$(CC)";\
-	/bin/sh $(word 1,$^) $(word 2,$^) $(word 3,$^) $(WINDRES) $(CFLAGS) $(VERSION_CFLAGS)
+	/bin/sh $(word 1,$^) $(word 2,$^) $(word 3,$^) $(WINDRES) $(AM_CPPFLAGS) $(CPPFLAGS) $(CFLAGS) $(VERSION_CFLAGS)
 
 winver.o: version.cc
 
@@ -606,9 +646,32 @@ $(LDSCRIPT): $(LDSCRIPT).in
 
 # msys-2.0 dll
 # Set PE and export table header timestamps to zero for reproducible builds.
-$(NEW_DLL_NAME): $(LDSCRIPT) libdll.a $(VERSION_OFILES) $(LIBSERVER)\
-		  $(newlib_build)/libm.a $(newlib_build)/libc.a
-	$(AM_V_CXXLD)$(CXX) $(CXXFLAGS) \
+#
+# ARM64 NOTE -- DO NOT ADD -Wl,--disable-dynamicbase TO THIS LINK LINE.
+#
+# It is a locally reasonable inference from DllCharacteristics 0x0160 plus a
+# randomised-looking load base, and it has been independently derived at least
+# twice.  It is wrong, and it makes the DLL UNLOADABLE.
+#
+# MEASURED: Windows on Arm MANDATES DYNAMIC_BASE.  Six stock Microsoft ARM64
+# system DLLs (version, winmm, bcrypt, wintrust, cryptbase, profapi) with ONLY
+# that one bit cleared all fail LoadLibrary with err 193 ERROR_BAD_EXE_FORMAT.
+# Controls: pristine copies load 6/6; byte-identical rewrites load 6/6;
+# checksum-zeroed variants still fail 6/6.  Only DYNAMIC_BASE is mandated --
+# HIGH_ENTROPY_VA is not, and clearing it alone still loads 5/6.
+#
+# AND fork() DOES NOT NEED A FIXED BASE.  DLL ASLR is per-image-per-boot:
+# measured on an ASLR-enabled image, 5 concurrent processes and 3 sequential
+# loads after full unload all received base 0x7ffe4ed60000 -- one distinct
+# base, and not the preferred one, so relocation demonstrably occurred.
+# Parent and child therefore share a base and fork's invariant holds.
+#
+# The real defect behind the fork failure is cygheap allocation-chain
+# corruption, which is present even in programs that never call fork.
+$(NEW_DLL_NAME): $(LDSCRIPT) $(DEF_FILE) libdll.a $(VERSION_OFILES) $(LIBSERVER)\
+		  $(newlib_build)/libm.a $(newlib_build)/libc.a $(srcdir)/scripts/link-runtime
+	$(AM_V_CXXLD)bash $(srcdir)/scripts/link-runtime $@ $(CXX) $(CXXFLAGS) \
+	$(AM_LDFLAGS) $(LDFLAGS) \
 	-mno-use-libstdc-wrappers \
 	-Wl,--gc-sections -nostdlib -Wl,-T$(LDSCRIPT) -static \
 	$${SOURCE_DATE_EPOCH:+-Wl,--no-insert-timestamp} \
@@ -619,7 +682,7 @@ $(NEW_DLL_NAME): $(LDSCRIPT) libdll.a $(VERSION_OFILES) $(LIBSERVER)\
 	$(LIBSERVER) \
 	$(newlib_build)/libm.a \
 	$(newlib_build)/libc.a \
-	-lgcc -lkernel32 -lntdll -Wl,-Map,msys.map
+	-lgcc -lkernel32 -lntdll -lnetapi32 -luser32 -Wl,-Map,msys.map
 	@$(MKDIR_P) ${target_builddir}/winsup/testsuite/testinst/bin/
 	$(AM_V_at)$(INSTALL_PROGRAM) $(NEW_DLL_NAME) ${target_builddir}/winsup/testsuite/testinst/bin/$(DLL_NAME)
 
@@ -629,7 +692,7 @@ toolopts=--cpu=@target_cpu@ --ar=@AR@ --as=@AS@ --nm=@NM@ --objcopy=@OBJCOPY@
 $(DEF_FILE): scripts/gendef cygwin.din
 	$(AM_V_GEN)$(srcdir)/scripts/gendef --cpu=@target_cpu@ --output-def=$(DEF_FILE) $(srcdir)/cygwin.din
 
-sigfe.s: $(DEF_FILE) tlsoffsets
+sigfe.s: $(DEF_FILE)
 	@[ -s $@ ] || \
 	{ rm -f $(DEF_FILE); $(MAKE) -s -j1 $(DEF_FILE); }; \
 	[ -s $@ ] && touch $@
@@ -705,6 +768,12 @@ maintainer-clean-local:
 #
 # install
 #
+
+.PHONY: check-install-layout
+check-install-layout:
+	@test "$(toollibdir)" = "$(EXPECTED_TOOL_ROOT)/lib" && \
+	  test "$(toolincludedir)" = "$(EXPECTED_TOOL_ROOT)/include" || \
+	  { echo "Unexpected runtime install directories" >&2; exit 1; }
 
 man_MANS = regex/regex.3 regex/regex.7
 

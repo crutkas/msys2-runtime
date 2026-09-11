@@ -45,6 +45,7 @@ AC_ARG_WITH([cross-bootstrap],[AS_HELP_STRING([--with-cross-bootstrap],[do not b
 AC_CYGWIN_INCLUDES
 
 AC_CONFIG_HEADERS([cygwin/config.h])
+AC_DEFINE([__MSYS__], [1], [Build the MSYS runtime personality.])
 
 AC_CHECK_TOOL(AR, ar, ar)
 AC_CHECK_TOOL(AS, as, as)
@@ -103,12 +104,14 @@ DLL_ENTRY="dll_entry"
 
 case "$target_cpu" in
    x86_64)	;;
+   aarch64)	;;
    *)		AC_MSG_ERROR([Invalid target processor "$target_cpu"]) ;;
 esac
 
 AC_SUBST(DLL_ENTRY)
 
 AM_CONDITIONAL(TARGET_X86_64, [test $target_cpu = "x86_64"])
+AM_CONDITIONAL(TARGET_AARCH64, [test $target_cpu = "aarch64"])
 
 AC_ARG_ENABLE(doc,
 	      [AS_HELP_STRING([--disable-doc], [do not build documentation])],,
@@ -159,8 +162,10 @@ AM_CONDITIONAL(BUILD_DUMPER, [test "x$build_dumper" = "xyes"])
 # libbfd.a doesn't have a pkgconfig file, so we guess what it's dependencies
 # are, based on what's present in the build environment
 BFD_LIBS="-lintl -liconv -liberty -lz"
-AC_CHECK_LIB([sframe], [sframe_decode], [BFD_LIBS="${BFD_LIBS} -lsframe"])
-AC_CHECK_LIB([zstd], [ZSTD_isError], [BFD_LIBS="${BFD_LIBS} -lzstd"])
+if test "x$build_dumper" = "xyes"; then
+    AC_CHECK_LIB([sframe], [sframe_decode], [BFD_LIBS="${BFD_LIBS} -lsframe"])
+    AC_CHECK_LIB([zstd], [ZSTD_isError], [BFD_LIBS="${BFD_LIBS} -lzstd"])
+fi
 AC_SUBST([BFD_LIBS])
 
 AC_CONFIG_FILES([

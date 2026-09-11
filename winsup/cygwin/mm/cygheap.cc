@@ -80,6 +80,29 @@ static void *_csbrk (int);
 #define somekinda_printf malloc_printf
 #endif
 
+static init_cygheap *
+reserve_cygheap (SIZE_T commit_size)
+{
+  if (!VirtualAlloc ((LPVOID) CYGHEAP_GUARD_LOW,
+		     CYGHEAP_GUARD_HIGH - CYGHEAP_GUARD_LOW,
+		     MEM_RESERVE, PAGE_NOACCESS))
+    api_fatal ("Couldn't reserve the stack/cygheap guard, %E");
+
+  LPVOID reserved = VirtualAlloc ((LPVOID) CYGHEAP_STORAGE_LOW,
+				 CYGHEAP_STORAGE_HIGH - CYGHEAP_STORAGE_LOW,
+				 MEM_RESERVE, PAGE_NOACCESS);
+  if (!reserved)
+    api_fatal ("Couldn't reserve cygheap at %p, %E",
+	       (LPVOID) CYGHEAP_STORAGE_LOW);
+
+  LPVOID committed = VirtualAlloc (reserved, commit_size, MEM_COMMIT,
+				  PAGE_READWRITE);
+  if (!committed)
+    api_fatal ("Couldn't commit %lu bytes of cygheap at %p, %E",
+	       commit_size, reserved);
+  return (init_cygheap *) committed;
+}
+
 /* Called by fork or spawn to reallocate cygwin heap */
 void
 cygheap_fixup_in_child (bool execed)
@@ -89,13 +112,7 @@ cygheap_fixup_in_child (bool execed)
   if (child_proc_info->cygheap_max > (void *) CYGHEAP_STORAGE_INITIAL)
     commit_size = allocsize ((char *) child_proc_info->cygheap_max
                    - CYGHEAP_STORAGE_LOW);
-  cygheap = (init_cygheap *) VirtualAlloc ((LPVOID) CYGHEAP_STORAGE_LOW,
-					   CYGHEAP_STORAGE_HIGH
-					   - CYGHEAP_STORAGE_LOW,
-					   MEM_RESERVE, PAGE_NOACCESS);
-  cygheap = (init_cygheap *) VirtualAlloc ((LPVOID) CYGHEAP_STORAGE_LOW,
-					   commit_size, MEM_COMMIT,
-					   PAGE_READWRITE);
+  cygheap = reserve_cygheap (commit_size);
   if (dynamically_loaded && execed)
     spawn_info->moreinfo->myself_pinfo = NULL;
   cygheap_max = child_proc_info->cygheap_max;
@@ -290,14 +307,7 @@ cygheap_init ()
 {
   if (cygheap == &cygheap_dummy)
     {
-      cygheap = (init_cygheap *) VirtualAlloc ((LPVOID) CYGHEAP_STORAGE_LOW,
-					       CYGHEAP_STORAGE_HIGH
-					       - CYGHEAP_STORAGE_LOW,
-					       MEM_RESERVE, PAGE_NOACCESS);
-      cygheap = (init_cygheap *) VirtualAlloc ((LPVOID) CYGHEAP_STORAGE_LOW,
-					       CYGHEAP_STORAGE_INITIAL
-					       - CYGHEAP_STORAGE_LOW,
-					       MEM_COMMIT, PAGE_READWRITE);
+      cygheap = reserve_cygheap (CYGHEAP_STORAGE_INITIAL - CYGHEAP_STORAGE_LOW);
       cygheap_max = (char *) cygheap + sizeof (*cygheap);
       /* Default locale settings. */
       cygheap->locale.mbtowc = __utf8_mbtowc;

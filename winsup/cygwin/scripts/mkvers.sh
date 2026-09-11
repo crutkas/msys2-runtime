@@ -20,15 +20,18 @@ msys2_runtime_commit=
 # Find header file locations
 while [ -n "$*" ]; do
   case "$1" in
+  -I|-isystem|-iquote|-idirafter)
+    shift
+    iflags="$iflags -I$1"
+    ;;
   -I*)
     iflags="$iflags $1"
     ;;
-  -idirafter)
-    shift
-    iflags="$iflags -I$1"
-      ;;
   -DMSYS2_RUNTIME_COMMIT=*)
     msys2_runtime_commit="${1#*=}"
+    ;;
+  -D*)
+    iflags="$iflags $1"
     ;;
   esac
   shift

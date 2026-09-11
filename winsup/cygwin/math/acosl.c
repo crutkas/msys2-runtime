@@ -7,6 +7,7 @@ long double acosl (long double x);
 
 long double acosl (long double x)
 {
+#ifdef __x86_64__
   long double res = 0.0L;
 
   /* acosl = atanl (sqrtl(1 - x^2) / x) */
@@ -20,4 +21,10 @@ long double acosl (long double x)
 	"fpatan"
 	: "=t" (res) : "0" (x) : "st(1)");
   return res;
+#else
+  /* AArch64 has no x87.  long double is the same 64-bit IEEE double as
+     double here, so delegate to the double-precision acos.  acos itself
+     comes from newlib, so this does not recurse. */
+  return __builtin_acos ((double) x);
+#endif
 }

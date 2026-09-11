@@ -87,7 +87,7 @@ find_exec (const char *name, path_conv& buf, const char *search,
   char *tmp_path;
   char *tmp = tp.c_get ();
   bool has_slash = !!strpbrk (name, "/\\");
-  int err = 0;
+  int err = ENOENT;
   bool eopath = false;
 
   debug_printf ("find_exec (%s)", name);
@@ -156,13 +156,18 @@ find_exec (const char *name, path_conv& buf, const char *search,
       if ((suffix = perhaps_suffix (tmp_path, buf, err1, opt)) != NULL)
 	{
 	  if (buf.has_acls () && check_file_access (buf, X_OK, true))
-	    continue;
+	    {
+	      err = EACCES;
+	      continue;
+	    }
 	  /* Overwrite potential symlink target with original path.
 	     See comment preceeding this method. */
 	  buf.set_posix (tmp_path);
 	  retval = buf.get_posix ();
 	  goto out;
 	}
+      if (err1 == EACCES)
+	err = EACCES;
 
     }
   while (!eopath);
@@ -537,8 +542,12 @@ child_info_spawn::worker (const char *prog_arg, const char *const *argv,
 			     != ::cygheap->user.real_uid);
       bool keep_posix = (iscmd (argv[0], "strace.exe")
 			|| iscmd (argv[0], "strace")) ? true : real_path.iscygexec ();
+      /* A foreign-architecture MSYS/Cygwin child cannot consume our private
+	 envp.  Keep its POSIX argument/environment personality, but supply
+	 the complete Windows block as for an unknown executable architecture. */
+      bool no_envblock = real_path.iscygexec () && newargv.same_arch;
       moreinfo->envp = build_env (envp, envblock, moreinfo->envc,
-				  real_path.iscygexec (),
+				  no_envblock,
 				  switch_user ? ::cygheap->user.primary_token ()
 					      : NULL,
 				  keep_posix);
@@ -1111,9 +1120,11 @@ extern "C" int
 spawnvp (int mode, const char *file, const char * const *argv)
 {
   path_conv buf;
-  return spawnve (mode | _P_PATH_TYPE_EXEC,
-		  find_exec (file, buf, "PATH", FE_NNF) ?: "",
-		  argv, environ);
+  const char *path = find_exec (file, buf, "PATH", FE_NNF);
+
+  if (!path)
+    return -1;
+  return spawnve (mode | _P_PATH_TYPE_EXEC, path, argv, environ);
 }
 
 extern "C" int
@@ -1121,9 +1132,11 @@ spawnvpe (int mode, const char *file, const char * const *argv,
 	  const char * const *envp)
 {
   path_conv buf;
-  return spawnve (mode | _P_PATH_TYPE_EXEC,
-		  find_exec (file, buf, "PATH", FE_NNF) ?: "",
-		  argv, envp);
+  const char *path = find_exec (file, buf, "PATH", FE_NNF);
+
+  if (!path)
+    return -1;
+  return spawnve (mode | _P_PATH_TYPE_EXEC, path, argv, envp);
 }
 
 int
@@ -1223,7 +1236,7 @@ av::setup (const char *prog_arg, path_conv& real_path, const char *ext,
 		  win16_exe = off < sizeof (IMAGE_DOS_HEADER);
 		  if (!win16_exe)
 		    real_path.set_cygexec (hook_or_detect_cygwin (buf, NULL,
-								  subsys, hm));
+							  subsys, hm, &same_arch));
 		  else
 		    real_path.set_cygexec (false);
 		  UnmapViewOfFile (buf);
@@ -1406,14 +1419,18 @@ __posix_spawn_execvpe (const char *path, char * const *argv, char *const *envp,
 		       HANDLE sem, int use_env_path)
 {
   path_conv buf;
+  const char *exec_path = path;
 
   static char *const empty_env[] = { NULL };
   if (!envp)
     envp = empty_env;
   ch_spawn.set_sem (sem);
-  ch_spawn.worker (use_env_path ? (find_exec (path, buf, "PATH", FE_NNF) ?: "")
-				: path,
-		   argv, envp, _P_OVERLAY);
+  if (use_env_path && !(exec_path = find_exec (path, buf, "PATH", FE_NNF)))
+    {
+      __posix_spawn_sem_release (sem, errno);
+      return -1;
+    }
+  ch_spawn.worker (exec_path, argv, envp, _P_OVERLAY);
   __posix_spawn_sem_release (sem, errno);
   return -1;
 }

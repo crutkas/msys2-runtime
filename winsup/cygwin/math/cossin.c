@@ -10,6 +10,7 @@ void sincosf (float __x, float *p_sin, float *p_cos);
 
 void sincos (double __x, double *p_sin, double *p_cos)
 {
+#ifdef __x86_64__
   long double c, s;
 
   __asm__ __volatile__ ("fsincos\n\t"
@@ -28,10 +29,17 @@ void sincos (double __x, double *p_sin, double *p_cos)
     "1:" : "=t" (c), "=u" (s) : "0" (__x));
   *p_sin = (double) s;
   *p_cos = (double) c;
+#else
+  /* AArch64 has no x87 fsincos, so compute the two values separately.
+     sin and cos come from newlib, so this does not recurse. */
+  *p_sin = __builtin_sin (__x);
+  *p_cos = __builtin_cos (__x);
+#endif
 }
 
 void sincosf (float __x, float *p_sin, float *p_cos)
 {
+#ifdef __x86_64__
   long double c, s;
 
   __asm__ __volatile__ ("fsincos\n\t"
@@ -50,10 +58,17 @@ void sincosf (float __x, float *p_sin, float *p_cos)
     "1:" : "=t" (c), "=u" (s) : "0" (__x));
   *p_sin = (float) s;
   *p_cos = (float) c;
+#else
+  /* AArch64 has no x87 fsincos, so compute the two values separately.
+     sin and cos come from newlib, so this does not recurse. */
+  *p_sin = __builtin_sinf (__x);
+  *p_cos = __builtin_cosf (__x);
+#endif
 }
 
 void sincosl (long double __x, long double *p_sin, long double *p_cos)
 {
+#ifdef __x86_64__
   long double c, s;
 
   __asm__ __volatile__ ("fsincos\n\t"
@@ -72,4 +87,10 @@ void sincosl (long double __x, long double *p_sin, long double *p_cos)
     "1:" : "=t" (c), "=u" (s) : "0" (__x));
   *p_sin = s;
   *p_cos = c;
+#else
+  /* AArch64 has no x87 fsincos, so compute the two values separately.
+     sin and cos come from newlib, so this does not recurse. */
+  *p_sin = __builtin_sin ((double) __x);
+  *p_cos = __builtin_cos ((double) __x);
+#endif
 }

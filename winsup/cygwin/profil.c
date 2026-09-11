@@ -44,9 +44,11 @@ get_thrpc (HANDLE thr)
   if (GetThreadContext (thr, &ctx)) {
 #ifdef __x86_64__
     pc = ctx.Rip;
-#else
-#error unimplemented for this target
-#endif
+    #elif defined (__aarch64__)
+        pc = ctx.Pc;
+    #else
+    #error unimplemented for this target
+    #endif
   }
   ResumeThread (thr);
   return pc;

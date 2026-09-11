@@ -16,6 +16,8 @@
 /* FIXME: We really should get rid of the code duplication using euther
    C++ templates or tgmath-type macros.  */
 
+#ifdef __x86_64__
+
 static __inline__ double __fast_sqrt (double x)
 {
   double res;
@@ -116,5 +118,46 @@ static __inline__ float __fast_log1pf (float x)
        : "=t" (res) : "0" (x) : "st(1)");
    return res;
 }
+
+#else /* !__x86_64__ */
+
+/* AArch64 has no x87 FPU, so none of the "=t" stack-register asm above has
+   an analogue.  On this target long double is the same 64-bit IEEE double
+   as double (verified: sizeof (long double) == 8), so the "l" variants
+   delegate to the double-precision builtins rather than to *l symbols,
+   which avoids creating link dependencies on the x87-only routines.
+   __builtin_sqrt lowers to a single fsqrt instruction.  The log helpers
+   lower to calls to log/log1p, which are implemented elsewhere in this
+   library and do not call back into these helpers, so there is no
+   recursion. */
+
+static __inline__ double __fast_sqrt (double x)
+{ return __builtin_sqrt (x); }
+
+static __inline__ long double __fast_sqrtl (long double x)
+{ return __builtin_sqrt ((double) x); }
+
+static __inline__ float __fast_sqrtf (float x)
+{ return __builtin_sqrtf (x); }
+
+static __inline__ double __fast_log (double x)
+{ return __builtin_log (x); }
+
+static __inline__ long double __fast_logl (long double x)
+{ return __builtin_log ((double) x); }
+
+static __inline__ float __fast_logf (float x)
+{ return __builtin_logf (x); }
+
+static __inline__ double __fast_log1p (double x)
+{ return __builtin_log1p (x); }
+
+static __inline__ long double __fast_log1pl (long double x)
+{ return __builtin_log1p ((double) x); }
+
+static __inline__ float __fast_log1pf (float x)
+{ return __builtin_log1pf (x); }
+
+#endif /* __x86_64__ */
 
 #endif

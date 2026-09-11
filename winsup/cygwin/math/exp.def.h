@@ -51,6 +51,12 @@ static long double c1 = 7.05260771340735992468e-6L;
 static long double
 __expl_internal (long double x)
 {
+#ifdef __aarch64__
+  /* AArch64 has no x87.  long double is the same 64-bit IEEE double as
+     double here, so delegate to the double-precision exp.  exp comes from
+     newlib and is not built from this header, so this does not recurse. */
+  return __builtin_exp ((double) x);
+#else
   long double res = 0.0L;
   asm volatile (
        "fldl2e\n\t"             /* 1  log2(e)         */
@@ -102,6 +108,7 @@ __expl_internal (long double x)
        "fstp	%%st(1)\n\t"    /* 0  */
        : "=t" (res) : "0" (x), "m" (c0), "m" (c1) : "ax", "dx");
   return res;
+#endif
 }
 
 __FLT_TYPE

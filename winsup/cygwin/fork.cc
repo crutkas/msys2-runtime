@@ -667,9 +667,11 @@ dofork (void **proc, bool *with_forkables)
     volatile char * volatile stackp;
 #ifdef __x86_64__
     __asm__ volatile ("movq %%rsp,%0": "=r" (stackp));
-#else
-#error unimplemented for this target
-#endif
+    #elif defined (__aarch64__)
+        __asm__ volatile ("mov %0, sp": "=r" (stackp));
+    #else
+    #error unimplemented for this target
+    #endif
 
     if (!ischild)
       res = grouped.parent (stackp);
@@ -750,19 +752,22 @@ child_copy (HANDLE hp, bool write, bool silentfail, ...)
 	    res = WriteProcessMemory (hp, here, here, todo, &done);
 	  else
 	    res = ReadProcessMemory (hp, here, here, todo, &done);
+	  DWORD copy_error = res ? ERROR_SUCCESS : GetLastError ();
 	  debug_printf ("%s - hp %p low %p, high %p, res %d", what, hp, low, high, res);
 	  if (!res || todo != done)
 	    {
 	      if (!res)
-		__seterrno ();
+		set_errno (geterrno_from_win_error (copy_error));
 	      if (silentfail)
-		debug_printf ("%s %s copy failed, %p..%p, done %lu, windows pid %u, %E",
-			     what, huh[write], low, high, done, myself->dwProcessId);
+		debug_printf ("%s %s copy failed, %p..%p, requested %lu, done %lu, windows pid %u, Win32 error %lu",
+			     what, huh[write], low, high, todo, done,
+			     myself->dwProcessId, copy_error);
 	      else
 		/* If this happens then there is a bug in our fork
 		   implementation somewhere. */
-		system_printf ("%s %s copy failed, %p..%p, done %lu, windows pid %u, %E",
-			      what, huh[write], low, high, done, myself->dwProcessId);
+		system_printf ("%s %s copy failed, %p..%p, requested %lu, done %lu, windows pid %u, Win32 error %lu",
+			       what, huh[write], low, high, todo, done,
+			       myself->dwProcessId, copy_error);
 	      goto err;
 	    }
 	}

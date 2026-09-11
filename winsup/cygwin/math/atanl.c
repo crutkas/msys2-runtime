@@ -8,6 +8,7 @@ long double atanl (long double x);
 long double
 atanl (long double x)
 {
+#ifdef __x86_64__
   long double res = 0.0L;
 
   asm volatile (
@@ -15,4 +16,9 @@ atanl (long double x)
        "fpatan"
        : "=t" (res) : "0" (x));
   return res;
+#else
+  /* AArch64 has no x87 fpatan; long double is the same 64-bit IEEE double
+     as double here, so delegate to the double-precision atan. */
+  return __builtin_atan ((double) x);
+#endif
 }

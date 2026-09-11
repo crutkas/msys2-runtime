@@ -34,6 +34,7 @@ libltp_a_SOURCES = \
 check_PROGRAMS = \
 	winsup.api/checksignal \
 	winsup.api/crlf \
+	winsup.api/ctype-table \
 	winsup.api/devdsp \
 	winsup.api/devzero \
 	winsup.api/iospeed \
@@ -43,12 +44,21 @@ check_PROGRAMS = \
 	winsup.api/mmaptest04 \
 	winsup.api/msgtest \
 	winsup.api/nullgetcwd \
+	winsup.api/process-group \
 	winsup.api/resethand \
+	winsup.api/runtime-process \
 	winsup.api/semtest \
+	winsup.api/setjmp \
 	winsup.api/shmtest \
 	winsup.api/sigchld \
+	winsup.api/sigjmp-mask \
 	winsup.api/signal-into-win32-api \
+	winsup.api/signal-context-arm64 \
 	winsup.api/systemcall \
+	winsup.api/uname-machine \
+	winsup.api/ucontext-arm64 \
+	winsup.api/environment-handoff \
+	winsup.api/cygheap-guard \
 	winsup.api/user_malloc \
 	winsup.api/waitpid \
 	winsup.api/ltp/access01 \
@@ -318,7 +328,8 @@ check_PROGRAMS = \
 # flags for linking against the just built implib
 # TODO: use -nostdinc and to-be-installed headers as well?
 LDFLAGS_FOR_TESTDLL = -nodefaultlibs
-LDADD_FOR_TESTDLL = $(builddir)/../cygwin/libcygwin.a -lgcc -lkernel32 -luser32
+LDADD_FOR_TESTDLL = $(builddir)/../cygwin/libmsys-2.0.a -lgcc \
+	$(builddir)/../cygwin/libmsys-2.0.a -lkernel32 -luser32
 
 # flags for test executables
 AM_CPPFLAGS = -I$(srcdir)/libltp/include
@@ -328,9 +339,36 @@ LDADD = $(builddir)/libltp.a $(builddir)/../cygwin/binmode.o $(LDADD_FOR_TESTDLL
 # additional flags for specific test executables
 winsup_api_devdsp_LDADD = -lwinmm $(LDADD)
 
+# Hosted C++ is not required to bootstrap the runtime itself.
+EXTRA_PROGRAMS = winsup.api/ctype-hosted
+winsup_api_ctype_hosted_SOURCES = winsup.api/ctype-hosted.cc
+winsup_api_ctype_hosted_LDADD = -lstdc++ $(LDADD)
+
+winsup_api_setjmp_SOURCES = winsup.api/setjmp.c
+if TARGET_AARCH64
+check_PROGRAMS += winsup.api/signal-myfault-arm64 winsup.api/signal-registers-arm64
+winsup_api_signal_registers_arm64_SOURCES = winsup.api/signal-registers-arm64.c \
+	winsup.api/signal-registers-arm64-asm.S
+winsup_api_setjmp_SOURCES += winsup.api/setjmp-arm64.S
+check_PROGRAMS += winsup.api/math-arm64
+winsup_api_math_arm64_CFLAGS = $(AM_CFLAGS) -D_GNU_SOURCE -fno-builtin
+endif
+
 # all tests
 TESTS = $(check_PROGRAMS) \
-	mingw/cygload
+	mingw/cygload \
+	build/gentls_offsets.sh \
+	build/runtime_build.sh \
+	build/startup_safety.sh
+
+TEST_EXTENSIONS = .sh
+SH_LOG_COMPILER = bash
+
+EXTRA_DIST = \
+	build/gentls_offsets.sh \
+	build/gentls_offsets-compiler \
+	build/runtime_build.sh \
+	build/startup_safety.sh
 
 # expected fail tests
 XFAIL_TESTS = \

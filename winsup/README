@@ -7,3 +7,127 @@ You might especially be interested in
 
 https://cygwin.com/faq/faq.html#faq.programming.building-cygwin
 
+ARM64 MSYS2 cross build
+======================
+
+build-arm64.sh provides separate prepare, headers, newlib, runtime, install,
+utilities and cygpath phases.  This separation allows GCC's libgcc and
+freestanding C++ headers to be bootstrapped between the runtime's header and
+library phases.  The target is
+aarch64-pc-cygwin, not aarch64-w64-mingw32.  The driver must use the Windows
+ARM64 LP64 ABI with 64-bit long double and pointer-sized va_list in both C and
+C++; the script checks the actual compilers before publishing headers or
+building target code.  Compiler ABI changes require rebuilding newlib, the
+runtime, CRT objects and applications together, not merely relinking old objects.
+The fenv trap-control exports use newlib's real FPCR operations.  Trap-enable
+bits may be read-as-zero/write-ignored by the target hardware or OS; exporting
+those functions is not a guarantee that hardware floating-point traps work.
+
+Required host tools include Bash, GNU make, GNU Awk, Perl, Automake, Autoconf
+2.69 (for newlib), and Autoconf for winsup.  The toolchain prefix must provide
+the target C/C++ compiler, binutils, compatible w32api headers/import libraries,
+and configured freestanding C++ headers.  libgcc must be installed before the
+runtime link.  The build script does not install host dependencies.
+
+For a Windows worktree, run export-arm64-source.ps1 with a new OutputDirectory.
+It exports the exact HEAD, tracked binary patch, every untracked source file,
+the complete source-file inventory, version metadata and SHA-256 checksums.
+import-arm64-source.sh takes that export directory and a NEW WSL source
+directory, checks the export, applies the changes and compares the full file
+inventory before hashing the imported source.  It never reads the Windows
+worktree's .git pointer with WSL git.  Keep newly authored shell sources LF-only.
+
+In WSL, load the adjacent SOURCE.env produced by the importer, then invoke:
+
+  bash SOURCE/winsup/build-arm64.sh prepare SOURCE BUILD_ROOT TOOLCHAIN_PREFIX
+  bash SOURCE/winsup/build-arm64.sh headers SOURCE BUILD_ROOT TOOLCHAIN_PREFIX
+
+After the compiler's libgcc and C++ header bootstrap:
+
+  bash SOURCE/winsup/build-arm64.sh newlib SOURCE BUILD_ROOT TOOLCHAIN_PREFIX
+  bash SOURCE/winsup/build-arm64.sh runtime SOURCE BUILD_ROOT TOOLCHAIN_PREFIX
+  bash SOURCE/winsup/build-arm64.sh install SOURCE BUILD_ROOT TOOLCHAIN_PREFIX
+
+JOBS defaults to 2.  SOURCE_DATE_EPOCH, MSYS2_RUNTIME_COMMIT and
+UNAME_DEV_VERSION are required and are supplied by the exported metadata.
+SOURCE_DATE_EPOCH also enables the existing deterministic archive and
+--no-insert-timestamp DLL rules.  Do not disable DYNAMIC_BASE on Windows ARM64.
+CFLAGS and CXXFLAGS default to -g -O2 and can be supplied explicitly.  Debug
+paths are build inputs; use matching absolute paths or GCC debug-prefix maps
+when comparing complete rebuilds in different build directories.
+
+reproduce-arm64.sh SOURCE TOOLCHAIN_PREFIX NEW_BUILD_ROOT performs two clean
+builds using canonical debug/macro paths and fixed build-user/hostname metadata.
+It compares libc, libm, generated TLS/assembly/object files, libdll.a, the DLL
+and its import library byte-for-byte, and writes SHA256SUMS only for matching
+pairs.  It does not install a runtime DLL or claim native execution coverage.
+Pass a fourth argument naming an already qualified newlib build directory
+to compare runtime-only rebuilds without rebuilding newlib.  Its archives and
+generated header are hashed before copying and checked in both build roots.
+Always use a private toolchain prefix; the full-build mode installs headers.
+
+The runtime personality is explicit in configure's generated config.h and
+the common preprocessor flags; it must not depend on compiler predefines.
+Startup objects also receive the MSYS flags.  The resource rule forwards
+source/build preprocessor include paths to windres.  Runtime links honor
+LDFLAGS, including additional library search paths, and record each actual
+invocation under new-msys-2.0.dll.link.*/ with a replayable command.sh,
+NUL-separated argv, stdout/stderr, exit status and successful output hash.
+Keep these records with the source, compiler and complete link-input hashes.
+Do not infer a historical command from a silent "CXXLD" build-log line.
+
+Before rebuilding a recovered tree, copy any known-good tlsoffsets and verify
+its digest.  Reconfigure and build only in a new private copy: copied Makefiles
+can still contain absolute paths into their source or previous build.
+gentls_offsets publishes atomically only after every compiler-emitted member
+has a valid .long/.word value; a failed generation preserves the old file.
+
+The normal Automake targets build libdll.a and link new-msys-2.0.dll with
+dll_entry and msys.def.  Installation provides bin/msys-2.0.dll and
+aarch64-pc-cygwin/lib/libmsys-2.0.a, CRT objects and headers.  Never hand-select
+successful objects or substitute historical TLS offsets for a failed build.
+The generated offsets must come from the current compiler and headers.
+
+Application builds require an MSYS-configured driver/specs layer: an unmodified
+Cygwin driver requests libcygwin instead of libmsys-2.0.  Do not disguise that
+configuration error with a renamed import library.  Confirm a normally linked
+native application against the installed DLL before building dependent tools.
+The utilities phase builds and installs cygserver and the POSIX utilities with
+the prefix's msys2-gcc/msys2-g++ drivers after runtime installation; it may also
+require hosted C++ headers/libraries and additional w32api imports.  The runtime
+phase builds the complete DLL, CRT and import libraries, not those applications.
+
+To build only cygpath against an already qualified runtime/SDK, use a new
+private copy of that prefix and a prepared source snapshot from the same
+runtime cohort:
+
+  bash SOURCE/winsup/build-arm64.sh cygpath SOURCE NEW_BUILD_ROOT PRIVATE_PREFIX
+
+This configures winsup, builds the maintained utils/cygpath.exe target with
+msys2-g++ and installs bin/cygpath.exe without a cross-tool name prefix.
+It does not rebuild or install the runtime, newlib, CRT or C headers.  The
+utility link is timestamp-free and requires libnetapi32.a, libuserenv.a and
+libntdll.a in addition to the paired MSYS runtime/CRT and C++ SDK inputs.
+These must be genuine ARM64 Windows API import libraries, not a substitute
+MinGW CRT or sysroot.  Run native path conversions and verify the loaded
+runtime; a successful cross build alone does not qualify the utility.
+
+Host generator regression:
+
+  bash winsup/testsuite/build/gentls_offsets.sh
+
+Additional host-only build and startup failure-path checks:
+
+  bash winsup/testsuite/build/runtime_build.sh
+  bash winsup/testsuite/build/startup_safety.sh
+
+The latter compiles the production allocation and copy routines against
+deterministic Win32 call stubs using CXX_FOR_BUILD (g++ by default).
+The native cygheap-guard test separately checks the reserved no-access gap
+between the stack arena and fixed cygheap, committed heap memory, and thread
+stack bounds.  The gap is allocation-granularity sized and remains reserved;
+unlike PAGE_GUARD it cannot be cleared by the first fault.
+
+Native tests include winsup.api/setjmp (return values and nonvolatile state)
+and winsup.api/signal-context-arm64 (asynchronous vector-register restoration).
+Host fixture success alone is not a runtime, fork/exec or application result.

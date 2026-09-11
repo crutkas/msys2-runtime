@@ -14,10 +14,16 @@
 long double
 logbl (long double x)
 {
+#ifdef __x86_64__
   long double res = 0.0L;
 
   asm volatile (
        "fxtract\n\t"
        "fstp	%%st" : "=t" (res) : "0" (x));
   return res;
+#else
+  /* AArch64 has no x87 fxtract; long double is the same 64-bit IEEE
+     double as double here, so delegate to the double-precision logb. */
+  return __builtin_logb ((double) x);
+#endif
 }

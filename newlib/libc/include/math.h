@@ -582,10 +582,10 @@ extern float pow10f (float);
 # endif
 #ifdef __CYGWIN__
 # ifndef exp10l
-extern float exp10l (float);
+extern long double exp10l (long double);
 # endif
 # ifndef pow10l
-extern float pow10l (float);
+extern long double pow10l (long double);
 # endif
 #endif /* __CYGWIN__ */
 #endif /* __GNU_VISIBLE */

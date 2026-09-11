@@ -8,6 +8,7 @@ long double fmodl (long double x, long double y);
 long double
 fmodl (long double x, long double y)
 {
+#ifdef __x86_64__
   long double res = 0.0L;
 
   asm volatile (
@@ -18,4 +19,9 @@ fmodl (long double x, long double y)
        "fstp    %%st(1)"
        : "=t" (res) : "0" (x), "u" (y) : "ax", "st(1)");
   return res;
+#else
+  /* AArch64 has no x87 fprem; long double is the same 64-bit IEEE double
+     as double here, so delegate to the double-precision fmod. */
+  return __builtin_fmod ((double) x, (double) y);
+#endif
 }
