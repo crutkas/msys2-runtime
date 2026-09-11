@@ -1,0 +1,71 @@
+[?2004hBASH907__> [[ $BASH_VERSION == 5.3.15* && $MACHTYPE == aarch64-pc-cygwin && $- == *i* && $- == *m* ]]; printf '\nCASE:identity:%s\n' "$?"
+[?2004l
+CASE:identity:0
+[?2004hBASH907__> (exit 7) | (exit 0); s=$? p=("${PIPESTATUS[@]}"); [[ $s == 0 && ${p[*]} == '7 0' ]]; printf '\nCASE:pipe:%s\n' "$?"
+[?2004l
+CASE:pipe:0
+[?2004hBASH907__> set -o pipefail; (exit 7) | (exit 0); s=$? p=("${PIPESTATUS[@]}"); set +o pipefail; [[ $s == 7 && ${p[*]} == '7 0' ]]; printf '\nCASE:pipefail:%s\n' "$?"
+[?2004l
+CASE:pipefail:0
+[?2004hBASH907__> x=outer; y=$(printf 'value'; exit 9); s=$?; (x=inner; [[ $x == inner ]]); [[ $x == outer && $y == value && $s == 9 ]]; printf '\nCASE:substitution:%s\n' "$?"
+[?2004l
+CASE:substitution:0
+[?2004hBASH907__> v=world; read -r line <<EOF
+[?2004l[?2004hBASH907_CONT> hello $v
+[?2004l[?2004hBASH907_CONT> EOF
+[?2004l[?2004hBASH907__> [[ $line == 'hello world' ]]; printf '\nCASE:heredoc:%s\n' "$?"
+[?2004l
+CASE:heredoc:0
+[?2004hBASH907__> read -r line <<'EOF'
+[?2004l[?2004hBASH907_CONT> $v literal
+[?2004l[?2004hBASH907_CONT> EOF
+[?2004l[?2004hBASH907__> [[ $line == '$v literal' ]]; printf '\nCASE:quoted:%s\n' "$?"
+[?2004l
+CASE:quoted:0
+[?2004hBASH907__> printf a > owned-a.txt; printf b > owned-b.txt; printf h > .owned-hidden; a=(owned-*.txt); [[ ${#a[@]} == 2 && ${a[0]} == owned-a.txt && ${a[1]} == owned-b.txt ]]; printf '\nCASE:glob:%s\n' "$?"
+[?2004l
+CASE:glob:0
+[?2004hBASH907__> mkdir 'owned space'; printf '%s' 'path value' > 'owned space/value.txt'; read -r value < 'owned space/value.txt'; [[ $value == 'path value' ]]; printf '\nCASE:path:%s\n' "$?"
+[?2004l
+CASE:path:0
+[?2004hBASH907__> p=$PWD; w=$(pwd -W); cd "$w" && [[ $PWD == "$p" && $w == [A-Za-z]:/* ]]; printf '\nCASE:winpath:%s\n' "$?"
+[?2004l
+CASE:winpath:0
+[?2004hBASH907__> w=$(pwd -W); printf native > "$w/owned-win.txt"; [[ $(<owned-win.txt) == native && $(/usr/bin/cat.exe "$w/owned-win.txt") == native ]]; printf '\nCASE:translation:%s\n' "$?"
+[?2004l
+CASE:translation:0
+[?2004hBASH907__> v='lambda λ中X[K[K中'; [[ $v == 'lambda λ中' ]]; printf '\nCASE:unicode:%s\n' "$?"
+[?2004l
+CASE:unicode:0
+[?2004hBASH907__> v='lambda λ中'; [[ $v == 'lambda λ中' ]]; printf '\nCASE:unicode:%s\n' "$?"
+[?2004l
+CASE:unicode:0
+[?2004hBASH907__> discard-no-command^C[?2004l[?2004h[?2004l
+[?2004hBASH907__> s=$?; [[ $s == 130 ]]; printf '\nCASE:prompt-interrupt:%s:%s\n' "$?" "$s"
+[?2004l
+CASE:prompt-interrupt:0:130
+[?2004hBASH907__> [KBASH907__> [[ $LINES == 41 && $COLUMNS == 87 ]]; printf '\nCASE:resize:%s:%s:%s\n' "$?" "$LINES" "$COLUMNS"
+[?2004l
+CASE:resize:0:41:87
+[?2004hBASH907__> sleep 60 | cat
+[?2004l
+[1]+  Stopped                    sleep 60 | cat
+[?2004hBASH907__> j=$(jobs -s); [[ $j == *Stopped* ]]; printf '\nCASE:stopped:%s\n' "$?"
+[?2004l
+CASE:stopped:0
+[?2004hBASH907__> bg %+; j=$(jobs -r); [[ $j == *Running* ]]; printf '\nCASE:background:%s\n' "$?"
+[?2004l[1]+ sleep 60 | cat &
+
+CASE:background:0
+[?2004hBASH907__> fg %+
+[?2004lsleep 60 | cat
+
+[?2004hBASH907__> s=$? p=("${PIPESTATUS[@]}"); [[ $s == 130 ]]; printf '\nCASE:foreground:%s:%s\n' "$?" "$s"
+[?2004l
+CASE:foreground:0:130
+[?2004hBASH907__> (exit 17) & p=$!; wait "$p"; s=$?; [[ $s == 17 ]]; printf '\nCASE:wait:%s:%s\n' "$?" "$s"
+[?2004l[1] 1799
+[1]+  Exit 17                    ( exit 17 )
+
+CASE:wait:0:17
+[?2004hBASH907__> 

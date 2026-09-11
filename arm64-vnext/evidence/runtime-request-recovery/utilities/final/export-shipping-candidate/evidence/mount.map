@@ -1,0 +1,1127 @@
+Archive member included to satisfy reference by file (symbol)
+
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000024.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (__errno)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000037.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (__getreent)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000048.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (__main)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000382.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (cygwin_internal)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000432.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (endmntent)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000468.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (exit)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000493.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (fclose)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000533.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (fgets)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000569.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (fopen)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000574.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (fprintf)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000586.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-path.o (free)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000674.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (getlogin)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000676.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (getmntent)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000681.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (getopt_long)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000936.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (memcpy)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000938.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (memmove)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000960.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (mount)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001017.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (__imp_optarg)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001019.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (__imp_optind)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001070.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (printf)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001072.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (__imp_program_invocation_short_name)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001224.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (realloc)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001340.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (setmntent)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001428.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (stat)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001433.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (stpncpy)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001438.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (strcat)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001439.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (strchr)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001441.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (strcmp)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001444.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (strcpy)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001446.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (strdup)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001447.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (strerror)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001456.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (strlen)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001466.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (strpbrk)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001469.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (strrchr)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001473.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (strstr)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000024.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (__errno)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000037.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (__getreent)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000048.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (__main)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000382.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (cygwin_internal)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000432.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (endmntent)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000468.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (exit)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000493.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (fclose)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000533.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (fgets)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000569.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (fopen)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000574.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (fprintf)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000586.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-path.o (free)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000674.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (getlogin)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000676.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (getmntent)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000681.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (getopt_long)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000936.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (memcpy)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000938.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (memmove)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000960.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (mount)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d001070.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (printf)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d001224.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (realloc)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d001340.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (setmntent)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d001428.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (stat)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d001433.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (stpncpy)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d001438.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (strcat)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d001439.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (strchr)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d001441.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (strcmp)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d001444.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (strcpy)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d001446.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (strdup)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d001447.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (strerror)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d001456.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (strlen)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d001466.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (strpbrk)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d001469.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (strrchr)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d001473.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (strstr)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(cygwin_crt0.o)
+                              C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib/crt0.o (msys_crt0)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain0.o)
+                              C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib/crt0.o (cygwin_premain0)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain1.o)
+                              C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib/crt0.o (cygwin_premain1)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain2.o)
+                              C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib/crt0.o (cygwin_premain2)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain3.o)
+                              C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib/crt0.o (cygwin_premain3)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(pseudo-reloc-dummy.o)
+                              (_pei386_runtime_relocator)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000000.o)
+                              C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000024.o) (_head_msys_2_0_dll)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000109.o)
+                              C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(cygwin_crt0.o) (__imp__dll_crt0)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001764.o)
+                              C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000000.o) (msys_2_0_dll_iname)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(_cygwin_crt0_common.o)
+                              C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(cygwin_crt0.o) (_msys_crt0_common)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(dll_entry.o)
+                              C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(_cygwin_crt0_common.o) (__dynamically_loaded)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(dll_main.o)
+                              C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(dll_entry.o) (DllMain)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000115.o)
+                              C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(_cygwin_crt0_common.o) (__imp__impure_ptr)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000260.o)
+                              C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(_cygwin_crt0_common.o) (calloc)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000917.o)
+                              C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(_cygwin_crt0_common.o) (malloc)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000978.o)
+                              C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(dll_entry.o) (msys_detach_dll)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001035.o)
+                              C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(_cygwin_crt0_common.o) (posix_memalign)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000260.o)
+                              C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(_cygwin_crt0_common.o) (calloc)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000917.o)
+                              C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(_cygwin_crt0_common.o) (malloc)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000978.o)
+                              C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(dll_entry.o) (msys_detach_dll)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d001035.o)
+                              C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(_cygwin_crt0_common.o) (posix_memalign)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(cygwin_attach_dll.o)
+                              C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(dll_entry.o) (msys_attach_dll)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000410.o)
+                              C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(cygwin_attach_dll.o) (dll_dllcrt0)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000410.o)
+                              C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(cygwin_attach_dll.o) (dll_dllcrt0)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libkernel32.a(libkernel32_a_s00657.o)
+                              C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(_cygwin_crt0_common.o) (GetModuleHandleA)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libkernel32.a(libkernel32_a_s00581.o)
+                              C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o (__imp_GetDriveTypeA)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libkernel32.a(libkernel32_a_h.o)
+                              C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libkernel32.a(libkernel32_a_s00657.o) (_head_libkernel32_a)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libkernel32.a(libkernel32_a_t.o)
+                              C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libkernel32.a(libkernel32_a_h.o) (__libkernel32_a_iname)
+C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1\libgcc.a(_ctors.o)
+                              C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(_cygwin_crt0_common.o) (__DTOR_LIST__)
+
+There are no discarded input sections
+
+Memory Configuration
+
+Name             Origin             Length             Attributes
+*default*        0x0000000000000000 0xffffffffffffffff
+
+Linker script and memory map
+
+                0x0000000100400000                __image_base__ = 0x100400000
+                0x0000000000000000                __dll__ = 0x0
+                0x0000000100400000                __ImageBase = 0x100400000
+                0x0000000000001000                __section_alignment__ = 0x1000
+                0x0000000000000200                __file_alignment__ = 0x200
+                0x0000000000000004                __major_os_version__ = 0x4
+                0x0000000000000000                __minor_os_version__ = 0x0
+                0x0000000000000000                __major_image_version__ = 0x0
+                0x0000000000000000                __minor_image_version__ = 0x0
+                0x0000000000000005                __major_subsystem_version__ = 0x5
+                0x0000000000000002                __minor_subsystem_version__ = 0x2
+                0x0000000000000003                __subsystem__ = 0x3
+                0x0000000000200000                __size_of_stack_reserve__ = 0x200000
+                0x0000000000001000                __size_of_stack_commit__ = 0x1000
+                0x0000000000100000                __size_of_heap_reserve__ = 0x100000
+                0x0000000000001000                __size_of_heap_commit__ = 0x1000
+                0x0000000000000000                __loader_flags__ = 0x0
+                0x0000000000008160                __dll_characteristics__ = 0x8160
+LOAD C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib/crt0.o
+LOAD C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/crtbegin.o
+LOAD C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o
+LOAD C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-path.o
+LOAD C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libnetapi32.a
+LOAD C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libstdc++.a
+LOAD C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libm.a
+LOAD C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1\libgcc.a
+LOAD C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a
+LOAD C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libadvapi32.a
+LOAD C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libshell32.a
+LOAD C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libuser32.a
+LOAD C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libkernel32.a
+LOAD C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1\libgcc.a
+LOAD C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/crtend.o
+                0x0000000000000408                . = SIZEOF_HEADERS
+                0x0000000000001000                . = ALIGN (__section_alignment__)
+
+.text           0x0000000100401000     0x1a00
+ *(SORT_NONE(.init))
+ *(.text)
+ .text          0x0000000100401000       0x60 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib/crt0.o
+                0x0000000100401000                mainCRTStartup
+                0x0000000100401000                WinMainCRTStartup
+ .text          0x0000000100401060       0x20 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/crtbegin.o
+                0x0000000100401064                __gcc_register_frame
+                0x0000000100401068                __gcc_deregister_frame
+ .text          0x0000000100401080      0x9e0 C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o
+ .text          0x0000000100401a60      0x380 C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-path.o
+                0x0000000100401a60                _Z15from_fstab_lineP5mnt_tPcb
+ .text          0x0000000100401de0        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001017.o)
+ .text          0x0000000100401de0        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001019.o)
+ .text          0x0000000100401de0        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001072.o)
+ .text          0x0000000100401de0        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000024.o)
+                0x0000000100401de0                __errno
+ .text          0x0000000100401dec        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000037.o)
+                0x0000000100401dec                __getreent
+ .text          0x0000000100401df8        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000048.o)
+                0x0000000100401df8                __main
+ .text          0x0000000100401e04        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000382.o)
+                0x0000000100401e04                cygwin_internal
+ .text          0x0000000100401e10        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000432.o)
+                0x0000000100401e10                endmntent
+ .text          0x0000000100401e1c        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000468.o)
+                0x0000000100401e1c                exit
+ .text          0x0000000100401e28        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000493.o)
+                0x0000000100401e28                fclose
+ .text          0x0000000100401e34        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000533.o)
+                0x0000000100401e34                fgets
+ .text          0x0000000100401e40        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000569.o)
+                0x0000000100401e40                fopen
+ .text          0x0000000100401e4c        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000574.o)
+                0x0000000100401e4c                fprintf
+ .text          0x0000000100401e58        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000586.o)
+                0x0000000100401e58                free
+ .text          0x0000000100401e64        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000674.o)
+                0x0000000100401e64                getlogin
+ .text          0x0000000100401e70        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000676.o)
+                0x0000000100401e70                getmntent
+ .text          0x0000000100401e7c        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000681.o)
+                0x0000000100401e7c                getopt_long
+ .text          0x0000000100401e88        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000936.o)
+                0x0000000100401e88                memcpy
+ .text          0x0000000100401e94        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000938.o)
+                0x0000000100401e94                memmove
+ .text          0x0000000100401ea0        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000960.o)
+                0x0000000100401ea0                mount
+ .text          0x0000000100401eac        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d001070.o)
+                0x0000000100401eac                printf
+ .text          0x0000000100401eb8        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d001224.o)
+                0x0000000100401eb8                realloc
+ .text          0x0000000100401ec4        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d001340.o)
+                0x0000000100401ec4                setmntent
+ .text          0x0000000100401ed0        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d001428.o)
+                0x0000000100401ed0                stat
+ .text          0x0000000100401edc        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d001433.o)
+                0x0000000100401edc                stpncpy
+ .text          0x0000000100401ee8        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d001438.o)
+                0x0000000100401ee8                strcat
+ .text          0x0000000100401ef4        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d001439.o)
+                0x0000000100401ef4                strchr
+ .text          0x0000000100401f00        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d001441.o)
+                0x0000000100401f00                strcmp
+ .text          0x0000000100401f0c        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d001444.o)
+                0x0000000100401f0c                strcpy
+ .text          0x0000000100401f18        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d001446.o)
+                0x0000000100401f18                strdup
+ .text          0x0000000100401f24        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d001447.o)
+                0x0000000100401f24                strerror
+ .text          0x0000000100401f30        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d001456.o)
+                0x0000000100401f30                strlen
+ .text          0x0000000100401f3c        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d001466.o)
+                0x0000000100401f3c                strpbrk
+ .text          0x0000000100401f48        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d001469.o)
+                0x0000000100401f48                strrchr
+ .text          0x0000000100401f54        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d001473.o)
+                0x0000000100401f54                strstr
+ .text          0x0000000100401f60       0x40 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(cygwin_crt0.o)
+                0x0000000100401f60                msys_crt0
+ .text          0x0000000100401fa0       0x20 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain0.o)
+                0x0000000100401fa0                cygwin_premain0
+ .text          0x0000000100401fc0       0x20 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain1.o)
+                0x0000000100401fc0                cygwin_premain1
+ .text          0x0000000100401fe0       0x20 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain2.o)
+                0x0000000100401fe0                cygwin_premain2
+ .text          0x0000000100402000       0x20 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain3.o)
+                0x0000000100402000                cygwin_premain3
+ .text          0x0000000100402020       0x20 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(pseudo-reloc-dummy.o)
+                0x0000000100402020                _pei386_runtime_relocator
+ .text          0x0000000100402040      0x2e0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(_cygwin_crt0_common.o)
+                0x0000000100402040                _msys_crt0_common
+ .text          0x0000000100402320      0x100 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(dll_entry.o)
+                0x000000010040233c                _msys_dll_entry
+ .text          0x0000000100402420       0x20 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(dll_main.o)
+                0x0000000100402420                DllMain
+ .text          0x0000000100402440        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000115.o)
+ .text          0x0000000100402440        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000260.o)
+                0x0000000100402440                calloc
+ .text          0x000000010040244c        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000917.o)
+                0x000000010040244c                malloc
+ .text          0x0000000100402458        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000978.o)
+                0x0000000100402458                msys_detach_dll
+ .text          0x0000000100402464        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d001035.o)
+                0x0000000100402464                posix_memalign
+ *fill*         0x0000000100402470       0x10 
+ .text          0x0000000100402480       0x40 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(cygwin_attach_dll.o)
+                0x0000000100402480                msys_attach_dll
+ .text          0x00000001004024c0        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(t-msys_2_0_dll_d000410.o)
+                0x00000001004024c0                dll_dllcrt0
+ .text          0x00000001004024cc       0x10 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libkernel32.a(libkernel32_a_s00657.o)
+                0x00000001004024cc                GetModuleHandleA
+ .text          0x00000001004024dc       0x10 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libkernel32.a(libkernel32_a_s00581.o)
+                0x00000001004024dc                GetDriveTypeA
+ .text          0x00000001004024ec        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libkernel32.a(libkernel32_a_h.o)
+ .text          0x00000001004024ec        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libkernel32.a(libkernel32_a_t.o)
+ .text          0x00000001004024ec        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1\libgcc.a(_ctors.o)
+ *fill*         0x00000001004024ec       0x14 
+ .text          0x0000000100402500       0x20 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/crtend.o
+ *(SORT_BY_NAME(.text$*))
+ *(.text.*)
+ .text.startup  0x0000000100402520      0x480 C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o
+                0x0000000100402520                main
+ *(.gnu.linkonce.t.*)
+ *(.glue_7t)
+ *(.glue_7)
+                0x00000001004029a0                . = ALIGN (0x8)
+ *(SORT_NONE(.fini))
+ *(.gcc_exc)
+                [!provide]                        PROVIDE (etext = .)
+ *(.gcc_except_table)
+
+.data           0x0000000100403000     0x1a00
+                0x0000000100403000                __data_start__ = .
+ *(.data)
+ .data          0x0000000100403000        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib/crt0.o
+ .data          0x0000000100403000        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/crtbegin.o
+                0x0000000100403000                __dso_handle
+ .data          0x0000000100403008      0x130 C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o
+ .data          0x0000000100403138     0x17f0 C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-path.o
+                0x0000000100403138                max_mount_entry
+                0x0000000100403140                mount_table
+ .data          0x0000000100404928        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(cygwin_crt0.o)
+ .data          0x0000000100404928        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain0.o)
+ .data          0x0000000100404928        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain1.o)
+ .data          0x0000000100404928        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain2.o)
+ .data          0x0000000100404928        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain3.o)
+ .data          0x0000000100404928        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(pseudo-reloc-dummy.o)
+ .data          0x0000000100404928       0x48 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(_cygwin_crt0_common.o)
+                0x0000000100404928                _fmode
+                0x0000000100404930                __cygwin_cxx_malloc
+ .data          0x0000000100404970        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(dll_entry.o)
+                0x0000000100404970                __dynamically_loaded
+ .data          0x0000000100404974        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(dll_main.o)
+ .data          0x0000000100404974        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(cygwin_attach_dll.o)
+ .data          0x0000000100404974        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libkernel32.a(libkernel32_a_s00657.o)
+ .data          0x0000000100404974        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libkernel32.a(libkernel32_a_s00581.o)
+ .data          0x0000000100404974        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libkernel32.a(libkernel32_a_h.o)
+ .data          0x0000000100404974        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libkernel32.a(libkernel32_a_t.o)
+ *fill*         0x0000000100404974        0xc 
+ .data          0x0000000100404980       0x20 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1\libgcc.a(_ctors.o)
+ .data          0x00000001004049a0        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/crtend.o
+ *(.data2)
+ *(SORT_BY_NAME(.data$*))
+ *(.jcr)
+                0x00000001004049a0                __data_end__ = .
+ *(.data_cygwin_nocopy)
+
+.rdata          0x0000000100405000      0xa00
+ *(.rdata)
+ .rdata         0x0000000100405000      0x810 C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o
+ .rdata         0x0000000100405810       0x28 C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-path.o
+ .rdata         0x0000000100405838       0x10 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(_cygwin_crt0_common.o)
+ *(SORT_BY_NAME(.rdata$*))
+ .rdata$.refptr.__CTOR_LIST__
+                0x0000000100405848        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(_cygwin_crt0_common.o)
+                0x0000000100405848                .refptr.__CTOR_LIST__
+ .rdata$.refptr.__DTOR_LIST__
+                0x0000000100405850        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(_cygwin_crt0_common.o)
+                0x0000000100405850                .refptr.__DTOR_LIST__
+ .rdata$.refptr.__RUNTIME_PSEUDO_RELOC_LIST_END__
+                0x0000000100405858        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(_cygwin_crt0_common.o)
+                0x0000000100405858                .refptr.__RUNTIME_PSEUDO_RELOC_LIST_END__
+ .rdata$.refptr.__RUNTIME_PSEUDO_RELOC_LIST__
+                0x0000000100405860        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(_cygwin_crt0_common.o)
+                0x0000000100405860                .refptr.__RUNTIME_PSEUDO_RELOC_LIST__
+ .rdata$.refptr.__bss_end__
+                0x0000000100405868        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(_cygwin_crt0_common.o)
+                0x0000000100405868                .refptr.__bss_end__
+ .rdata$.refptr.__bss_start__
+                0x0000000100405870        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(_cygwin_crt0_common.o)
+                0x0000000100405870                .refptr.__bss_start__
+ .rdata$.refptr.__data_end__
+                0x0000000100405878        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(_cygwin_crt0_common.o)
+                0x0000000100405878                .refptr.__data_end__
+ .rdata$.refptr.__data_start__
+                0x0000000100405880        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(_cygwin_crt0_common.o)
+                0x0000000100405880                .refptr.__data_start__
+ .rdata$.refptr.__dynamically_loaded
+                0x0000000100405888        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(_cygwin_crt0_common.o)
+                0x0000000100405888                .refptr.__dynamically_loaded
+ .rdata$.refptr.__image_base__
+                0x0000000100405890        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(_cygwin_crt0_common.o)
+                0x0000000100405890                .refptr.__image_base__
+ .rdata$.refptr.max_mount_entry
+                0x0000000100405898        0x8 C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o
+                0x0000000100405898                .refptr.max_mount_entry
+ .rdata$.refptr.mount_table
+                0x00000001004058a0        0x8 C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o
+                0x00000001004058a0                .refptr.mount_table
+                0x00000001004058a8                . = ALIGN (0x4)
+                0x00000001004058a8                __rt_psrelocs_start = .
+ *(.rdata_runtime_pseudo_reloc)
+                0x00000001004058a8                __rt_psrelocs_end = .
+                0x00000001004058a8                . = ALIGN (0x8)
+                0x00000001004058a8                ___CTOR_LIST__ = .
+                0x00000001004058a8                __CTOR_LIST__ = .
+                0x00000001004058a8        0x4 LONG 0xffffffffffffffff
+                0x00000001004058ac        0x4 LONG 0xffffffffffffffff
+ *(.ctors)
+ *(.ctor)
+ *(SORT_BY_NAME(.ctors.*))
+                0x00000001004058b0        0x4 LONG 0x0
+                0x00000001004058b4        0x4 LONG 0x0
+                0x00000001004058b8                ___DTOR_LIST__ = .
+                0x00000001004058b8                __DTOR_LIST__ = .
+                0x00000001004058b8        0x4 LONG 0xffffffffffffffff
+                0x00000001004058bc        0x4 LONG 0xffffffffffffffff
+ *(.dtors)
+ *(.dtor)
+ *(SORT_BY_NAME(.dtors.*))
+                0x00000001004058c0        0x4 LONG 0x0
+                0x00000001004058c4        0x4 LONG 0x0
+                0x00000001004058c8                ___crt_xc_start__ = .
+ *(SORT_BY_NAME(.CRT$XC*))
+                0x00000001004058c8                ___crt_xc_end__ = .
+                0x00000001004058c8                ___crt_xi_start__ = .
+ *(SORT_BY_NAME(.CRT$XI*))
+                0x00000001004058c8                ___crt_xi_end__ = .
+                0x00000001004058c8                ___crt_xl_start__ = .
+ *(SORT_BY_NAME(.CRT$XL*))
+                0x00000001004058c8                ___crt_xp_start__ = .
+ *(SORT_BY_NAME(.CRT$XP*))
+                0x00000001004058c8                ___crt_xp_end__ = .
+                0x00000001004058c8                ___crt_xt_start__ = .
+ *(SORT_BY_NAME(.CRT$XT*))
+                0x00000001004058c8                ___crt_xt_end__ = .
+                0x00000001004058c8                ___crt_xd_start__ = .
+ *(SORT_BY_NAME(.CRT$XD*))
+                0x00000001004058c8                ___crt_xd_end__ = .
+                0x00000001004058a8                ___RUNTIME_PSEUDO_RELOC_LIST_END__ = __rt_psrelocs_end
+                0x00000001004058a8                __RUNTIME_PSEUDO_RELOC_LIST_END__ = __rt_psrelocs_end
+                0x00000001004058a8                ___RUNTIME_PSEUDO_RELOC_LIST__ = __rt_psrelocs_start
+                0x00000001004058a8                __RUNTIME_PSEUDO_RELOC_LIST__ = __rt_psrelocs_start
+
+.eh_frame
+ *(.eh_frame*)
+
+.pdata          0x0000000100406000      0x200
+ *(.pdata*)
+ .pdata         0x0000000100406000        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib/crt0.o
+ .pdata         0x0000000100406008       0x18 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/crtbegin.o
+ .pdata         0x0000000100406020       0x40 C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o
+ .pdata.startup
+                0x0000000100406060        0x8 C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o
+ .pdata         0x0000000100406068        0x8 C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-path.o
+ .pdata         0x0000000100406070        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(cygwin_crt0.o)
+ .pdata         0x0000000100406078        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain0.o)
+ .pdata         0x0000000100406080        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain1.o)
+ .pdata         0x0000000100406088        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain2.o)
+ .pdata         0x0000000100406090        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain3.o)
+ .pdata         0x0000000100406098        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(pseudo-reloc-dummy.o)
+ .pdata         0x00000001004060a0        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(_cygwin_crt0_common.o)
+ .pdata         0x00000001004060a8       0x10 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(dll_entry.o)
+ .pdata         0x00000001004060b8        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(dll_main.o)
+ .pdata         0x00000001004060c0        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(cygwin_attach_dll.o)
+ .pdata         0x00000001004060c8        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/crtend.o
+
+.xdata          0x0000000100407000      0x400
+ *(.xdata*)
+ .xdata         0x0000000100407000       0x14 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib/crt0.o
+ .xdata         0x0000000100407014       0x18 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/crtbegin.o
+ .xdata         0x000000010040702c      0x11c C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o
+ .xdata.startup
+                0x0000000100407148       0x28 C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o
+ .xdata         0x0000000100407170       0x28 C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-path.o
+ .xdata         0x0000000100407198        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(cygwin_crt0.o)
+ .xdata         0x00000001004071a4        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain0.o)
+ .xdata         0x00000001004071ac        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain1.o)
+ .xdata         0x00000001004071b4        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain2.o)
+ .xdata         0x00000001004071bc        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain3.o)
+ .xdata         0x00000001004071c4        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(pseudo-reloc-dummy.o)
+ .xdata         0x00000001004071cc       0x18 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(_cygwin_crt0_common.o)
+ .xdata         0x00000001004071e4       0x28 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(dll_entry.o)
+ .xdata         0x000000010040720c        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(dll_main.o)
+ .xdata         0x0000000100407214       0x14 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(cygwin_attach_dll.o)
+ .xdata         0x0000000100407228        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/crtend.o
+
+.bss            0x0000000100408000      0x1b0
+                0x0000000100408000                __bss_start__ = .
+ *(.bss)
+ .bss           0x0000000100408000        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib/crt0.o
+ .bss           0x0000000100408000        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/crtbegin.o
+ .bss           0x0000000100408000       0x20 C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o
+ .bss           0x0000000100408020        0x0 C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-path.o
+ .bss           0x0000000100408020        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(cygwin_crt0.o)
+ .bss           0x0000000100408020        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain0.o)
+ .bss           0x0000000100408020        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain1.o)
+ .bss           0x0000000100408020        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain2.o)
+ .bss           0x0000000100408020        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain3.o)
+ .bss           0x0000000100408020        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(pseudo-reloc-dummy.o)
+ .bss           0x0000000100408020        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(_cygwin_crt0_common.o)
+ .bss           0x0000000100408020       0x40 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(dll_entry.o)
+ .bss           0x0000000100408060        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(dll_main.o)
+ .bss           0x0000000100408060      0x150 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(cygwin_attach_dll.o)
+ .bss           0x00000001004081b0        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libkernel32.a(libkernel32_a_s00657.o)
+ .bss           0x00000001004081b0        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libkernel32.a(libkernel32_a_s00581.o)
+ .bss           0x00000001004081b0        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libkernel32.a(libkernel32_a_h.o)
+ .bss           0x00000001004081b0        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libkernel32.a(libkernel32_a_t.o)
+ .bss           0x00000001004081b0        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1\libgcc.a(_ctors.o)
+ .bss           0x00000001004081b0        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/crtend.o
+ *(COMMON)
+                0x00000001004081b0                __bss_end__ = .
+
+.edata
+ *(.edata)
+
+/DISCARD/
+ *(.debug$S)
+ *(.debug$T)
+ *(.debug$F)
+ *(.drectve)
+ *(.note.GNU-stack)
+ *(.gnu.lto_*)
+ *(.gnu_object_only)
+
+.idata          0x0000000100409000      0x800
+ SORT_BY_NAME(*)(.idata$2)
+ .idata$2       0x0000000100409000       0x14 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libkernel32.a(libkernel32_a_h.o)
+                0x0000000100409000                _head_libkernel32_a
+ .idata$2       0x0000000100409014       0x14 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000000.o)
+                0x0000000100409014                _head_msys_2_0_dll
+ SORT_BY_NAME(*)(.idata$3)
+                0x0000000100409028        0x4 LONG 0x0
+                0x000000010040902c        0x4 LONG 0x0
+                0x0000000100409030        0x4 LONG 0x0
+                0x0000000100409034        0x4 LONG 0x0
+                0x0000000100409038        0x4 LONG 0x0
+                0x0000000100409040                . = ALIGN (0x8)
+ *fill*         0x000000010040903c        0x4 
+ SORT_BY_NAME(*)(.idata$4)
+ .idata$4       0x0000000100409040        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libkernel32.a(libkernel32_a_h.o)
+ .idata$4       0x0000000100409040        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libkernel32.a(libkernel32_a_s00581.o)
+ .idata$4       0x0000000100409048        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libkernel32.a(libkernel32_a_s00657.o)
+ .idata$4       0x0000000100409050        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libkernel32.a(libkernel32_a_t.o)
+ .idata$4       0x0000000100409058        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000000.o)
+ .idata$4       0x0000000100409058        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000024.o)
+ .idata$4       0x0000000100409060        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000037.o)
+ .idata$4       0x0000000100409068        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000048.o)
+ .idata$4       0x0000000100409070        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000109.o)
+ .idata$4       0x0000000100409078        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000115.o)
+ .idata$4       0x0000000100409080        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000260.o)
+ .idata$4       0x0000000100409088        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000382.o)
+ .idata$4       0x0000000100409090        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000410.o)
+ .idata$4       0x0000000100409098        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000432.o)
+ .idata$4       0x00000001004090a0        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000468.o)
+ .idata$4       0x00000001004090a8        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000493.o)
+ .idata$4       0x00000001004090b0        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000533.o)
+ .idata$4       0x00000001004090b8        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000569.o)
+ .idata$4       0x00000001004090c0        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000574.o)
+ .idata$4       0x00000001004090c8        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000586.o)
+ .idata$4       0x00000001004090d0        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000674.o)
+ .idata$4       0x00000001004090d8        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000676.o)
+ .idata$4       0x00000001004090e0        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000681.o)
+ .idata$4       0x00000001004090e8        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000917.o)
+ .idata$4       0x00000001004090f0        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000936.o)
+ .idata$4       0x00000001004090f8        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000938.o)
+ .idata$4       0x0000000100409100        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000960.o)
+ .idata$4       0x0000000100409108        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000978.o)
+ .idata$4       0x0000000100409110        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001017.o)
+ .idata$4       0x0000000100409118        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001019.o)
+ .idata$4       0x0000000100409120        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001035.o)
+ .idata$4       0x0000000100409128        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001070.o)
+ .idata$4       0x0000000100409130        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001072.o)
+ .idata$4       0x0000000100409138        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001224.o)
+ .idata$4       0x0000000100409140        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001340.o)
+ .idata$4       0x0000000100409148        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001428.o)
+ .idata$4       0x0000000100409150        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001433.o)
+ .idata$4       0x0000000100409158        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001438.o)
+ .idata$4       0x0000000100409160        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001439.o)
+ .idata$4       0x0000000100409168        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001441.o)
+ .idata$4       0x0000000100409170        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001444.o)
+ .idata$4       0x0000000100409178        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001446.o)
+ .idata$4       0x0000000100409180        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001447.o)
+ .idata$4       0x0000000100409188        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001456.o)
+ .idata$4       0x0000000100409190        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001466.o)
+ .idata$4       0x0000000100409198        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001469.o)
+ .idata$4       0x00000001004091a0        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001473.o)
+ .idata$4       0x00000001004091a8        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001764.o)
+                0x00000001004091b0                __IAT_start__ = .
+ SORT_BY_NAME(*)(.idata$5)
+ .idata$5       0x00000001004091b0        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libkernel32.a(libkernel32_a_h.o)
+ .idata$5       0x00000001004091b0        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libkernel32.a(libkernel32_a_s00581.o)
+                0x00000001004091b0                __imp_GetDriveTypeA
+ .idata$5       0x00000001004091b8        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libkernel32.a(libkernel32_a_s00657.o)
+                0x00000001004091b8                __imp_GetModuleHandleA
+ .idata$5       0x00000001004091c0        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libkernel32.a(libkernel32_a_t.o)
+ .idata$5       0x00000001004091c8        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000000.o)
+ .idata$5       0x00000001004091c8        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000024.o)
+                0x00000001004091c8                __imp___errno
+ .idata$5       0x00000001004091d0        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000037.o)
+                0x00000001004091d0                __imp___getreent
+ .idata$5       0x00000001004091d8        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000048.o)
+                0x00000001004091d8                __imp___main
+ .idata$5       0x00000001004091e0        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000109.o)
+                0x00000001004091e0                __imp__dll_crt0
+ .idata$5       0x00000001004091e8        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000115.o)
+                0x00000001004091e8                __imp__impure_ptr
+ .idata$5       0x00000001004091f0        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000260.o)
+                0x00000001004091f0                __imp_calloc
+ .idata$5       0x00000001004091f8        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000382.o)
+                0x00000001004091f8                __imp_cygwin_internal
+ .idata$5       0x0000000100409200        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000410.o)
+                0x0000000100409200                __imp_dll_dllcrt0
+ .idata$5       0x0000000100409208        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000432.o)
+                0x0000000100409208                __imp_endmntent
+ .idata$5       0x0000000100409210        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000468.o)
+                0x0000000100409210                __imp_exit
+ .idata$5       0x0000000100409218        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000493.o)
+                0x0000000100409218                __imp_fclose
+ .idata$5       0x0000000100409220        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000533.o)
+                0x0000000100409220                __imp_fgets
+ .idata$5       0x0000000100409228        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000569.o)
+                0x0000000100409228                __imp_fopen
+ .idata$5       0x0000000100409230        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000574.o)
+                0x0000000100409230                __imp_fprintf
+ .idata$5       0x0000000100409238        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000586.o)
+                0x0000000100409238                __imp_free
+ .idata$5       0x0000000100409240        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000674.o)
+                0x0000000100409240                __imp_getlogin
+ .idata$5       0x0000000100409248        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000676.o)
+                0x0000000100409248                __imp_getmntent
+ .idata$5       0x0000000100409250        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000681.o)
+                0x0000000100409250                __imp_getopt_long
+ .idata$5       0x0000000100409258        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000917.o)
+                0x0000000100409258                __imp_malloc
+ .idata$5       0x0000000100409260        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000936.o)
+                0x0000000100409260                __imp_memcpy
+ .idata$5       0x0000000100409268        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000938.o)
+                0x0000000100409268                __imp_memmove
+ .idata$5       0x0000000100409270        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000960.o)
+                0x0000000100409270                __imp_mount
+ .idata$5       0x0000000100409278        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000978.o)
+                0x0000000100409278                __imp_msys_detach_dll
+ .idata$5       0x0000000100409280        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001017.o)
+                0x0000000100409280                __imp_optarg
+ .idata$5       0x0000000100409288        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001019.o)
+                0x0000000100409288                __imp_optind
+ .idata$5       0x0000000100409290        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001035.o)
+                0x0000000100409290                __imp_posix_memalign
+ .idata$5       0x0000000100409298        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001070.o)
+                0x0000000100409298                __imp_printf
+ .idata$5       0x00000001004092a0        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001072.o)
+                0x00000001004092a0                __imp_program_invocation_short_name
+ .idata$5       0x00000001004092a8        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001224.o)
+                0x00000001004092a8                __imp_realloc
+ .idata$5       0x00000001004092b0        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001340.o)
+                0x00000001004092b0                __imp_setmntent
+ .idata$5       0x00000001004092b8        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001428.o)
+                0x00000001004092b8                __imp_stat
+ .idata$5       0x00000001004092c0        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001433.o)
+                0x00000001004092c0                __imp_stpncpy
+ .idata$5       0x00000001004092c8        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001438.o)
+                0x00000001004092c8                __imp_strcat
+ .idata$5       0x00000001004092d0        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001439.o)
+                0x00000001004092d0                __imp_strchr
+ .idata$5       0x00000001004092d8        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001441.o)
+                0x00000001004092d8                __imp_strcmp
+ .idata$5       0x00000001004092e0        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001444.o)
+                0x00000001004092e0                __imp_strcpy
+ .idata$5       0x00000001004092e8        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001446.o)
+                0x00000001004092e8                __imp_strdup
+ .idata$5       0x00000001004092f0        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001447.o)
+                0x00000001004092f0                __imp_strerror
+ .idata$5       0x00000001004092f8        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001456.o)
+                0x00000001004092f8                __imp_strlen
+ .idata$5       0x0000000100409300        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001466.o)
+                0x0000000100409300                __imp_strpbrk
+ .idata$5       0x0000000100409308        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001469.o)
+                0x0000000100409308                __imp_strrchr
+ .idata$5       0x0000000100409310        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001473.o)
+                0x0000000100409310                __imp_strstr
+ .idata$5       0x0000000100409318        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001764.o)
+                0x0000000100409320                __IAT_end__ = .
+ SORT_BY_NAME(*)(.idata$6)
+ .idata$6       0x0000000100409320       0x10 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libkernel32.a(libkernel32_a_s00581.o)
+ .idata$6       0x0000000100409330       0x14 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libkernel32.a(libkernel32_a_s00657.o)
+ .idata$6       0x0000000100409344        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000024.o)
+ .idata$6       0x0000000100409350       0x10 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000037.o)
+ .idata$6       0x0000000100409360        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000048.o)
+ .idata$6       0x000000010040936c        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000109.o)
+ .idata$6       0x0000000100409378       0x10 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000115.o)
+                0x0000000100409378                __nm__impure_ptr
+ .idata$6       0x0000000100409388        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000260.o)
+ .idata$6       0x0000000100409394       0x14 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000382.o)
+ .idata$6       0x00000001004093a8       0x10 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000410.o)
+ .idata$6       0x00000001004093b8        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000432.o)
+ .idata$6       0x00000001004093c4        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000468.o)
+ .idata$6       0x00000001004093cc        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000493.o)
+ .idata$6       0x00000001004093d8        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000533.o)
+ .idata$6       0x00000001004093e0        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000569.o)
+ .idata$6       0x00000001004093e8        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000574.o)
+ .idata$6       0x00000001004093f4        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000586.o)
+ .idata$6       0x00000001004093fc        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000674.o)
+ .idata$6       0x0000000100409408        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000676.o)
+ .idata$6       0x0000000100409414       0x10 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000681.o)
+ .idata$6       0x0000000100409424        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000917.o)
+ .idata$6       0x0000000100409430        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000936.o)
+ .idata$6       0x000000010040943c        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000938.o)
+ .idata$6       0x0000000100409448        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000960.o)
+ .idata$6       0x0000000100409450       0x14 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000978.o)
+ .idata$6       0x0000000100409464        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001017.o)
+                0x0000000100409464                __nm_optarg
+ .idata$6       0x0000000100409470        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001019.o)
+                0x0000000100409470                __nm_optind
+ .idata$6       0x000000010040947c       0x14 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001035.o)
+ .idata$6       0x0000000100409490        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001070.o)
+ .idata$6       0x000000010040949c       0x20 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001072.o)
+                0x000000010040949c                __nm_program_invocation_short_name
+ .idata$6       0x00000001004094bc        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001224.o)
+ .idata$6       0x00000001004094c8        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001340.o)
+ .idata$6       0x00000001004094d4        0x8 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001428.o)
+ .idata$6       0x00000001004094dc        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001433.o)
+ .idata$6       0x00000001004094e8        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001438.o)
+ .idata$6       0x00000001004094f4        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001439.o)
+ .idata$6       0x0000000100409500        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001441.o)
+ .idata$6       0x000000010040950c        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001444.o)
+ .idata$6       0x0000000100409518        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001446.o)
+ .idata$6       0x0000000100409524        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001447.o)
+ .idata$6       0x0000000100409530        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001456.o)
+ .idata$6       0x000000010040953c        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001466.o)
+ .idata$6       0x0000000100409548        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001469.o)
+ .idata$6       0x0000000100409554        0xc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001473.o)
+ SORT_BY_NAME(*)(.idata$7)
+ .idata$7       0x0000000100409560        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libkernel32.a(libkernel32_a_s00581.o)
+ .idata$7       0x0000000100409564        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libkernel32.a(libkernel32_a_s00657.o)
+ .idata$7       0x0000000100409568       0x10 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libkernel32.a(libkernel32_a_t.o)
+                0x0000000100409568                __libkernel32_a_iname
+ .idata$7       0x0000000100409578        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000024.o)
+ .idata$7       0x000000010040957c        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000037.o)
+ .idata$7       0x0000000100409580        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000048.o)
+ .idata$7       0x0000000100409584        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000109.o)
+ .idata$7       0x0000000100409588        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000115.o)
+ .idata$7       0x000000010040958c        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000260.o)
+ .idata$7       0x0000000100409590        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000382.o)
+ .idata$7       0x0000000100409594        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000410.o)
+ .idata$7       0x0000000100409598        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000432.o)
+ .idata$7       0x000000010040959c        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000468.o)
+ .idata$7       0x00000001004095a0        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000493.o)
+ .idata$7       0x00000001004095a4        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000533.o)
+ .idata$7       0x00000001004095a8        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000569.o)
+ .idata$7       0x00000001004095ac        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000574.o)
+ .idata$7       0x00000001004095b0        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000586.o)
+ .idata$7       0x00000001004095b4        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000674.o)
+ .idata$7       0x00000001004095b8        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000676.o)
+ .idata$7       0x00000001004095bc        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000681.o)
+ .idata$7       0x00000001004095c0        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000917.o)
+ .idata$7       0x00000001004095c4        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000936.o)
+ .idata$7       0x00000001004095c8        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000938.o)
+ .idata$7       0x00000001004095cc        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000960.o)
+ .idata$7       0x00000001004095d0        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d000978.o)
+ .idata$7       0x00000001004095d4        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001017.o)
+ .idata$7       0x00000001004095d8        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001019.o)
+ .idata$7       0x00000001004095dc        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001035.o)
+ .idata$7       0x00000001004095e0        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001070.o)
+ .idata$7       0x00000001004095e4        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001072.o)
+ .idata$7       0x00000001004095e8        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001224.o)
+ .idata$7       0x00000001004095ec        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001340.o)
+ .idata$7       0x00000001004095f0        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001428.o)
+ .idata$7       0x00000001004095f4        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001433.o)
+ .idata$7       0x00000001004095f8        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001438.o)
+ .idata$7       0x00000001004095fc        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001439.o)
+ .idata$7       0x0000000100409600        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001441.o)
+ .idata$7       0x0000000100409604        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001444.o)
+ .idata$7       0x0000000100409608        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001446.o)
+ .idata$7       0x000000010040960c        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001447.o)
+ .idata$7       0x0000000100409610        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001456.o)
+ .idata$7       0x0000000100409614        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001466.o)
+ .idata$7       0x0000000100409618        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001469.o)
+ .idata$7       0x000000010040961c        0x4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001473.o)
+ .idata$7       0x0000000100409620       0x10 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(msys_2_0_dll_d001764.o)
+                0x0000000100409620                msys_2_0_dll_iname
+
+.tls            0x000000010040a000        0x0
+                0x000000010040a000                ___tls_start__ = .
+ *(.tls$AAA)
+ *(.tls)
+ *(.tls$)
+ *(SORT_BY_NAME(.tls$*))
+ *(.tls$ZZZ)
+                0x000000010040a000                ___tls_end__ = .
+
+.endjunk        0x000000010040a000        0x0
+                [!provide]                        PROVIDE (end = .)
+                [!provide]                        PROVIDE (_end = .)
+                0x000000010040a000                __end__ = .
+
+.rsrc
+ *(.rsrc)
+ *(.rsrc$*)
+
+.reloc          0x000000010040a000      0x200
+ *(.reloc)
+ .reloc         0x000000010040a000       0x38 dll stuff
+
+.stab
+ *(.stab)
+
+.stabstr
+ *(.stabstr)
+
+.debug_aranges  0x000000010040b000      0x400
+ *(.debug_aranges)
+ .debug_aranges
+                0x000000010040b000       0x30 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib/crt0.o
+ .debug_aranges
+                0x000000010040b030       0x40 C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o
+ .debug_aranges
+                0x000000010040b070       0x30 C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-path.o
+ .debug_aranges
+                0x000000010040b0a0       0x30 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(cygwin_crt0.o)
+ .debug_aranges
+                0x000000010040b0d0       0x30 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain0.o)
+ .debug_aranges
+                0x000000010040b100       0x30 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain1.o)
+ .debug_aranges
+                0x000000010040b130       0x30 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain2.o)
+ .debug_aranges
+                0x000000010040b160       0x30 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain3.o)
+ .debug_aranges
+                0x000000010040b190       0x30 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(pseudo-reloc-dummy.o)
+ .debug_aranges
+                0x000000010040b1c0       0x30 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(_cygwin_crt0_common.o)
+ .debug_aranges
+                0x000000010040b1f0       0x30 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(dll_entry.o)
+ .debug_aranges
+                0x000000010040b220       0x30 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(dll_main.o)
+ .debug_aranges
+                0x000000010040b250       0x30 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(cygwin_attach_dll.o)
+ .debug_aranges
+                0x000000010040b280       0x20 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1\libgcc.a(_ctors.o)
+
+.zdebug_aranges
+ *(.zdebug_aranges)
+
+.debug_pubnames
+ *(.debug_pubnames)
+
+.zdebug_pubnames
+ *(.zdebug_pubnames)
+
+.debug_info     0x000000010040c000     0xa400
+ *(.debug_info .gnu.linkonce.wi.*)
+ .debug_info    0x000000010040c000     0x12c1 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib/crt0.o
+ .debug_info    0x000000010040d2c1     0x324d C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o
+ .debug_info    0x000000010041050e      0xfb7 C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-path.o
+ .debug_info    0x00000001004114c5      0x2b3 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(cygwin_crt0.o)
+ .debug_info    0x0000000100411778      0x160 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain0.o)
+ .debug_info    0x00000001004118d8      0x160 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain1.o)
+ .debug_info    0x0000000100411a38      0x160 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain2.o)
+ .debug_info    0x0000000100411b98      0x160 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain3.o)
+ .debug_info    0x0000000100411cf8      0x13a C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(pseudo-reloc-dummy.o)
+ .debug_info    0x0000000100411e32     0x2467 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(_cygwin_crt0_common.o)
+ .debug_info    0x0000000100414299      0x821 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(dll_entry.o)
+ .debug_info    0x0000000100414aba      0x2ec C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(dll_main.o)
+ .debug_info    0x0000000100414da6     0x1247 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(cygwin_attach_dll.o)
+ .debug_info    0x0000000100415fed      0x2fc C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1\libgcc.a(_ctors.o)
+
+.zdebug_info
+ *(.zdebug_info .zdebug.gnu.linkonce.wi.*)
+
+.debug_abbrev   0x0000000100417000     0x1600
+ *(.debug_abbrev)
+ .debug_abbrev  0x0000000100417000      0x228 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib/crt0.o
+ .debug_abbrev  0x0000000100417228      0x52a C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o
+ .debug_abbrev  0x0000000100417752      0x261 C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-path.o
+ .debug_abbrev  0x00000001004179b3       0xd0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(cygwin_crt0.o)
+ .debug_abbrev  0x0000000100417a83       0x5c C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain0.o)
+ .debug_abbrev  0x0000000100417adf       0x5c C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain1.o)
+ .debug_abbrev  0x0000000100417b3b       0x5c C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain2.o)
+ .debug_abbrev  0x0000000100417b97       0x5c C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain3.o)
+ .debug_abbrev  0x0000000100417bf3       0x33 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(pseudo-reloc-dummy.o)
+ .debug_abbrev  0x0000000100417c26      0x3c4 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(_cygwin_crt0_common.o)
+ .debug_abbrev  0x0000000100417fea      0x1a6 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(dll_entry.o)
+ .debug_abbrev  0x0000000100418190       0xa6 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(dll_main.o)
+ .debug_abbrev  0x0000000100418236      0x21d C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(cygwin_attach_dll.o)
+ .debug_abbrev  0x0000000100418453       0x7f C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1\libgcc.a(_ctors.o)
+
+.zdebug_abbrev
+ *(.zdebug_abbrev)
+
+.debug_line     0x0000000100419000     0x3a00
+ *(.debug_line)
+ .debug_line    0x0000000100419000      0x287 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib/crt0.o
+ .debug_line    0x0000000100419287     0x17f0 C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o
+ .debug_line    0x000000010041aa77      0x9a7 C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-path.o
+ .debug_line    0x000000010041b41e      0x11e C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(cygwin_crt0.o)
+ .debug_line    0x000000010041b53c       0xe5 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain0.o)
+ .debug_line    0x000000010041b621       0xe5 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain1.o)
+ .debug_line    0x000000010041b706       0xe5 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain2.o)
+ .debug_line    0x000000010041b7eb       0xe5 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain3.o)
+ .debug_line    0x000000010041b8d0      0x10a C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(pseudo-reloc-dummy.o)
+ .debug_line    0x000000010041b9da      0x87c C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(_cygwin_crt0_common.o)
+ .debug_line    0x000000010041c256      0x233 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(dll_entry.o)
+ .debug_line    0x000000010041c489      0x150 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(dll_main.o)
+ .debug_line    0x000000010041c5d9      0x2d5 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(cygwin_attach_dll.o)
+ .debug_line    0x000000010041c8ae      0x12d C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1\libgcc.a(_ctors.o)
+
+.zdebug_line
+ *(.zdebug_line)
+
+.debug_frame    0x000000010041d000      0x600
+ *(.debug_frame*)
+ .debug_frame   0x000000010041d000       0x38 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib/crt0.o
+ .debug_frame   0x000000010041d038      0x248 C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o
+ .debug_frame   0x000000010041d280       0x58 C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-path.o
+ .debug_frame   0x000000010041d2d8       0x30 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(cygwin_crt0.o)
+ .debug_frame   0x000000010041d308       0x28 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain0.o)
+ .debug_frame   0x000000010041d330       0x28 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain1.o)
+ .debug_frame   0x000000010041d358       0x28 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain2.o)
+ .debug_frame   0x000000010041d380       0x28 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain3.o)
+ .debug_frame   0x000000010041d3a8       0x28 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(pseudo-reloc-dummy.o)
+ .debug_frame   0x000000010041d3d0       0x40 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(_cygwin_crt0_common.o)
+ .debug_frame   0x000000010041d410       0x60 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(dll_entry.o)
+ .debug_frame   0x000000010041d470       0x28 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(dll_main.o)
+ .debug_frame   0x000000010041d498       0x38 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(cygwin_attach_dll.o)
+
+.zdebug_frame
+ *(.zdebug_frame*)
+
+.debug_str      0x000000010041e000      0x200
+ *(.debug_str)
+ .debug_str     0x000000010041e000        0xe C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib/crt0.o
+ .debug_str     0x000000010041e00e       0x2c C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o
+ .debug_str     0x000000010041e03a        0x0 C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-path.o
+ .debug_str     0x000000010041e03a        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(cygwin_crt0.o)
+ .debug_str     0x000000010041e03a        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain0.o)
+ .debug_str     0x000000010041e03a        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain1.o)
+ .debug_str     0x000000010041e03a        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain2.o)
+ .debug_str     0x000000010041e03a        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(premain3.o)
+ .debug_str     0x000000010041e03a        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(pseudo-reloc-dummy.o)
+ .debug_str     0x000000010041e03a       0x67 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(_cygwin_crt0_common.o)
+ .debug_str     0x000000010041e0a1        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(dll_entry.o)
+ .debug_str     0x000000010041e0a1        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(dll_main.o)
+ .debug_str     0x000000010041e0a1        0xe C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(cygwin_attach_dll.o)
+ .debug_str     0x000000010041e0af        0x0 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1\libgcc.a(_ctors.o)
+
+.zdebug_str
+ *(.zdebug_str)
+
+.debug_loc
+ *(.debug_loc)
+
+.zdebug_loc
+ *(.zdebug_loc)
+
+.debug_macinfo
+ *(.debug_macinfo)
+
+.zdebug_macinfo
+ *(.zdebug_macinfo)
+
+.debug_weaknames
+ *(.debug_weaknames)
+
+.zdebug_weaknames
+ *(.zdebug_weaknames)
+
+.debug_funcnames
+ *(.debug_funcnames)
+
+.zdebug_funcnames
+ *(.zdebug_funcnames)
+
+.debug_typenames
+ *(.debug_typenames)
+
+.zdebug_typenames
+ *(.zdebug_typenames)
+
+.debug_varnames
+ *(.debug_varnames)
+
+.zdebug_varnames
+ *(.zdebug_varnames)
+
+.debug_pubtypes
+ *(.debug_pubtypes)
+
+.zdebug_pubtypes
+ *(.zdebug_pubtypes)
+
+.debug_ranges
+ *(.debug_ranges)
+
+.zdebug_ranges
+ *(.zdebug_ranges)
+
+.debug_types
+ *(.debug_types .gnu.linkonce.wt.*)
+
+.zdebug_types
+ *(.zdebug_types .gnu.linkonce.wt.*)
+
+.debug_addr
+ *(.debug_addr)
+
+.zdebug_addr
+ *(.zdebug_addr)
+
+.debug_line_str
+ *(.debug_line_str)
+
+.zdebug_line_str
+ *(.zdebug_line_str)
+
+.debug_loclists
+                0x000000010041f000      0xe00
+ *(.debug_loclists)
+ .debug_loclists
+                0x000000010041f000      0x822 C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o
+ .debug_loclists
+                0x000000010041f822      0x2bd C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-path.o
+ .debug_loclists
+                0x000000010041fadf       0x1e C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(cygwin_crt0.o)
+ .debug_loclists
+                0x000000010041fafd       0x98 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(_cygwin_crt0_common.o)
+ .debug_loclists
+                0x000000010041fb95      0x16d C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(dll_entry.o)
+ .debug_loclists
+                0x000000010041fd02       0x1e C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(dll_main.o)
+ .debug_loclists
+                0x000000010041fd20       0x45 C:/ag-readline-e138-01/combined-20260911-01/compiler/bin/../lib/gcc/aarch64-pc-cygwin/15.0.1/../../../../aarch64-pc-cygwin/lib\libmsys-2.0.a(cygwin_attach_dll.o)
+
+.zdebug_loclists
+ *(.zdebug_loclists)
+
+.debug_macro
+ *(.debug_macro)
+
+.zdebug_macro
+ *(.zdebug_macro)
+
+.debug_names
+ *(.debug_names)
+
+.zdebug_names
+ *(.zdebug_names)
+
+.debug_rnglists
+                0x0000000100420000      0x200
+ *(.debug_rnglists)
+ .debug_rnglists
+                0x0000000100420000       0xda C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-mount.o
+ .debug_rnglists
+                0x00000001004200da       0x64 C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount-path.o
+
+.zdebug_rnglists
+ *(.zdebug_rnglists)
+
+.debug_str_offsets
+ *(.debug_str_offsets)
+
+.zdebug_str_offsets
+ *(.zdebug_str_offsets)
+
+.debug_sup
+ *(.debug_sup)
+
+.debug_gdb_scripts
+ *(.debug_gdb_scripts)
+
+.zdebug_gdb_scripts
+ *(.zdebug_gdb_scripts)
+OUTPUT(C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/build/mount.exe pei-aarch64-little)
+LOAD dll stuff

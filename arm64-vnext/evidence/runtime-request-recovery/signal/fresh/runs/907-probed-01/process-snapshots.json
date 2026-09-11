@@ -1,0 +1,726 @@
+[
+  {
+    "timestamp_utc": "2026-09-11T15:57:51.5580020Z",
+    "processes": [
+      {
+        "ProcessId": 22476,
+        "ParentProcessId": 28628,
+        "CreationDate": "2026-09-11T08:57:51.418323-07:00",
+        "Name": "bash907-pty.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe",
+        "CommandLine": "\"C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe\" C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\controller-result.json"
+      }
+    ]
+  },
+  {
+    "timestamp_utc": "2026-09-11T15:57:51.7371636Z",
+    "processes": [
+      {
+        "ProcessId": 22476,
+        "ParentProcessId": 28628,
+        "CreationDate": "2026-09-11T08:57:51.418323-07:00",
+        "Name": "bash907-pty.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe",
+        "CommandLine": "\"C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe\" C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\controller-result.json"
+      },
+      {
+        "ProcessId": 12468,
+        "ParentProcessId": 22476,
+        "CreationDate": "2026-09-11T08:57:51.594644-07:00",
+        "Name": "bash907-pty.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe",
+        "CommandLine": "\"C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe\" C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\controller-result.json"
+      }
+    ]
+  },
+  {
+    "timestamp_utc": "2026-09-11T15:57:51.8689141Z",
+    "processes": [
+      {
+        "ProcessId": 22476,
+        "ParentProcessId": 28628,
+        "CreationDate": "2026-09-11T08:57:51.418323-07:00",
+        "Name": "bash907-pty.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe",
+        "CommandLine": "\"C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe\" C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\controller-result.json"
+      },
+      {
+        "ProcessId": 12468,
+        "ParentProcessId": 22476,
+        "CreationDate": "2026-09-11T08:57:51.594644-07:00",
+        "Name": "bash907-pty.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe",
+        "CommandLine": "\"C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe\" C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\controller-result.json"
+      },
+      {
+        "ProcessId": 5072,
+        "ParentProcessId": 12468,
+        "CreationDate": "2026-09-11T08:57:51.670229-07:00",
+        "Name": "conhost.exe",
+        "ExecutablePath": "C:\\Windows\\system32\\conhost.exe",
+        "CommandLine": "\\??\\C:\\Windows\\system32\\conhost.exe 0x4"
+      }
+    ]
+  },
+  {
+    "timestamp_utc": "2026-09-11T15:57:51.9932905Z",
+    "processes": [
+      {
+        "ProcessId": 22476,
+        "ParentProcessId": 28628,
+        "CreationDate": "2026-09-11T08:57:51.418323-07:00",
+        "Name": "bash907-pty.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe",
+        "CommandLine": "\"C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe\" C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\controller-result.json"
+      },
+      {
+        "ProcessId": 12468,
+        "ParentProcessId": 22476,
+        "CreationDate": "2026-09-11T08:57:51.594644-07:00",
+        "Name": "bash907-pty.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe",
+        "CommandLine": "\"C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe\" C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\controller-result.json"
+      },
+      {
+        "ProcessId": 5072,
+        "ParentProcessId": 12468,
+        "CreationDate": "2026-09-11T08:57:51.670229-07:00",
+        "Name": "conhost.exe",
+        "ExecutablePath": "C:\\Windows\\system32\\conhost.exe",
+        "CommandLine": "\\??\\C:\\Windows\\system32\\conhost.exe 0x4"
+      }
+    ]
+  },
+  {
+    "timestamp_utc": "2026-09-11T15:57:52.1986022Z",
+    "processes": [
+      {
+        "ProcessId": 22476,
+        "ParentProcessId": 28628,
+        "CreationDate": "2026-09-11T08:57:51.418323-07:00",
+        "Name": "bash907-pty.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe",
+        "CommandLine": "\"C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe\" C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\controller-result.json"
+      },
+      {
+        "ProcessId": 12468,
+        "ParentProcessId": 22476,
+        "CreationDate": "2026-09-11T08:57:51.594644-07:00",
+        "Name": "bash907-pty.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe",
+        "CommandLine": "\"C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe\" C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\controller-result.json"
+      },
+      {
+        "ProcessId": 5072,
+        "ParentProcessId": 12468,
+        "CreationDate": "2026-09-11T08:57:51.670229-07:00",
+        "Name": "conhost.exe",
+        "ExecutablePath": "C:\\Windows\\system32\\conhost.exe",
+        "CommandLine": "\\??\\C:\\Windows\\system32\\conhost.exe 0x4"
+      }
+    ]
+  },
+  {
+    "timestamp_utc": "2026-09-11T15:57:52.3632878Z",
+    "processes": [
+      {
+        "ProcessId": 22476,
+        "ParentProcessId": 28628,
+        "CreationDate": "2026-09-11T08:57:51.418323-07:00",
+        "Name": "bash907-pty.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe",
+        "CommandLine": "\"C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe\" C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\controller-result.json"
+      },
+      {
+        "ProcessId": 12468,
+        "ParentProcessId": 22476,
+        "CreationDate": "2026-09-11T08:57:51.594644-07:00",
+        "Name": "bash907-pty.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe",
+        "CommandLine": "\"C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe\" C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\controller-result.json"
+      },
+      {
+        "ProcessId": 5072,
+        "ParentProcessId": 12468,
+        "CreationDate": "2026-09-11T08:57:51.670229-07:00",
+        "Name": "conhost.exe",
+        "ExecutablePath": "C:\\Windows\\system32\\conhost.exe",
+        "CommandLine": "\\??\\C:\\Windows\\system32\\conhost.exe 0x4"
+      }
+    ]
+  },
+  {
+    "timestamp_utc": "2026-09-11T15:57:52.5026614Z",
+    "processes": [
+      {
+        "ProcessId": 22476,
+        "ParentProcessId": 28628,
+        "CreationDate": "2026-09-11T08:57:51.418323-07:00",
+        "Name": "bash907-pty.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe",
+        "CommandLine": "\"C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe\" C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\controller-result.json"
+      },
+      {
+        "ProcessId": 12468,
+        "ParentProcessId": 22476,
+        "CreationDate": "2026-09-11T08:57:51.594644-07:00",
+        "Name": "bash907-pty.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe",
+        "CommandLine": "\"C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe\" C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\controller-result.json"
+      },
+      {
+        "ProcessId": 5072,
+        "ParentProcessId": 12468,
+        "CreationDate": "2026-09-11T08:57:51.670229-07:00",
+        "Name": "conhost.exe",
+        "ExecutablePath": "C:\\Windows\\system32\\conhost.exe",
+        "CommandLine": "\\??\\C:\\Windows\\system32\\conhost.exe 0x4"
+      }
+    ]
+  },
+  {
+    "timestamp_utc": "2026-09-11T15:57:52.6253686Z",
+    "processes": [
+      {
+        "ProcessId": 22476,
+        "ParentProcessId": 28628,
+        "CreationDate": "2026-09-11T08:57:51.418323-07:00",
+        "Name": "bash907-pty.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe",
+        "CommandLine": "\"C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe\" C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\controller-result.json"
+      },
+      {
+        "ProcessId": 12468,
+        "ParentProcessId": 22476,
+        "CreationDate": "2026-09-11T08:57:51.594644-07:00",
+        "Name": "bash907-pty.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe",
+        "CommandLine": "\"C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe\" C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\controller-result.json"
+      },
+      {
+        "ProcessId": 5072,
+        "ParentProcessId": 12468,
+        "CreationDate": "2026-09-11T08:57:51.670229-07:00",
+        "Name": "conhost.exe",
+        "ExecutablePath": "C:\\Windows\\system32\\conhost.exe",
+        "CommandLine": "\\??\\C:\\Windows\\system32\\conhost.exe 0x4"
+      }
+    ]
+  },
+  {
+    "timestamp_utc": "2026-09-11T15:57:52.8220458Z",
+    "processes": [
+      {
+        "ProcessId": 22476,
+        "ParentProcessId": 28628,
+        "CreationDate": "2026-09-11T08:57:51.418323-07:00",
+        "Name": "bash907-pty.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe",
+        "CommandLine": "\"C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe\" C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\controller-result.json"
+      },
+      {
+        "ProcessId": 12468,
+        "ParentProcessId": 22476,
+        "CreationDate": "2026-09-11T08:57:51.594644-07:00",
+        "Name": "bash907-pty.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe",
+        "CommandLine": "\"C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe\" C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\controller-result.json"
+      },
+      {
+        "ProcessId": 5072,
+        "ParentProcessId": 12468,
+        "CreationDate": "2026-09-11T08:57:51.670229-07:00",
+        "Name": "conhost.exe",
+        "ExecutablePath": "C:\\Windows\\system32\\conhost.exe",
+        "CommandLine": "\\??\\C:\\Windows\\system32\\conhost.exe 0x4"
+      }
+    ]
+  },
+  {
+    "timestamp_utc": "2026-09-11T15:57:52.9856962Z",
+    "processes": [
+      {
+        "ProcessId": 22476,
+        "ParentProcessId": 28628,
+        "CreationDate": "2026-09-11T08:57:51.418323-07:00",
+        "Name": "bash907-pty.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe",
+        "CommandLine": "\"C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe\" C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\controller-result.json"
+      },
+      {
+        "ProcessId": 12468,
+        "ParentProcessId": 22476,
+        "CreationDate": "2026-09-11T08:57:51.594644-07:00",
+        "Name": "bash907-pty.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe",
+        "CommandLine": "\"C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe\" C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\controller-result.json"
+      },
+      {
+        "ProcessId": 5072,
+        "ParentProcessId": 12468,
+        "CreationDate": "2026-09-11T08:57:51.670229-07:00",
+        "Name": "conhost.exe",
+        "ExecutablePath": "C:\\Windows\\system32\\conhost.exe",
+        "CommandLine": "\\??\\C:\\Windows\\system32\\conhost.exe 0x4"
+      }
+    ]
+  },
+  {
+    "timestamp_utc": "2026-09-11T15:57:53.1352786Z",
+    "processes": [
+      {
+        "ProcessId": 22476,
+        "ParentProcessId": 28628,
+        "CreationDate": "2026-09-11T08:57:51.418323-07:00",
+        "Name": "bash907-pty.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe",
+        "CommandLine": "\"C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe\" C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\controller-result.json"
+      },
+      {
+        "ProcessId": 12468,
+        "ParentProcessId": 22476,
+        "CreationDate": "2026-09-11T08:57:51.594644-07:00",
+        "Name": "bash907-pty.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe",
+        "CommandLine": "\"C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe\" C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\controller-result.json"
+      },
+      {
+        "ProcessId": 5072,
+        "ParentProcessId": 12468,
+        "CreationDate": "2026-09-11T08:57:51.670229-07:00",
+        "Name": "conhost.exe",
+        "ExecutablePath": "C:\\Windows\\system32\\conhost.exe",
+        "CommandLine": "\\??\\C:\\Windows\\system32\\conhost.exe 0x4"
+      }
+    ]
+  },
+  {
+    "timestamp_utc": "2026-09-11T15:57:53.2943464Z",
+    "processes": [
+      {
+        "ProcessId": 22476,
+        "ParentProcessId": 28628,
+        "CreationDate": "2026-09-11T08:57:51.418323-07:00",
+        "Name": "bash907-pty.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe",
+        "CommandLine": "\"C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe\" C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\controller-result.json"
+      },
+      {
+        "ProcessId": 22156,
+        "ParentProcessId": 12468,
+        "CreationDate": "2026-09-11T08:57:53.083337-07:00",
+        "Name": "bash.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe",
+        "CommandLine": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe --noprofile --norc -i"
+      }
+    ]
+  },
+  {
+    "timestamp_utc": "2026-09-11T15:57:53.4081088Z",
+    "processes": [
+      {
+        "ProcessId": 22476,
+        "ParentProcessId": 28628,
+        "CreationDate": "2026-09-11T08:57:51.418323-07:00",
+        "Name": "bash907-pty.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe",
+        "CommandLine": "\"C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe\" C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\controller-result.json"
+      },
+      {
+        "ProcessId": 22156,
+        "ParentProcessId": 12468,
+        "CreationDate": "2026-09-11T08:57:53.083337-07:00",
+        "Name": "bash.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe",
+        "CommandLine": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe --noprofile --norc -i"
+      }
+    ]
+  },
+  {
+    "timestamp_utc": "2026-09-11T15:57:53.5781668Z",
+    "processes": [
+      {
+        "ProcessId": 22476,
+        "ParentProcessId": 28628,
+        "CreationDate": "2026-09-11T08:57:51.418323-07:00",
+        "Name": "bash907-pty.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe",
+        "CommandLine": "\"C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe\" C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\controller-result.json"
+      },
+      {
+        "ProcessId": 22156,
+        "ParentProcessId": 12468,
+        "CreationDate": "2026-09-11T08:57:53.083337-07:00",
+        "Name": "bash.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe",
+        "CommandLine": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe --noprofile --norc -i"
+      }
+    ]
+  },
+  {
+    "timestamp_utc": "2026-09-11T15:57:53.7610084Z",
+    "processes": [
+      {
+        "ProcessId": 22476,
+        "ParentProcessId": 28628,
+        "CreationDate": "2026-09-11T08:57:51.418323-07:00",
+        "Name": "bash907-pty.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe",
+        "CommandLine": "\"C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe\" C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\controller-result.json"
+      },
+      {
+        "ProcessId": 22156,
+        "ParentProcessId": 12468,
+        "CreationDate": "2026-09-11T08:57:53.083337-07:00",
+        "Name": "bash.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe",
+        "CommandLine": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe --noprofile --norc -i"
+      }
+    ]
+  },
+  {
+    "timestamp_utc": "2026-09-11T15:57:53.9492183Z",
+    "processes": [
+      {
+        "ProcessId": 22476,
+        "ParentProcessId": 28628,
+        "CreationDate": "2026-09-11T08:57:51.418323-07:00",
+        "Name": "bash907-pty.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe",
+        "CommandLine": "\"C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe\" C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\controller-result.json"
+      },
+      {
+        "ProcessId": 22156,
+        "ParentProcessId": 12468,
+        "CreationDate": "2026-09-11T08:57:53.083337-07:00",
+        "Name": "bash.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe",
+        "CommandLine": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe --noprofile --norc -i"
+      },
+      {
+        "ProcessId": 9044,
+        "ParentProcessId": 22156,
+        "CreationDate": "2026-09-11T08:57:53.837801-07:00",
+        "Name": "bash.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe",
+        "CommandLine": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe --noprofile --norc -i"
+      }
+    ]
+  },
+  {
+    "timestamp_utc": "2026-09-11T15:57:54.1131063Z",
+    "processes": [
+      {
+        "ProcessId": 22476,
+        "ParentProcessId": 28628,
+        "CreationDate": "2026-09-11T08:57:51.418323-07:00",
+        "Name": "bash907-pty.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe",
+        "CommandLine": "\"C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe\" C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\controller-result.json"
+      },
+      {
+        "ProcessId": 22156,
+        "ParentProcessId": 12468,
+        "CreationDate": "2026-09-11T08:57:53.083337-07:00",
+        "Name": "bash.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe",
+        "CommandLine": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe --noprofile --norc -i"
+      }
+    ]
+  },
+  {
+    "timestamp_utc": "2026-09-11T15:57:54.2368086Z",
+    "processes": [
+      {
+        "ProcessId": 22476,
+        "ParentProcessId": 28628,
+        "CreationDate": "2026-09-11T08:57:51.418323-07:00",
+        "Name": "bash907-pty.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe",
+        "CommandLine": "\"C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe\" C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\controller-result.json"
+      },
+      {
+        "ProcessId": 22156,
+        "ParentProcessId": 12468,
+        "CreationDate": "2026-09-11T08:57:53.083337-07:00",
+        "Name": "bash.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe",
+        "CommandLine": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe --noprofile --norc -i"
+      }
+    ]
+  },
+  {
+    "timestamp_utc": "2026-09-11T15:57:54.3855666Z",
+    "processes": [
+      {
+        "ProcessId": 22476,
+        "ParentProcessId": 28628,
+        "CreationDate": "2026-09-11T08:57:51.418323-07:00",
+        "Name": "bash907-pty.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe",
+        "CommandLine": "\"C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe\" C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\controller-result.json"
+      },
+      {
+        "ProcessId": 22156,
+        "ParentProcessId": 12468,
+        "CreationDate": "2026-09-11T08:57:53.083337-07:00",
+        "Name": "bash.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe",
+        "CommandLine": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe --noprofile --norc -i"
+      }
+    ]
+  },
+  {
+    "timestamp_utc": "2026-09-11T15:57:54.5457219Z",
+    "processes": [
+      {
+        "ProcessId": 22476,
+        "ParentProcessId": 28628,
+        "CreationDate": "2026-09-11T08:57:51.418323-07:00",
+        "Name": "bash907-pty.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe",
+        "CommandLine": "\"C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe\" C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\controller-result.json"
+      },
+      {
+        "ProcessId": 22156,
+        "ParentProcessId": 12468,
+        "CreationDate": "2026-09-11T08:57:53.083337-07:00",
+        "Name": "bash.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe",
+        "CommandLine": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe --noprofile --norc -i"
+      }
+    ]
+  },
+  {
+    "timestamp_utc": "2026-09-11T15:57:54.7060666Z",
+    "processes": [
+      {
+        "ProcessId": 22476,
+        "ParentProcessId": 28628,
+        "CreationDate": "2026-09-11T08:57:51.418323-07:00",
+        "Name": "bash907-pty.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe",
+        "CommandLine": "\"C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe\" C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\controller-result.json"
+      },
+      {
+        "ProcessId": 22156,
+        "ParentProcessId": 12468,
+        "CreationDate": "2026-09-11T08:57:53.083337-07:00",
+        "Name": "bash.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe",
+        "CommandLine": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe --noprofile --norc -i"
+      }
+    ]
+  },
+  {
+    "timestamp_utc": "2026-09-11T15:57:54.8362631Z",
+    "processes": [
+      {
+        "ProcessId": 22476,
+        "ParentProcessId": 28628,
+        "CreationDate": "2026-09-11T08:57:51.418323-07:00",
+        "Name": "bash907-pty.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe",
+        "CommandLine": "\"C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe\" C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\controller-result.json"
+      },
+      {
+        "ProcessId": 22156,
+        "ParentProcessId": 12468,
+        "CreationDate": "2026-09-11T08:57:53.083337-07:00",
+        "Name": "bash.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe",
+        "CommandLine": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe --noprofile --norc -i"
+      }
+    ]
+  },
+  {
+    "timestamp_utc": "2026-09-11T15:57:54.9655378Z",
+    "processes": [
+      {
+        "ProcessId": 22476,
+        "ParentProcessId": 28628,
+        "CreationDate": "2026-09-11T08:57:51.418323-07:00",
+        "Name": "bash907-pty.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe",
+        "CommandLine": "\"C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe\" C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\controller-result.json"
+      },
+      {
+        "ProcessId": 22156,
+        "ParentProcessId": 12468,
+        "CreationDate": "2026-09-11T08:57:53.083337-07:00",
+        "Name": "bash.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe",
+        "CommandLine": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe --noprofile --norc -i"
+      },
+      {
+        "ProcessId": 5744,
+        "ParentProcessId": 22156,
+        "CreationDate": "2026-09-11T08:57:54.839535-07:00",
+        "Name": "bash.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe",
+        "CommandLine": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe --noprofile --norc -i"
+      },
+      {
+        "ProcessId": 3924,
+        "ParentProcessId": 22156,
+        "CreationDate": "2026-09-11T08:57:54.885152-07:00",
+        "Name": "bash.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe",
+        "CommandLine": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe --noprofile --norc -i"
+      }
+    ]
+  },
+  {
+    "timestamp_utc": "2026-09-11T15:57:55.4074194Z",
+    "processes": [
+      {
+        "ProcessId": 22476,
+        "ParentProcessId": 28628,
+        "CreationDate": "2026-09-11T08:57:51.418323-07:00",
+        "Name": "bash907-pty.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe",
+        "CommandLine": "\"C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe\" C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\controller-result.json"
+      },
+      {
+        "ProcessId": 22156,
+        "ParentProcessId": 12468,
+        "CreationDate": "2026-09-11T08:57:53.083337-07:00",
+        "Name": "bash.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe",
+        "CommandLine": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe --noprofile --norc -i"
+      },
+      {
+        "ProcessId": 27680,
+        "ParentProcessId": 3924,
+        "CreationDate": "2026-09-11T08:57:54.901162-07:00",
+        "Name": "cat.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\cat.exe",
+        "CommandLine": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\cat.exe"
+      },
+      {
+        "ProcessId": 3012,
+        "ParentProcessId": 5744,
+        "CreationDate": "2026-09-11T08:57:54.90651-07:00",
+        "Name": "sleep.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\sleep.exe",
+        "CommandLine": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\sleep.exe 60"
+      }
+    ]
+  },
+  {
+    "timestamp_utc": "2026-09-11T15:57:55.5620950Z",
+    "processes": [
+      {
+        "ProcessId": 22476,
+        "ParentProcessId": 28628,
+        "CreationDate": "2026-09-11T08:57:51.418323-07:00",
+        "Name": "bash907-pty.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe",
+        "CommandLine": "\"C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe\" C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\controller-result.json"
+      },
+      {
+        "ProcessId": 22156,
+        "ParentProcessId": 12468,
+        "CreationDate": "2026-09-11T08:57:53.083337-07:00",
+        "Name": "bash.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe",
+        "CommandLine": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe --noprofile --norc -i"
+      },
+      {
+        "ProcessId": 27680,
+        "ParentProcessId": 3924,
+        "CreationDate": "2026-09-11T08:57:54.901162-07:00",
+        "Name": "cat.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\cat.exe",
+        "CommandLine": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\cat.exe"
+      },
+      {
+        "ProcessId": 3012,
+        "ParentProcessId": 5744,
+        "CreationDate": "2026-09-11T08:57:54.90651-07:00",
+        "Name": "sleep.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\sleep.exe",
+        "CommandLine": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\sleep.exe 60"
+      }
+    ]
+  },
+  {
+    "timestamp_utc": "2026-09-11T15:57:55.7108058Z",
+    "processes": [
+      {
+        "ProcessId": 22476,
+        "ParentProcessId": 28628,
+        "CreationDate": "2026-09-11T08:57:51.418323-07:00",
+        "Name": "bash907-pty.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe",
+        "CommandLine": "\"C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe\" C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\controller-result.json"
+      },
+      {
+        "ProcessId": 22156,
+        "ParentProcessId": 12468,
+        "CreationDate": "2026-09-11T08:57:53.083337-07:00",
+        "Name": "bash.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe",
+        "CommandLine": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe --noprofile --norc -i"
+      },
+      {
+        "ProcessId": 27680,
+        "ParentProcessId": 3924,
+        "CreationDate": "2026-09-11T08:57:54.901162-07:00",
+        "Name": "cat.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\cat.exe",
+        "CommandLine": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\cat.exe"
+      },
+      {
+        "ProcessId": 3012,
+        "ParentProcessId": 5744,
+        "CreationDate": "2026-09-11T08:57:54.90651-07:00",
+        "Name": "sleep.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\sleep.exe",
+        "CommandLine": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\sleep.exe 60"
+      }
+    ]
+  },
+  {
+    "timestamp_utc": "2026-09-11T15:57:55.8564137Z",
+    "processes": [
+      {
+        "ProcessId": 22476,
+        "ParentProcessId": 28628,
+        "CreationDate": "2026-09-11T08:57:51.418323-07:00",
+        "Name": "bash907-pty.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe",
+        "CommandLine": "\"C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe\" C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\controller-result.json"
+      },
+      {
+        "ProcessId": 22156,
+        "ParentProcessId": 12468,
+        "CreationDate": "2026-09-11T08:57:53.083337-07:00",
+        "Name": "bash.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe",
+        "CommandLine": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe --noprofile --norc -i"
+      }
+    ]
+  },
+  {
+    "timestamp_utc": "2026-09-11T15:57:56.0264040Z",
+    "processes": [
+      {
+        "ProcessId": 22476,
+        "ParentProcessId": 28628,
+        "CreationDate": "2026-09-11T08:57:51.418323-07:00",
+        "Name": "bash907-pty.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe",
+        "CommandLine": "\"C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash907-pty.exe\" C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\controller-result.json"
+      },
+      {
+        "ProcessId": 22156,
+        "ParentProcessId": 12468,
+        "CreationDate": "2026-09-11T08:57:53.083337-07:00",
+        "Name": "bash.exe",
+        "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe",
+        "CommandLine": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01\\runtime\\usr\\bin\\bash.exe --noprofile --norc -i"
+      }
+    ]
+  }
+]

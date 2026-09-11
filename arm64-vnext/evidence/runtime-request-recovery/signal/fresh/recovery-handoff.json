@@ -1,0 +1,182 @@
+{
+  "schema": 1,
+  "generated_utc": "2026-09-11T16:00:02.0928146Z",
+  "status": "bounded-original-controller-not-reproduced-no-runtime-patch",
+  "disposition": "Retain runtime907 Bash compatibility as NOT_ADMITTED under the existing a2dd decision, but narrow this specific foreground-pipeline item to a timing-sensitive lifecycle/fixture boundary. No causal 907 runtime defect was reproduced, so no source or binary change is justified.",
+  "exact_cohort": {
+    "controller_sha256": "e4bf9ab340f57dcb1c6456c2e8d0454cb31fac0762fdc0447d75759447aa493a",
+    "bash_sha256": "39ef42f62906be249b650dd9e0760109161c40c5b4e047093ef7e16b138c5d6a",
+    "runtime907_sha256": "907afa099a69aa3c13d4e3b30eeba18c4a6b1766d5fa39b4746fae23c3f9e76c",
+    "runtime_d70_sha256": "d70cfb46ed6bfa643a6ab557a71008e86043d8a04e5ce2d33549e4e95a49117d",
+    "iconv_sha256": "86aa5600dd67dc8985ed4f218420549ed46539ae739dbbeaf11f68d0c1db4215",
+    "intl_sha256": "44c50b20168751f4b5a0107a7b85c7e9ff9565062b1be2b86c65eb5beeaa339c"
+  },
+  "historical_failure": {
+    "handoff_path": "C:\\ag-bash907-20260911-02\\signal-failure-handoff-01\\handoff.json",
+    "handoff_sha256": "3c753f5b569c2760fb58ad93e5099ef4aa74e6a0a39063dba00236ba6ec57b3e",
+    "intake_path": "C:\\ap11-native-provider-intake\\bash-runtime907-qualification-failure-v1.json",
+    "intake_sha256": "ad40b7e220d3be4373ef0811523cd443a71da60058c9b9c1c90ab11794294ac5",
+    "runtime907": "16 pass / 1 fail / 2 not reached; shell 0; sleep DWORD 2; cat DWORD 0",
+    "d70": "19/19 pass; shell 130; sleep DWORD 2; cat DWORD 2"
+  },
+  "fresh_pair": {
+    "root": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03",
+    "pair_summary_sha256": "394a9f8256759c9cad9101bf2e58bcf6ede7473e5e631eed5a2739f37c796595",
+    "pair_summary_size": 5414,
+    "clean_controller_only": "runtime907 3/3 runs 19/19 and shell 130; d70 3/3 runs 19/19 and shell 130",
+    "observational": "runtime907 and d70 each 1/1 19/19 and shell 130; both foreground probes show sleep and cat in one PGID",
+    "runs": [
+      {
+        "name": "907-probed-01",
+        "result_sha256": "e799dba6b227b52608c411f5bf0c080b572daa6b286c6bff52ba0eef647e4982",
+        "result_size": 12223,
+        "controller_exit_dword": 0,
+        "foreground_shell_status": 130,
+        "passed": 19,
+        "failed": 0,
+        "residual_count": 0,
+        "monitored": true,
+        "raw_sleep_dwords": [
+          0
+        ],
+        "raw_cat_dwords": [
+          0
+        ]
+      },
+      {
+        "name": "907-unprobed-01",
+        "result_sha256": "123263700b74b10b20754c9172cef6c0063eda050e6ff7368e84dcf4c74b06f9",
+        "result_size": 2497,
+        "controller_exit_dword": 0,
+        "foreground_shell_status": 130,
+        "passed": 19,
+        "failed": 0,
+        "residual_count": 0,
+        "monitored": false,
+        "raw_sleep_dwords": [],
+        "raw_cat_dwords": []
+      },
+      {
+        "name": "907-unprobed-02",
+        "result_sha256": "af7273228dee8e87b8eecf009c8e3b2c1c6ef37e86b672893987a7d531f1eb6b",
+        "result_size": 2498,
+        "controller_exit_dword": 0,
+        "foreground_shell_status": 130,
+        "passed": 19,
+        "failed": 0,
+        "residual_count": 0,
+        "monitored": false,
+        "raw_sleep_dwords": [],
+        "raw_cat_dwords": []
+      },
+      {
+        "name": "907-unprobed-03",
+        "result_sha256": "84b1973b3eb0642ab153648276b66d7a3ccb086f8cf366d2011ad79e0c1d63dc",
+        "result_size": 2499,
+        "controller_exit_dword": 0,
+        "foreground_shell_status": 130,
+        "passed": 19,
+        "failed": 0,
+        "residual_count": 0,
+        "monitored": false,
+        "raw_sleep_dwords": [],
+        "raw_cat_dwords": []
+      },
+      {
+        "name": "d70-probed-01",
+        "result_sha256": "8e2fb126afc7a2aa4e5652ce3bb6444ace999b80947261f46d92ca3712726884",
+        "result_size": 13588,
+        "controller_exit_dword": 0,
+        "foreground_shell_status": 130,
+        "passed": 19,
+        "failed": 0,
+        "residual_count": 0,
+        "monitored": true,
+        "raw_sleep_dwords": [
+          0
+        ],
+        "raw_cat_dwords": [
+          0
+        ]
+      },
+      {
+        "name": "d70-unprobed-01",
+        "result_sha256": "c87a737b510c20b6a41ca1a321b11fd93cd39ec3c2d0f982915146e64a80e57d",
+        "result_size": 2499,
+        "controller_exit_dword": 0,
+        "foreground_shell_status": 130,
+        "passed": 19,
+        "failed": 0,
+        "residual_count": 0,
+        "monitored": false,
+        "raw_sleep_dwords": [],
+        "raw_cat_dwords": []
+      },
+      {
+        "name": "d70-unprobed-02",
+        "result_sha256": "45cf935226b9fa51195bbda6321e2b5202f9038a777748a8311c27879b4b1eac",
+        "result_size": 2499,
+        "controller_exit_dword": 0,
+        "foreground_shell_status": 130,
+        "passed": 19,
+        "failed": 0,
+        "residual_count": 0,
+        "monitored": false,
+        "raw_sleep_dwords": [],
+        "raw_cat_dwords": []
+      },
+      {
+        "name": "d70-unprobed-03",
+        "result_sha256": "8251f9a6b56aa49fead67ab77776c0ad865986cc7b493406af38b73c90c7b1b4",
+        "result_size": 2498,
+        "controller_exit_dword": 0,
+        "foreground_shell_status": 130,
+        "passed": 19,
+        "failed": 0,
+        "residual_count": 0,
+        "monitored": false,
+        "raw_sleep_dwords": [],
+        "raw_cat_dwords": []
+      }
+    ],
+    "probe_receipts": [
+      {
+        "run": "907-probed-01",
+        "name": "pgid-initial.json",
+        "sha256": "75e704f697055e608cd80bdb6f9d6d5ed712dcb24fc2815a8820d234d28d768c",
+        "size": 617
+      },
+      {
+        "run": "907-probed-01",
+        "name": "pgid-foreground.json",
+        "sha256": "9c8804d94904a3d256b7ef8c8da79e522c3d2a5ac851d2794476b23acf761f84",
+        "size": 617
+      },
+      {
+        "run": "d70-probed-01",
+        "name": "pgid-initial.json",
+        "sha256": "94fa9d9d0b8ccfaa0caa82b8357fa789141e9abaececf65396ba85062284d1ec",
+        "size": 617
+      },
+      {
+        "run": "d70-probed-01",
+        "name": "pgid-foreground.json",
+        "sha256": "7ea2852d4eb4598139d5e4923167cb540681e653d4d3883c6917cd099fae0d26",
+        "size": 617
+      }
+    ],
+    "runner_original_summary_sha256": "38d91db6cd7f014c55a5c39c9186fb78260180bbb8c4086f95eb834612747438",
+    "harness_sha256": "9c5e292c90f7fc769332ae4490a87a72bb7dc7158305517bb92e8186f4eb4a7d"
+  },
+  "contract": {
+    "controller_timing": "After fg echo, waits fixed 200 ms, writes VINTR, then waits for prompt; echoed command is not a member-readiness barrier.",
+    "runtime_source": "fhandler/termios.cc process_sigs maps VINTR to SIGINT and kill_pgrp enumerates current processes matching controlling tty and target PGID.",
+    "classification": "The same exact runtime907/controller cohort has both a retained historical failure and repeated fresh passes, while fresh d70 behaves identically. Current evidence proves timing sensitivity but not a reproducible 907-vs-d70 product regression."
+  },
+  "limits": [
+    "No runtime, Bash, GCC, newlib, provider, PR, or admission mutation was made.",
+    "Do not erase the historical failure or promote runtime907; broader unresolved 86-case failures remain separate.",
+    "Do not use startup waits or expected-status changes as qualification waivers.",
+    "If this item is revisited, require an exact-timing trace at VINTR enumeration/delivery that reproduces a 907-only difference before changing runtime source."
+  ]
+}

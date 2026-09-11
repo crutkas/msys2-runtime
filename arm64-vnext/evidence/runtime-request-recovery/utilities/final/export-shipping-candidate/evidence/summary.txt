@@ -1,0 +1,4 @@
+    PID  TTY        STIME COMMAND
+   1069 ?        07:39:51 /usr/bin/ps
+   1063 ?        07:39:50 /usr/bin/bash
+   1065 ?        07:39:51 /usr/bin/sleep

@@ -1,0 +1,20 @@
+[
+  {
+    "file": "ps.exe",
+    "candidate": "29b1625519e704559152b10f8dcb02bbc7ddb6eeaa4002cee5296f4c286de990",
+    "rebuild": "5e09c36dc63be211c37dffd891633aca64c270127463da8bbc6eef73e74d375f",
+    "identical": false
+  },
+  {
+    "file": "mount.exe",
+    "candidate": "8bbe25b7ecf74e904349109d166c3aac03c3f908368c00bf00756a99bf279d04",
+    "rebuild": "4b9d03ddb5a432e9376b7739a7310bc8ec7afd599086c2fb8748755b23887e02",
+    "identical": false
+  },
+  {
+    "file": "cygpath.exe",
+    "candidate": "113ea73df954680b63d5f16de3e83a99db0bb0734e2e801b746764f0404db726",
+    "rebuild": "5faecdd6b7bbc58c4102adca70f3a0f3415f8355be52b615b1a9a00f5563ee70",
+    "identical": false
+  }
+]

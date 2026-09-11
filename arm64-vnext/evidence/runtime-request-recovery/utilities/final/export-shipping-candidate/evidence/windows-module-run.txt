@@ -1,0 +1,326 @@
+      PID    PPID    PGID     WINPID   TTY         UID    STIME COMMAND
+  4194308       0       0          4  ?              0   Sep  4 System
+  4194588       0       0        284  ?              0   Sep  4 *** unknown ***
+  4194656       0       0        352  ?              0   Sep  4 Registry
+  4195244       0       0        940  ?              0   Sep  4 C:\Windows\System32\smss.exe
+  4195820       0       0       1516  ?              0   Sep  4 C:\Windows\System32\csrss.exe
+  4195924       0       0       1620  ?              0   Sep  4 C:\Windows\System32\wininit.exe
+  4196040       0       0       1736  ?              0   Sep  4 C:\Windows\System32\services.exe
+  4196100       0       0       1796  ?              0   Sep  4 C:\Windows\System32\LsaIso.exe
+  4196108       0       0       1804  ?              0   Sep  4 C:\Windows\System32\lsass.exe
+  4196276       0       0       1972  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4196296       0       0       1992  ?              0   Sep  4 C:\Windows\System32\fontdrvhost.exe
+  4195216       0       0        912  ?              0   Sep  4 C:\Windows\System32\WUDFHost.exe
+  4195408       0       0       1104  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4195920       0       0       1616  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4196164       0       0       1860  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4196628       0       0       2324  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4196636       0       0       2332  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4196644       0       0       2340  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4196652       0       0       2348  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4196856       0       0       2552  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4196888       0       0       2584  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4196900       0       0       2596  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4196964       0       0       2660  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4196980       0       0       2676  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4197020       0       0       2716  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4197132       0       0       2828  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4197140       0       0       2836  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4197156       0       0       2852  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4197220       0       0       2916  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4197152       0       0       2848  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4197508       0       0       3204  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4197516       0       0       3212  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4197700       0       0       3396  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4197776       0       0       3472  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4197820       0       0       3516  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4197908       0       0       3604  ?              0   Sep  4 C:\Windows\System32\DriverStore\FileRepository\nv_surface_woa.inf_arm64_552424781ade3526\Display.NvContainer\NVDisplay.Container.exe
+  4197940       0       0       3636  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4197948       0       0       3644  ?              0   Sep  4 C:\Windows\System32\XtaCache.exe
+  4198004       0       0       3700  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4198012       0       0       3708  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4198020       0       0       3716  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4198136       0       0       3832  ?              0   Sep  4 MemCompression
+  4198200       0       0       3896  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4198248       0       0       3944  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4198256       0       0       3952  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4198336       0       0       4032  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4198368       0       0       4064  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4198360       0       0       4056  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4198540       0       0       4236  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4198768       0       0       4464  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4198776       0       0       4472  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4199052       0       0       4748  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4199080       0       0       4776  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4199192       0       0       4888  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4199268       0       0       4964  ?              0   Sep  4 C:\Windows\System32\spoolsv.exe
+  4199304       0       0       5000  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4199352       0       0       5048  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4198572       0       0       4268  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4199444       0       0       5140  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4199544       0       0       5240  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4199552       0       0       5248  ?              0   Sep  4 C:\Windows\System32\DriverStore\FileRepository\dax3_swc_aposvc_arm64.inf_arm64_d623cd3563f9f5fb\DAX3API.exe
+  4199560       0       0       5256  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4199568       0       0       5264  ?              0   Sep  4 C:\Windows\System32\mtkbtsvc.exe
+  4199580       0       0       5276  ?              0   Sep  4 C:\Windows\System32\DriverStore\FileRepository\mptfcore.inf_arm64_ba9982bacf6373df\MptfGenericService.exe
+  4199588       0       0       5284  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4199600       0       0       5296  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4199608       0       0       5304  ?              0   Sep  4 C:\Windows\System32\DriverStore\FileRepository\surfacethermalservicenulldriver.inf_arm64_10f435ca6421e9ce\SurfaceThermalService.exe
+  4199624       0       0       5320  ?              0   Sep  4 C:\Program Files\WSL\wslservice.exe
+  4199640       0       0       5336  ?              0   Sep  4 C:\Windows\System32\DriverStore\FileRepository\surfaceservicenulldriver.inf_arm64_045fb930dca2cdd3\SurfaceService.exe
+  4200480       0       0       6176  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4200504       0       0       6200  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4200820       0       0       6516  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4201196       0       0       6892  ?              0   Sep  4 C:\Windows\System32\wlanext.exe
+  4201404       0       0       7100  ?              0   Sep  4 C:\Windows\System32\AggregatorHost.exe
+  4200832       0       0       6528  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4201840       0       0       7536  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4202008       0       0       7704  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4202328       0       0       8024  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4202676       0       0       8372  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4205088       0       0      10784  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4205452       0       0      11148  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4206096       0       0      11792  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4199316       0       0       5012  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4200844       0       0       6540  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4202756       0       0       8452  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4204528       0       0      10224  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4205084       0       0      10780  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4197336       0       0       3032  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4206172       0       0      11868  ?              0   Sep  4 C:\Program Files (x86)\Microsoft\EdgeUpdate\MicrosoftEdgeUpdate.exe
+  4202420       0       0       8116  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4195224       0       0        920  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4200728       0       0       6424  ?              0   Sep  4 C:\Windows\System32\csrss.exe
+  4203352       0       0       9048  ?              0   Sep  4 C:\Windows\System32\winlogon.exe
+  4203436       0       0       9132  ?              0   Sep  4 C:\Windows\System32\fontdrvhost.exe
+  4200032       0       0       5728  ?              0   Sep  4 C:\Windows\System32\dwm.exe
+  4204404       0       0      10100  ?              0   Sep  4 C:\Windows\System32\DriverStore\FileRepository\nv_surface_woa.inf_arm64_552424781ade3526\Display.NvContainer\NVDisplay.Container.exe
+  4198812       0       0       4508  ?              0   Sep  4 C:\Windows\System32\sihost.exe
+  4202576       0       0       8272  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4202592       0       0       8288  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4202176       0       0       7872  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4201568       0       0       7264  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4206408       0       0      12104  ?              0   Sep  4 C:\Windows\SystemApps\MicrosoftWindows.Client.CBS_cw5n1h2txyewy\CrossDeviceResume.exe
+  4202892       0       0       8588  ?              0   Sep  4 C:\Windows\System32\dllhost.exe
+  4196556       0       0       2252  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4203592       0       0       9288  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4196168       0       0       1864  ?              0   Sep  4 C:\Windows\System32\RuntimeBroker.exe
+  4199068       0       0       4764  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4208040       0       0      13736  ?              0   Sep  4 C:\Tools\SurfaceDiagData\SurfaceDiagData.exe
+  4204496       0       0      10192  ?              0   Sep  4 C:\Windows\System32\MidiSrv.exe
+  4202792       0       0       8488  ?              0   Sep  4 C:\Windows\System32\vmcompute.exe
+  4198848       0       0       4544  ?              0   Sep  4 C:\Windows\System32\ctfmon.exe
+  4207856       0       0      13552  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4210160       0       0      15856  ?              0   Sep  4 C:\Windows\System32\oobe\UserOOBEBroker.exe
+  4210180       0       0      15876  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4211156       0       0      16852  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4211680       0       0      17376  ?              0   Sep  4 C:\Windows\System32\taskhostw.exe
+  4214040       0       0      19736  ?              0   Sep  4 C:\Windows\System32\SecurityHealthSystray.exe
+  4214060       0       0      19756  ?              0   Sep  4 C:\Windows\System32\SecurityHealthService.exe
+  4210296       0       0      15992  ?              0   Sep  4 C:\Windows\SystemApps\MicrosoftWindows.Client.CBS_cw5n1h2txyewy\AppActions.exe
+  4214696       0       0      20392  ?              0   Sep  4 C:\Windows\System32\RuntimeBroker.exe
+  4214628       0       0      20324  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4214268       0       0      19964  ?              0   Sep  4 C:\Windows\System32\WUDFHost.exe
+  4212484       0       0      18180  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4208956       0       0      14652  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4213256       0       0      18952  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4202236       0       0       7932  ?              0   Sep  4 C:\Program Files\WindowsApps\Microsoft.WindowsTerminal_1.18.10301.0_arm64__8wekyb3d8bbwe\WindowsTerminal.exe
+  4208592       0       0      14288  ?              0   Sep  5 C:\Windows\System32\ApplicationFrameHost.exe
+  4194772       0       0        468  ?              0   Sep  4 C:\Windows\System32\VSSVC.exe
+  4209940       0       0      15636  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4205508       0       0      11204  ?              0   Sep  5 C:\Windows\System32\ShellHost.exe
+  4218468       0       0      24164  ?              0   Sep  5 C:\Windows\System32\svchost.exe
+  4215348       0       0      21044  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4203700       0       0       9396  ?              0   Sep  4 C:\ProgramData\Microsoft\Windows Defender\Platform\4.18.26080.3-0\MsMpEng.exe
+  4203832       0       0       9528  ?              0   Sep  4 C:\ProgramData\Microsoft\Windows Defender\Platform\4.18.26080.3-0\MpDefenderCoreService.exe
+  4219444       0       0      25140  ?              0   Sep  4 C:\ProgramData\Microsoft\Windows Defender\Platform\4.18.26080.3-0\NisSrv.exe
+  4218132       0       0      23828  ?              0   Sep  5 C:\Program Files\WindowsApps\MicrosoftWindows.Client.WebExperience_526.21100.40.0_arm64__cw5n1h2txyewy\Dashboard\Widgets.exe
+  4208596       0       0      14292  ?              0   Sep  5 C:\Program Files\WindowsApps\Microsoft.WidgetsPlatformRuntime_1.6.19.0_arm64__8wekyb3d8bbwe\WidgetService\WidgetService.exe
+  4201004       0       0       6700  ?              0   Sep  5 C:\Program Files (x86)\Microsoft\EdgeWebView\Application\152.0.4191.66\msedgewebview2.exe
+  4200292       0       0       5988  ?              0   Sep  5 C:\Program Files (x86)\Microsoft\EdgeWebView\Application\152.0.4191.66\msedgewebview2.exe
+  4205036       0       0      10732  ?              0   Sep  5 C:\Program Files (x86)\Microsoft\EdgeWebView\Application\152.0.4191.66\msedgewebview2.exe
+  4198524       0       0       4220  ?              0   Sep  5 C:\Program Files (x86)\Microsoft\EdgeWebView\Application\152.0.4191.66\msedgewebview2.exe
+  4219324       0       0      25020  ?              0   Sep  5 C:\Windows\System32\RuntimeBroker.exe
+  4208992       0       0      14688  ?              0   Sep  5 C:\Program Files (x86)\Microsoft\EdgeWebView\Application\152.0.4191.66\msedgewebview2.exe
+  4218244       0       0      23940  ?              0   Sep  5 C:\Program Files (x86)\Microsoft\EdgeWebView\Application\152.0.4191.66\msedgewebview2.exe
+  4219272       0       0      24968  ?              0   Sep  5 C:\Windows\System32\svchost.exe
+  4219600       0       0      25296  ?              0   Sep  5 C:\Windows\System32\taskhostw.exe
+  4203852       0       0       9548  ?              0   Sep  4 C:\Windows\System32\DriverStore\FileRepository\devicestelemetryservicedriver.inf_arm64_b976c1d2737ed481\DevicesTelemetryService.exe
+  4203224       0       0       8920  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4220424       0       0      26120  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4222424       0       0      28120  ?              0   Sep  6 C:\Program Files\WindowsApps\Microsoft.DesktopAppInstaller_1.29.290.0_arm64__8wekyb3d8bbwe\WindowsPackageManagerServer.exe
+  4203728       0       0       9424  ?              0   Sep  4 C:\Program Files\Common Files\microsoft shared\ClickToRun\OfficeClickToRun.exe
+  4222588       0       0      28284  ?              0   Sep  6 C:\Program Files\Common Files\microsoft shared\ClickToRun\AppVShNotify.exe
+  4222784       0       0      28480  ?              0   Sep  4 C:\Windows\System32\SearchIndexer.exe
+  4211464       0       0      17160  ?              0   Sep  6 C:\Windows\System32\rundll32.exe
+  4221724       0       0      27420  ?              0   Sep  6 C:\Windows\explorer.exe
+  4203092       0       0       8788  ?              0   Sep  6 C:\Windows\SystemApps\MicrosoftWindows.Client.CBS_cw5n1h2txyewy\SearchHost.exe
+  4201416       0       0       7112  ?              0   Sep  6 C:\Windows\SystemApps\Microsoft.Windows.StartMenuExperienceHost_cw5n1h2txyewy\StartMenuExperienceHost.exe
+  4208368       0       0      14064  ?              0   Sep  6 C:\Windows\SystemApps\ShellExperienceHost_cw5n1h2txyewy\ShellExperienceHost.exe
+  4217712       0       0      23408  ?              0   Sep  6 C:\Program Files (x86)\Microsoft\EdgeWebView\Application\152.0.4191.66\msedgewebview2.exe
+  4206292       0       0      11988  ?              0   Sep  6 C:\Program Files (x86)\Microsoft\EdgeWebView\Application\152.0.4191.66\msedgewebview2.exe
+  4221460       0       0      27156  ?              0   Sep  6 C:\Program Files (x86)\Microsoft\EdgeWebView\Application\152.0.4191.66\msedgewebview2.exe
+  4205520       0       0      11216  ?              0   Sep  6 C:\Program Files (x86)\Microsoft\EdgeWebView\Application\152.0.4191.66\msedgewebview2.exe
+  4217508       0       0      23204  ?              0   Sep  6 C:\Program Files (x86)\Microsoft\EdgeWebView\Application\152.0.4191.66\msedgewebview2.exe
+  4209412       0       0      15108  ?              0   Sep  6 C:\Program Files (x86)\Microsoft\EdgeWebView\Application\152.0.4191.66\msedgewebview2.exe
+  4198236       0       0       3932  ?              0   Sep  6 C:\Program Files\WindowsApps\Microsoft.ScreenSketch_11.2605.38.0_arm64__8wekyb3d8bbwe\SnippingTool\SnippingTool.exe
+  4199404       0       0       5100  ?              0   Sep  6 C:\Users\crutkasLocal\AppData\Local\github-copilot-git-2.53.0-4\clangarm64\bin\git.exe
+  4217176       0       0      22872  ?              0   Sep  6 C:\Users\crutkasLocal\AppData\Local\github-copilot-git-2.53.0-4\clangarm64\bin\git.exe
+  4197304       0       0       3000  ?              0   Sep  6 C:\Users\crutkasLocal\AppData\Local\github-copilot-git-2.53.0-4\clangarm64\bin\git.exe
+  4205848       0       0      11544  ?              0   Sep  6 C:\Users\crutkasLocal\AppData\Local\github-copilot-git-2.53.0-4\clangarm64\bin\git.exe
+  4200756       0       0       6452  ?              0   Sep  6 C:\Users\crutkasLocal\AppData\Local\github-copilot-git-2.53.0-4\clangarm64\bin\git.exe
+  4202972       0       0       8668  ?              0   Sep  6 C:\Windows\System32\conhost.exe
+  4215536       0       0      21232  ?              0   Sep  6 C:\ap06-2160\restart01\b\usr\bin\gpg-agent.exe
+  4204900       0       0      10596  ?              0   Sep  6 C:\ap06-2160\restart01\b\usr\lib\gnupg\scdaemon.exe
+  4213012       0       0      18708  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4212752       0       0      18448  ?              0   Sep  4 C:\Program Files\WindowsApps\Microsoft.SurfaceHub_76.5120.174.0_arm64__8wekyb3d8bbwe\Services\SurfaceBroker.exe
+  4214372       0       0      20068  ?              0   Sep  7 C:\Windows\System32\conhost.exe
+  4201164       0       0       6860  ?              0   Sep  7 C:\ap06-2160\restart01\b\usr\bin\gpg-agent.exe
+  4195816       0       0       1512  ?              0   Sep  7 C:\ap06-2160\restart01\b\usr\lib\gnupg\scdaemon.exe
+  4211360       0       0      17056  ?              0   Sep  7 C:\Users\crutkasLocal\AppData\Local\github-copilot-git-2.53.0-4\clangarm64\bin\git.exe
+  4200296       0       0       5992  ?              0   Sep  7 C:\Users\crutkasLocal\AppData\Local\github-copilot-git-2.53.0-4\clangarm64\bin\git.exe
+  4213400       0       0      19096  ?              0   Sep  7 C:\Users\crutkasLocal\AppData\Local\github-copilot-git-2.53.0-4\clangarm64\bin\git.exe
+  4215356       0       0      21052  ?              0   Sep  7 C:\Users\crutkasLocal\AppData\Local\github-copilot-git-2.53.0-4\clangarm64\bin\git.exe
+  4210096       0       0      15792  ?              0   Sep  7 C:\Windows\System32\conhost.exe
+  4204108       0       0       9804  ?              0   Sep  7 C:\ap06-2160\p8\b\usr\bin\gpg-agent.exe
+  4211496       0       0      17192  ?              0   Sep  7 C:\ap06-2160\p8\b\usr\lib\gnupg\scdaemon.exe
+  4222188       0       0      27884  ?              0   Sep  7 C:\Users\crutkasLocal\AppData\Local\github-copilot-git-2.53.0-4\clangarm64\bin\git.exe
+  4198904       0       0       4600  ?              0   Sep  7 C:\Users\crutkasLocal\AppData\Local\github-copilot-git-2.53.0-4\clangarm64\bin\git.exe
+  4221576       0       0      27272  ?              0   Sep  8 C:\Users\crutkasLocal\AppData\Local\github-copilot-git-2.53.0-4\clangarm64\bin\git.exe
+  4209356       0       0      15052  ?              0   Sep  8 C:\Users\crutkasLocal\AppData\Local\github-copilot-git-2.53.0-4\clangarm64\bin\git.exe
+  4220100       0       0      25796  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4210368       0       0      16064  ?              0   Sep  8 C:\Users\crutkasLocal\AppData\Local\github-copilot-git-2.53.0-4\clangarm64\bin\git.exe
+  4219860       0       0      25556  ?              0   Sep  8 C:\Windows\System32\RuntimeBroker.exe
+  4203424       0       0       9120  ?              0   Sep  8 C:\Users\crutkasLocal\AppData\Local\github-copilot-git-2.53.0-4\clangarm64\bin\git.exe
+  4200956       0       0       6652  ?              0   Sep  8 C:\Users\crutkasLocal\AppData\Local\github-copilot-git-2.53.0-4\clangarm64\bin\git.exe
+  4205676       0       0      11372  ?              0   Sep  8 C:\Windows\System32\conhost.exe
+  4209048       0       0      14744  ?              0   Sep  8 C:\ap06-2160\p8\b\usr\lib\gnupg\keyboxd.exe
+  4216180       0       0      21876  ?              0   Sep  8 C:\Windows\System32\conhost.exe
+  4201744       0       0       7440  ?              0   Sep  8 C:\ap06-2160\p8\b\usr\bin\gpg-agent.exe
+  4207752       0       0      13448  ?              0   Sep  8 C:\ap06-2160\p8\b\usr\lib\gnupg\scdaemon.exe
+  4211764       0       0      17460  ?              0   Sep  8 C:\Windows\System32\conhost.exe
+  4204680       0       0      10376  ?              0   Sep  8 C:\ap06-2160\p8\b\usr\bin\gpg-agent.exe
+  4201860       0       0       7556  ?              0   Sep  8 C:\ap06-2160\p8\b\usr\lib\gnupg\scdaemon.exe
+  4204540       0       0      10236  ?              0   Sep  8 C:\ap06-2160\p8\b\usr\bin\dirmngr.exe
+  4212676       0       0      18372  ?              0   Sep  8 C:\Program Files\WindowsApps\Microsoft.WindowsTerminal_1.18.10301.0_arm64__8wekyb3d8bbwe\WindowsTerminal.exe
+  4219580       0       0      25276  ?              0   Sep  8 C:\Windows\ImmersiveControlPanel\SystemSettings.exe
+  4221772       0       0      27468  ?              0   Sep  8 C:\Users\crutkasLocal\AppData\Local\github-copilot-git-2.53.0-4\clangarm64\bin\git.exe
+  4209284       0       0      14980  ?              0   Sep  8 C:\Users\crutkasLocal\AppData\Local\github-copilot-git-2.53.0-4\clangarm64\bin\git.exe
+  4211776       0       0      17472  ?              0   Sep  8 C:\Users\crutkasLocal\AppData\Local\github-copilot-git-2.53.0-4\clangarm64\bin\git.exe
+  4220044       0       0      25740  ?              0   Sep  9 C:\Users\crutkasLocal\AppData\Local\github-copilot-git-2.53.0-4\clangarm64\bin\git.exe
+  4206724       0       0      12420  ?              0   Sep  9 C:\Users\crutkasLocal\AppData\Local\github-copilot-git-2.53.0-4\clangarm64\bin\git.exe
+  4205996       0       0      11692  ?              0   Sep  9 C:\Users\crutkasLocal\AppData\Local\github-copilot-git-2.53.0-4\clangarm64\bin\git.exe
+  4211044       0       0      16740  ?              0   Sep  9 C:\Windows\System32\conhost.exe
+  4217924       0       0      23620  ?              0   Sep  9 C:\Program Files\Git\usr\bin\dirmngr.exe
+  4218164       0       0      23860  ?              0   Sep  9 C:\Windows\System32\conhost.exe
+  4209080       0       0      14776  ?              0   Sep  9 C:\Program Files\Git\usr\bin\gpg-agent.exe
+  4213212       0       0      18908  ?              0   Sep  9 C:\Program Files\Git\usr\lib\gnupg\scdaemon.exe
+  4215124       0       0      20820  ?              0   Sep  9 C:\Windows\System32\conhost.exe
+  4200940       0       0       6636  ?              0   Sep  9 C:\ap10-ca5f\git-full-01\bootstrap\usr\lib\gnupg\keyboxd.exe
+  4219840       0       0      25536  ?              0   Sep  9 C:\Windows\System32\conhost.exe
+  4205480       0       0      11176  ?              0   Sep  9 C:\ap10-ca5f\git-full-01\bootstrap\usr\bin\dirmngr.exe
+  4212588       0       0      18284  ?              0   Sep  9 C:\ap10-ca5f\git-full-01\bootstrap\usr\bin\gpg-agent.exe
+  4202620       0       0       8316  ?              0   Sep  9 C:\ap10-ca5f\git-full-01\bootstrap\usr\lib\gnupg\scdaemon.exe
+  4220964       0       0      26660  ?              0   Sep  9 C:\Users\crutkasLocal\AppData\Local\Programs\GitHub Copilot\github.exe
+  4217776       0       0      23472  ?              0   Sep  9 C:\Program Files (x86)\Microsoft\EdgeWebView\Application\152.0.4191.66\msedgewebview2.exe
+  4206380       0       0      12076  ?              0   Sep  9 C:\Program Files (x86)\Microsoft\EdgeWebView\Application\152.0.4191.66\msedgewebview2.exe
+  4201256       0       0       6952  ?              0   Sep  9 C:\Program Files (x86)\Microsoft\EdgeWebView\Application\152.0.4191.66\msedgewebview2.exe
+  4210504       0       0      16200  ?              0   Sep  9 C:\Program Files (x86)\Microsoft\EdgeWebView\Application\152.0.4191.66\msedgewebview2.exe
+  4214668       0       0      20364  ?              0   Sep  9 C:\Program Files (x86)\Microsoft\EdgeWebView\Application\152.0.4191.66\msedgewebview2.exe
+  4207160       0       0      12856  ?              0   Sep  9 C:\Program Files (x86)\Microsoft\EdgeWebView\Application\152.0.4191.66\msedgewebview2.exe
+  4208268       0       0      13964  ?              0   Sep  9 C:\Users\crutkasLocal\AppData\Local\github-copilot-sdk\cli\1.0.83\copilot.exe
+  4213356       0       0      19052  ?              0   Sep  9 C:\Windows\System32\conhost.exe
+  4205460       0       0      11156  ?              0   Sep  9 C:\Users\crutkasLocal\AppData\Local\github-copilot-sdk\cli\1.0.83\copilot.exe
+  4205276       0       0      10972  ?              0   Sep  9 C:\Windows\System32\conhost.exe
+  4213016       0       0      18712  ?              0   Sep  9 C:\Users\crutkasLocal\AppData\Local\github-copilot-sdk\cli\1.0.83\copilot.exe
+  4214568       0       0      20264  ?              0   Sep  9 C:\Windows\System32\conhost.exe
+  4205060       0       0      10756  ?              0   Sep  9 C:\Users\crutkasLocal\AppData\Local\github-copilot-sdk\cli\1.0.83\copilot.exe
+  4203184       0       0       8880  ?              0   Sep  9 C:\Windows\System32\conhost.exe
+  4219164       0       0      24860  ?              0   Sep  9 C:\Windows\System32\conhost.exe
+  4197644       0       0       3340  ?              0   Sep  9 C:\Program Files\Git\usr\bin\dirmngr.exe
+  4214924       0       0      20620  ?              0   Sep  9 C:\Program Files\Git\usr\bin\gpg-agent.exe
+  4207428       0       0      13124  ?              0   Sep  9 C:\Program Files\Git\usr\lib\gnupg\scdaemon.exe
+  4220304       0       0      26000  ?              0   Sep 10 C:\Program Files\Microsoft OneDrive\OneDrive.exe
+  4204836       0       0      10532  ?              0   Sep 10 C:\Program Files\Microsoft OneDrive\26.158.0816.0003\OneDrive.Sync.Service.exe
+  4221912       0       0      27608  ?              0   Sep  4 C:\Program Files\WindowsApps\Microsoft.MixedRealityLink_26.9070.8271.0_arm64__8wekyb3d8bbwe\Platform\MixedRealityLinkSvc.exe
+  4210968       0       0      16664  ?              0   Sep 10 C:\Windows\System32\SystemUWPLauncher.exe
+  4200800       0       0       6496  ?              0   Sep 10 C:\Program Files\WindowsApps\Microsoft.MixedRealityLink_26.9070.8271.0_arm64__8wekyb3d8bbwe\Platform\MixedRealityPairingHelper.exe
+  4199940       0       0       5636  ?              0   Sep 10 C:\Windows\System32\RuntimeBroker.exe
+  4197552       0       0       3248  ?              0 14:56:25 C:\Users\crutkasLocal\AppData\Local\github-copilot-sdk\cli\1.0.83\copilot.exe
+  4201020       0       0       6716  ?              0 14:56:25 C:\Windows\System32\conhost.exe
+  4215344       0       0      21040  ?              0 19:09:29 C:\Users\crutkasLocal\AppData\Local\github-copilot-sdk\cli\1.0.83\copilot.exe
+  4212148       0       0      17844  ?              0 19:09:29 C:\Windows\System32\conhost.exe
+  4210612       0       0      16308  ?              0 20:13:45 C:\Users\crutkasLocal\AppData\Local\github-copilot-sdk\cli\1.0.83\copilot.exe
+  4210060       0       0      15756  ?              0 20:13:46 C:\Windows\System32\conhost.exe
+  4215708       0       0      21404  ?              0 20:14:19 C:\Users\crutkasLocal\AppData\Local\github-copilot-sdk\cli\1.0.83\copilot.exe
+  4207172       0       0      12868  ?              0 20:14:19 C:\Windows\System32\conhost.exe
+  4222100       0       0      27796  ?              0 20:17:44 C:\Users\crutkasLocal\AppData\Local\github-copilot-sdk\cli\1.0.83\copilot.exe
+  4219304       0       0      25000  ?              0 20:17:44 C:\Windows\System32\conhost.exe
+  4210520       0       0      16216  ?              0 22:38:59 C:\Windows\System32\PickerHost.exe
+  4200344       0       0       6040  ?              0 23:36:41 C:\Users\crutkasLocal\AppData\Local\github-copilot-sdk\cli\1.0.83\copilot.exe
+  4202828       0       0       8524  ?              0 23:36:41 C:\Windows\System32\conhost.exe
+  4220224       0       0      25920  ?              0 23:39:36 C:\Users\crutkasLocal\AppData\Local\github-copilot-sdk\cli\1.0.83\copilot.exe
+  4212132       0       0      17828  ?              0 23:39:36 C:\Windows\System32\conhost.exe
+  4197572       0       0       3268  ?              0 23:53:14 C:\Users\crutkasLocal\AppData\Local\github-copilot-git-2.53.0-4\clangarm64\bin\git.exe
+  4212928       0       0      18624  ?              0 23:56:34 C:\Users\crutkasLocal\AppData\Local\github-copilot-sdk\cli\1.0.83\copilot.exe
+  4210188       0       0      15884  ?              0 23:56:34 C:\Windows\System32\conhost.exe
+  4212760       0       0      18456  ?              0 23:57:04 C:\Users\crutkasLocal\AppData\Local\github-copilot-sdk\cli\1.0.83\copilot.exe
+  4210476       0       0      16172  ?              0 23:57:04 C:\Windows\System32\conhost.exe
+  4199372       0       0       5068  ?              0 00:00:23 C:\Windows\System32\PickerHost.exe
+  4214524       0       0      20220  ?              0 02:43:40 C:\Windows\System32\PickerHost.exe
+  4220832       0       0      26528  ?              0 03:54:09 C:\Users\crutkasLocal\AppData\Local\github-copilot-git-2.53.0-4\clangarm64\bin\git.exe
+  4202584       0       0       8280  ?              0 03:54:18 C:\Users\crutkasLocal\AppData\Local\github-copilot-git-2.53.0-4\clangarm64\bin\git.exe
+  4203004       0       0       8700  ?              0 04:30:04 C:\Windows\UUS\arm64\MoNotificationUx.exe
+  4207468       0       0      13164  ?              0 05:31:08 C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe
+  4223944       0       0      29640  ?              0 05:31:08 C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe
+  4210480       0       0      16176  ?              0 05:31:09 C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe
+  4210116       0       0      15812  ?              0 05:31:09 C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe
+  4209368       0       0      15064  ?              0 05:31:09 C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe
+  4210468       0       0      16164  ?              0 05:31:50 C:\Users\crutkasLocal\AppData\Local\github-copilot-sdk\cli\1.0.83\copilot.exe
+  4218600       0       0      24296  ?              0 05:31:50 C:\Windows\System32\conhost.exe
+  4211172       0       0      16868  ?              0 06:42:51 C:\Users\crutkasLocal\AppData\Local\github-copilot-sdk\cli\1.0.83\copilot.exe
+  4207444       0       0      13140  ?              0 06:42:51 C:\Users\crutkasLocal\AppData\Local\github-copilot-sdk\cli\1.0.83\copilot.exe
+  4208492       0       0      14188  ?              0 06:42:51 C:\Windows\System32\conhost.exe
+  4213204       0       0      18900  ?              0 06:42:51 C:\Windows\System32\conhost.exe
+  4218288       0       0      23984  ?              0 06:44:44 C:\Users\crutkasLocal\AppData\Local\github-copilot-sdk\cli\1.0.83\copilot.exe
+  4203940       0       0       9636  ?              0 06:44:44 C:\Users\crutkasLocal\AppData\Local\github-copilot-sdk\cli\1.0.83\copilot.exe
+  4220816       0       0      26512  ?              0 06:44:44 C:\Windows\System32\conhost.exe
+  4222316       0       0      28012  ?              0 06:44:44 C:\Windows\System32\conhost.exe
+  4205836       0       0      11532  ?              0 06:46:50 C:\Users\crutkasLocal\AppData\Local\github-copilot-sdk\cli\1.0.83\copilot.exe
+  4205116       0       0      10812  ?              0 06:46:50 C:\Windows\System32\conhost.exe
+  4195044       0       0        740  ?              0 06:55:55 C:\Windows\System32\conhost.exe
+  4216376       0       0      22072  ?              0 06:55:56 C:\ap10-ca5f\git-full-01\bootstrap\usr\bin\gpg-agent.exe
+  4217708       0       0      23404  ?              0 06:56:16 C:\Windows\System32\conhost.exe
+  4200304       0       0       6000  ?              0 06:56:20 C:\ap10-ca5f\git-full-01\bootstrap\usr\bin\gpg-agent.exe
+  4215000       0       0      20696  ?              0 07:10:05 C:\Program Files\WindowsApps\Microsoft.PowerShell_7.6.6.0_arm64__8wekyb3d8bbwe\pwsh.exe
+  4223588       0       0      29284  ?              0 07:10:05 C:\Windows\System32\conhost.exe
+  4203116       0       0       8812  ?              0 07:10:50 C:\ap12-ca5f\git-python-readback-01\usr\bin\bash.exe
+  4203256       0       0       8952  ?              0 07:10:51 C:\ap12-ca5f\git-python-readback-01\usr\bin\sh.exe
+  4206984       0       0      12680  ?              0   Sep  4 C:\Windows\System32\svchost.exe
+  4199772       0       0       5468  ?              0   Sep  4 C:\Windows\System32\wbem\WmiPrvSE.exe
+  4203496       0       0       9192  ?              0 07:21:05 C:\Program Files\WindowsApps\Microsoft.PowerShell_7.6.6.0_arm64__8wekyb3d8bbwe\pwsh.exe
+  4209360       0       0      15056  ?              0 07:21:05 C:\Windows\System32\conhost.exe
+  4213908       0       0      19604  ?              0 07:21:06 C:\Program Files\Python314-arm64\python.exe
+  4211840       0       0      17536  ?              0 07:21:09 C:\ap10-ca5f\git-full-01\bootstrap\usr\bin\gpg-agent.exe
+  4217940       0       0      23636  ?              0 07:21:19 C:\ap10-ca5f\git-full-01\bootstrap\usr\bin\bash.exe
+  4205244       0       0      10940  ?              0 07:21:19 C:\ap10-ca5f\git-full-01\bootstrap\usr\bin\make.exe
+  4204384       0       0      10080  ?              0 07:30:12 C:\Users\crutkasLocal\AppData\Local\github-copilot-sdk\cli\1.0.83\copilot.exe
+  4222928       0       0      28624  ?              0 07:30:12 C:\Windows\System32\conhost.exe
+  4207104       0       0      12800  ?              0 07:37:13 C:\ap10-ca5f\git-full-01\bootstrap\usr\bin\sh.exe
+  4215436       0       0      21132  ?              0 07:37:33 C:\ap12-ca5f\git-python-readback-01\usr\bin\sh.exe
+  4219592       0       0      25288  ?              0   Sep  4 C:\Windows\System32\vmwp.exe
+  4205040       0       0      10736  ?              0   Sep  4 vmmemWSL
+  4202100       0       0       7796  ?              0 07:39:02 C:\Windows\System32\dllhost.exe
+  4199856       0       0       5552  ?              0   Sep  4 C:\Windows\System32\wbem\WmiPrvSE.exe
+  4222932       0       0      28628  ?              0 07:39:03 C:\Windows\System32\dllhost.exe
+  4205032       0       0      10728  ?              0 07:39:03 C:\Program Files\WSL\wslrelay.exe
+  4216172       0       0      21868  ?              0 07:39:49 C:\Program Files\WindowsApps\Microsoft.PowerShell_7.6.6.0_arm64__8wekyb3d8bbwe\pwsh.exe
+  4220612       0       0      26308  ?              0 07:39:50 C:\Windows\System32\conhost.exe
+  4202016       0       0       7712  ?              0 07:40:13 C:\ap12-ca5f\git-python-readback-01\usr\bin\sh.exe
+  4212544       0       0      18240  ?              0 07:40:13 C:\ap12-ca5f\git-python-readback-01\usr\bin\sh.exe
+  4215464       0       0      21160  ?              0 07:40:14 C:\ap12-ca5f\git-python-readback-01\mingwarm64\bin\gcc.exe
+  4201904       0       0       7600  ?              0 07:40:14 C:\ap10-ca5f\git-full-01\bootstrap\usr\bin\sh.exe
+     1563       1    1563      12908  ?         197609 07:40:13 /usr/bin/ps
+  4218964       0       0      24660  ?              0 07:40:14 C:\ap12-ca5f\git-python-readback-01\mingwarm64\libexec\gcc\aarch64-w64-mingw32\15.0.1\cc1.exe
+  4203144       0       0       8840  ?              0 07:40:14 C:\ap10-ca5f\git-full-01\bootstrap\usr\bin\cp.exe
+

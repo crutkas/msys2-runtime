@@ -1,0 +1,14 @@
+{
+  "cygwin_pid": 1103,
+  "windows_pid": 28976,
+  "actual_process": {
+    "ProcessId": 28976,
+    "ParentProcessId": 17392,
+    "Name": "cat.exe",
+    "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\native-arm64-utils-shipping-03\\fixture\\usr\\bin\\cat.exe",
+    "CreationDate": "2026-09-11T07:40:11.316473-07:00",
+    "CommandLine": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\native-arm64-utils-shipping-03\\fixture\\usr\\bin\\cat.exe"
+  },
+  "default_line": "     1103       1    1103      28976  ?         197609 07:40:11 /usr/bin/cat",
+  "perl_regex_matched": true
+}

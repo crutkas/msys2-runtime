@@ -1,0 +1,132 @@
+[
+  {
+    "name": "cygpath.exe",
+    "path": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\native-arm64-utils-shipping-03\\fixture\\usr\\bin\\cygpath.exe",
+    "sha256": "8d77f36b9657c44b5055079b8e2592e27b1849f910a3088e4a6f8cff11563e6e"
+  },
+  {
+    "name": "ntdll.dll",
+    "path": "C:\\Windows\\SYSTEM32\\ntdll.dll",
+    "sha256": "81f9d523d199ba1a8bb5fb6081b39e62cdb3289aa2346880c4db43edc6922f9b"
+  },
+  {
+    "name": "KERNEL32.DLL",
+    "path": "C:\\Windows\\System32\\KERNEL32.DLL",
+    "sha256": "98f44d4a53a503ae1e94bb128675491bd05143177809626dea3e5caebdb7f2d3"
+  },
+  {
+    "name": "KERNELBASE.dll",
+    "path": "C:\\Windows\\System32\\KERNELBASE.dll",
+    "sha256": "4666d0eb010a0023a37b2e1318ba284a92171b37d2abc09828b4fa6d3dc43011"
+  },
+  {
+    "name": "SHELL32.dll",
+    "path": "C:\\Windows\\System32\\SHELL32.dll",
+    "sha256": "fcc6ab729463ba2123cb35a8bc3c31e9ed545bb517432c654a8b0f5b1ee0e7eb"
+  },
+  {
+    "name": "msvcp_win.dll",
+    "path": "C:\\Windows\\System32\\msvcp_win.dll",
+    "sha256": "f2f24f92ef7ee83aae1eb3878b6436032942a7f25af836e965f5ebd79bbc8db4"
+  },
+  {
+    "name": "ucrtbase.dll",
+    "path": "C:\\Windows\\System32\\ucrtbase.dll",
+    "sha256": "b08033104b472c51ea026446a5ec6417b02c935d4c31907b34b1e79e9e2f904f"
+  },
+  {
+    "name": "msys-2.0.dll",
+    "path": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\native-arm64-utils-shipping-03\\fixture\\usr\\bin\\msys-2.0.dll",
+    "sha256": "907afa099a69aa3c13d4e3b30eeba18c4a6b1766d5fa39b4746fae23c3f9e76c"
+  },
+  {
+    "name": "USER32.dll",
+    "path": "C:\\Windows\\System32\\USER32.dll",
+    "sha256": "e51ed41287efd6b7cdfd8d51b82ecd5d21fffcfd0233da25074db8944c121383"
+  },
+  {
+    "name": "win32u.dll",
+    "path": "C:\\Windows\\System32\\win32u.dll",
+    "sha256": "d4907bc4c7795182437530d57d77c075e8ad670aa4f8732c62e9b1eb803ab335"
+  },
+  {
+    "name": "GDI32.dll",
+    "path": "C:\\Windows\\System32\\GDI32.dll",
+    "sha256": "8a3424917908807a6c2b841997fd224ca02ad02d943d7ee7e977ef788dde64fc"
+  },
+  {
+    "name": "gdi32full.dll",
+    "path": "C:\\Windows\\System32\\gdi32full.dll",
+    "sha256": "17144441bd0bb04dd471f7c6c62d5869f31e04d2069cfcf35f04cb9f8dccf2fb"
+  },
+  {
+    "name": "sechost.dll",
+    "path": "C:\\Windows\\System32\\sechost.dll",
+    "sha256": "8a3a3003bfec3484e7dccdc5803228e1f9b50b5fa2987cba6849d97cc59d89ad"
+  },
+  {
+    "name": "USERENV.dll",
+    "path": "C:\\Windows\\SYSTEM32\\USERENV.dll",
+    "sha256": "9e9033c72cc63e0597c83d876fb65c408f35b0fb60b4100c237a203c373e3b24"
+  },
+  {
+    "name": "RPCRT4.dll",
+    "path": "C:\\Windows\\System32\\RPCRT4.dll",
+    "sha256": "e45e2e423b4d06c6a33d84cbcfe8fbc55b5c1fa7f259ff30ce7a1170163794ff"
+  },
+  {
+    "name": "advapi32.dll",
+    "path": "C:\\Windows\\System32\\advapi32.dll",
+    "sha256": "cadebff57e2f902855e521cdfbfdf6fbde908ce3d7e6f9edb8457d7aa15eed7d"
+  },
+  {
+    "name": "msvcrt.dll",
+    "path": "C:\\Windows\\System32\\msvcrt.dll",
+    "sha256": "ccece3c2c0ab2118e84ac75b5ab0cdcd377ef273318352fd8d684e20d9c5c4a6"
+  },
+  {
+    "name": "CRYPTBASE.DLL",
+    "path": "C:\\Windows\\SYSTEM32\\CRYPTBASE.DLL",
+    "sha256": "34c1b99c81db881341b91977d66d84893cc791f0588932e6242f6f6cb30e3785"
+  },
+  {
+    "name": "bcryptPrimitives.dll",
+    "path": "C:\\Windows\\System32\\bcryptPrimitives.dll",
+    "sha256": "aff5685748adb1537a243098f7ddc693b9cfd8e197ce4e62fb83c79b794e5dfd"
+  },
+  {
+    "name": "IMM32.DLL",
+    "path": "C:\\Windows\\System32\\IMM32.DLL",
+    "sha256": "0e927257bb424175f86ace1cb7724f6a0cfaaa94668b333e5828e6cccb9cba33"
+  },
+  {
+    "name": "netapi32.dll",
+    "path": "C:\\Windows\\system32\\netapi32.dll",
+    "sha256": "db3d52664ff28ce89a5da8cc739770a669222b16607c21485d9072163b42b90f"
+  },
+  {
+    "name": "SAMCLI.DLL",
+    "path": "C:\\Windows\\SYSTEM32\\SAMCLI.DLL",
+    "sha256": "88a941dce29466d50fc8c0a9920d46a8ca0f240cdb5eff1532dcb623ef99d59c"
+  },
+  {
+    "name": "SAMLIB.dll",
+    "path": "C:\\Windows\\SYSTEM32\\SAMLIB.dll",
+    "sha256": "2c346953cfb0e9b2a20c04fef6f6414ac677a5ca87982f75878aef4a222e9535"
+  },
+  {
+    "name": "NETUTILS.DLL",
+    "path": "C:\\Windows\\SYSTEM32\\NETUTILS.DLL",
+    "sha256": "4451d3ec6a9a4426fe430dd68bfacdce5e71a22c431f7f3ecae98850865eb5d6"
+  },
+  {
+    "name": "ws2_32.dll",
+    "path": "C:\\Windows\\System32\\ws2_32.dll",
+    "sha256": "67ebbfc3a456a5623e649e1dcb26deba2b58fa0e5e8cb09aa1e03ab7355a7a49"
+  },
+  {
+    "name": "mswsock.dll",
+    "path": "C:\\Windows\\System32\\mswsock.dll",
+    "sha256": "42b2c477d50c07a8c6aed14bcbbbda18720f141507e550da433a83e2d4a2c30e"
+  }
+]

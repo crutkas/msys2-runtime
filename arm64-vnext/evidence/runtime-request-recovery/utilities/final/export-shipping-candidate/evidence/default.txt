@@ -1,0 +1,4 @@
+      PID    PPID    PGID     WINPID   TTY         UID    STIME COMMAND
+     1066    1063    1063      22476  ?         197609 07:39:51 /usr/bin/ps
+     1063       1    1063      15572  ?         197609 07:39:50 /usr/bin/bash
+     1065    1063    1063      12468  ?         197609 07:39:51 /usr/bin/sleep

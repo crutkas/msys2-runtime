@@ -1,0 +1,229 @@
+{
+  "package_owner": "msys2-runtime utilities",
+  "scope": "source-utilities shipping candidate pending independent provider intake; not a complete runtime package",
+  "source_commit": "563662010c2f2072ad90f28713611caabdf70dbb",
+  "source_tree_manifest_sha256": "2180cb8b66ae8cf7a6c121b856dd1d4a1a7dccea927a672c4e0cbaa385adce59",
+  "producer_receipts": {
+    "runtime_dll_sha256": "907afa099a69aa3c13d4e3b30eeba18c4a6b1766d5fa39b4746fae23c3f9e76c",
+    "sdk_inputs_sha256": "69bde4474dc5c93660a598fac1ca8d3f97907cdabdbd4a454f51adeace711d34",
+    "compiler_sha256": "fff0fa4da353da74bbfd7e1f3424103e32fd73ab47878c9447cf5c67b43b2c38",
+    "runtime_import_sha256": "6f19eb725d275d6e9f3564783cf5a18c9f13849b6c8033ca92291ecd3f5a735c",
+    "crt_sha256": "29b356f7105386a37bc8b16169e8beac1b0cbc2c1640946df02f85bbae5d3737"
+  },
+  "actual_inputs": {
+    "gxx": {
+      "path": "C:\\ag-readline-e138-01\\combined-20260911-01\\compiler\\bin\\g++.exe",
+      "sha256": "e59c3c80c9232b1bb26bfd3f8a87c40a68790354df010bc97e4155077ce2e13b"
+    },
+    "cc1plus": {
+      "path": "C:\\ag-readline-e138-01\\combined-20260911-01\\compiler\\libexec\\gcc\\aarch64-pc-cygwin\\15.0.1\\cc1plus.exe",
+      "sha256": "f003aec1b083e8d54ab93b6d1d0d901cd659708f5fc95279dad4f0f24feb3c6c"
+    },
+    "specs": {
+      "path": "C:\\ag-readline-e138-01\\combined-20260911-01\\compiler\\lib\\gcc\\aarch64-pc-cygwin\\15.0.1\\specs",
+      "sha256": "f4938ea02592f1abd99d6febff97629442ed47156be7efdec65959c3536c0070"
+    },
+    "runtime_import": {
+      "path": "C:\\ag-readline-e138-01\\combined-20260911-01\\compiler\\aarch64-pc-cygwin\\lib\\libmsys-2.0.a",
+      "sha256": "6f19eb725d275d6e9f3564783cf5a18c9f13849b6c8033ca92291ecd3f5a735c"
+    },
+    "crt": {
+      "path": "C:\\ag-readline-e138-01\\combined-20260911-01\\compiler\\aarch64-pc-cygwin\\lib\\crt0.o",
+      "sha256": "29b356f7105386a37bc8b16169e8beac1b0cbc2c1640946df02f85bbae5d3737"
+    },
+    "psapi_import": {
+      "path": "C:\\ap06-78\\tcl-main-05\\tc\\aarch64-w64-mingw32\\lib\\libpsapi.a",
+      "sha256": "d9d8d8127942e8d2f1fece44359df2235b2cdec88cb0fb7e663897ab23793677"
+    },
+    "userenv_import": {
+      "path": "C:\\ap06-78\\tcl-main-05\\tc\\aarch64-w64-mingw32\\lib\\libuserenv.a",
+      "sha256": "a22750ffb8a9fe9a3d71eb18bb9fc27b6fd2cd7456de2e557cc9dfc0bcc5fdce"
+    }
+  },
+  "binaries": [
+    {
+      "file": "usr/bin/ps.exe",
+      "sha256": "c3deba68c4dbb984c4f7154fed817aa6fe147f9fc0b654ce716f7a61fb56a2b0",
+      "pe_machine": "0xaa64",
+      "imports": [
+        "ADVAPI32.dll",
+        "KERNEL32.dll",
+        "msys-2.0.dll",
+        "ntdll.dll"
+      ],
+      "link_map": "evidence/ps.map",
+      "normal_msys_import": true,
+      "libcygwin_alias_absent": true,
+      "path_hygiene": {
+        "forbidden_hits": [],
+        "noncanonical_paths": [],
+        "canonical_paths": [
+          "/opt/arm64-msys2-toolchain/aarch64-pc-cygwin/include/c++/15.0.1",
+          "/opt/arm64-msys2-toolchain/aarch64-pc-cygwin/include/c++/15.0.1/aarch64-pc-cygwin/bits",
+          "/opt/arm64-msys2-toolchain/aarch64-pc-cygwin/include/w32api",
+          "/opt/arm64-msys2-toolchain/lib/gcc/aarch64-pc-cygwin/15.0.1/include",
+          "/usr/src/msys2-build",
+          "/usr/src/msys2-build/winsup/cygwin",
+          "/usr/src/msys2-runtime/newlib/libc/include",
+          "/usr/src/msys2-runtime/newlib/libc/include/machine",
+          "/usr/src/msys2-runtime/newlib/libc/include/sys",
+          "/usr/src/msys2-runtime/newlib/libc/locale",
+          "/usr/src/msys2-runtime/winsup/cygwin",
+          "/usr/src/msys2-runtime/winsup/cygwin/crt0.c",
+          "/usr/src/msys2-runtime/winsup/cygwin/include",
+          "/usr/src/msys2-runtime/winsup/cygwin/include/machine",
+          "/usr/src/msys2-runtime/winsup/cygwin/include/sys",
+          "/usr/src/msys2-runtime/winsup/cygwin/lib",
+          "/usr/src/msys2-runtime/winsup/cygwin/lib/_cygwin_crt0_common.cc",
+          "/usr/src/msys2-runtime/winsup/cygwin/lib/cygwin_attach_dll.c",
+          "/usr/src/msys2-runtime/winsup/cygwin/lib/cygwin_crt0.c",
+          "/usr/src/msys2-runtime/winsup/cygwin/lib/dll_entry.c",
+          "/usr/src/msys2-runtime/winsup/cygwin/lib/dll_main.cc",
+          "/usr/src/msys2-runtime/winsup/cygwin/lib/premain0.c",
+          "/usr/src/msys2-runtime/winsup/cygwin/lib/premain1.c",
+          "/usr/src/msys2-runtime/winsup/cygwin/lib/premain2.c",
+          "/usr/src/msys2-runtime/winsup/cygwin/lib/premain3.c",
+          "/usr/src/msys2-runtime/winsup/cygwin/lib/pseudo-reloc-dummy.c",
+          "/usr/src/msys2-runtime/winsup/cygwin/local_includes",
+          "/usr/src/msys2-runtime/winsup/utils",
+          "/usr/src/msys2-runtime/winsup/utils/ps.cc"
+        ]
+      }
+    },
+    {
+      "file": "usr/bin/mount.exe",
+      "sha256": "4bd418ec00f6db840897f86fbf79dcbbcb6044774a3abf7dfde9d9178b2d2c6d",
+      "pe_machine": "0xaa64",
+      "imports": [
+        "KERNEL32.dll",
+        "msys-2.0.dll"
+      ],
+      "link_map": "evidence/mount.map",
+      "normal_msys_import": true,
+      "libcygwin_alias_absent": true,
+      "path_hygiene": {
+        "forbidden_hits": [],
+        "noncanonical_paths": [],
+        "canonical_paths": [
+          "/opt/arm64-msys2-toolchain/aarch64-pc-cygwin/include/c++/15.0.1",
+          "/opt/arm64-msys2-toolchain/aarch64-pc-cygwin/include/c++/15.0.1/aarch64-pc-cygwin/bits",
+          "/opt/arm64-msys2-toolchain/aarch64-pc-cygwin/include/w32api",
+          "/opt/arm64-msys2-toolchain/lib/gcc/aarch64-pc-cygwin/15.0.1/include",
+          "/usr/src/msys2-build",
+          "/usr/src/msys2-build/winsup/cygwin",
+          "/usr/src/msys2-runtime/newlib/libc/include",
+          "/usr/src/msys2-runtime/newlib/libc/include/machine",
+          "/usr/src/msys2-runtime/newlib/libc/include/sys",
+          "/usr/src/msys2-runtime/newlib/libc/locale",
+          "/usr/src/msys2-runtime/winsup/cygwin",
+          "/usr/src/msys2-runtime/winsup/cygwin/crt0.c",
+          "/usr/src/msys2-runtime/winsup/cygwin/include",
+          "/usr/src/msys2-runtime/winsup/cygwin/include/cygwin",
+          "/usr/src/msys2-runtime/winsup/cygwin/include/machine",
+          "/usr/src/msys2-runtime/winsup/cygwin/include/sys",
+          "/usr/src/msys2-runtime/winsup/cygwin/lib",
+          "/usr/src/msys2-runtime/winsup/cygwin/lib/_cygwin_crt0_common.cc",
+          "/usr/src/msys2-runtime/winsup/cygwin/lib/cygwin_attach_dll.c",
+          "/usr/src/msys2-runtime/winsup/cygwin/lib/cygwin_crt0.c",
+          "/usr/src/msys2-runtime/winsup/cygwin/lib/dll_entry.c",
+          "/usr/src/msys2-runtime/winsup/cygwin/lib/dll_main.cc",
+          "/usr/src/msys2-runtime/winsup/cygwin/lib/premain0.c",
+          "/usr/src/msys2-runtime/winsup/cygwin/lib/premain1.c",
+          "/usr/src/msys2-runtime/winsup/cygwin/lib/premain2.c",
+          "/usr/src/msys2-runtime/winsup/cygwin/lib/premain3.c",
+          "/usr/src/msys2-runtime/winsup/cygwin/lib/pseudo-reloc-dummy.c",
+          "/usr/src/msys2-runtime/winsup/cygwin/local_includes",
+          "/usr/src/msys2-runtime/winsup/utils",
+          "/usr/src/msys2-runtime/winsup/utils/mount.cc",
+          "/usr/src/msys2-runtime/winsup/utils/path.cc"
+        ]
+      }
+    },
+    {
+      "file": "usr/bin/cygpath.exe",
+      "sha256": "8d77f36b9657c44b5055079b8e2592e27b1849f910a3088e4a6f8cff11563e6e",
+      "pe_machine": "0xaa64",
+      "imports": [
+        "KERNEL32.dll",
+        "msys-2.0.dll",
+        "ntdll.dll",
+        "SHELL32.dll",
+        "USERENV.dll"
+      ],
+      "link_map": "evidence/cygpath.map",
+      "normal_msys_import": true,
+      "libcygwin_alias_absent": true,
+      "path_hygiene": {
+        "forbidden_hits": [],
+        "noncanonical_paths": [],
+        "canonical_paths": [
+          "/opt/arm64-msys2-toolchain/aarch64-pc-cygwin/include/c++/15.0.1",
+          "/opt/arm64-msys2-toolchain/aarch64-pc-cygwin/include/c++/15.0.1/aarch64-pc-cygwin/bits",
+          "/opt/arm64-msys2-toolchain/aarch64-pc-cygwin/include/w32api",
+          "/opt/arm64-msys2-toolchain/lib/gcc/aarch64-pc-cygwin/15.0.1/include",
+          "/usr/src/msys2-build",
+          "/usr/src/msys2-build/winsup/cygwin",
+          "/usr/src/msys2-runtime/newlib/libc/include",
+          "/usr/src/msys2-runtime/newlib/libc/include/machine",
+          "/usr/src/msys2-runtime/newlib/libc/include/sys",
+          "/usr/src/msys2-runtime/newlib/libc/locale",
+          "/usr/src/msys2-runtime/winsup/cygwin",
+          "/usr/src/msys2-runtime/winsup/cygwin/crt0.c",
+          "/usr/src/msys2-runtime/winsup/cygwin/include",
+          "/usr/src/msys2-runtime/winsup/cygwin/include/sys",
+          "/usr/src/msys2-runtime/winsup/cygwin/lib",
+          "/usr/src/msys2-runtime/winsup/cygwin/lib/_cygwin_crt0_common.cc",
+          "/usr/src/msys2-runtime/winsup/cygwin/lib/cygwin_attach_dll.c",
+          "/usr/src/msys2-runtime/winsup/cygwin/lib/cygwin_crt0.c",
+          "/usr/src/msys2-runtime/winsup/cygwin/lib/dll_entry.c",
+          "/usr/src/msys2-runtime/winsup/cygwin/lib/dll_main.cc",
+          "/usr/src/msys2-runtime/winsup/cygwin/lib/premain0.c",
+          "/usr/src/msys2-runtime/winsup/cygwin/lib/premain1.c",
+          "/usr/src/msys2-runtime/winsup/cygwin/lib/premain2.c",
+          "/usr/src/msys2-runtime/winsup/cygwin/lib/premain3.c",
+          "/usr/src/msys2-runtime/winsup/cygwin/lib/pseudo-reloc-dummy.c",
+          "/usr/src/msys2-runtime/winsup/cygwin/local_includes",
+          "/usr/src/msys2-runtime/winsup/utils",
+          "/usr/src/msys2-runtime/winsup/utils/cygpath.cc"
+        ]
+      }
+    }
+  ],
+  "runtime_load_proofs": {
+    "ps": {
+      "path": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\native-arm64-utils-shipping-03\\fixture\\usr\\bin\\msys-2.0.dll",
+      "sha256": "907afa099a69aa3c13d4e3b30eeba18c4a6b1766d5fa39b4746fae23c3f9e76c"
+    },
+    "mount": {
+      "path": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\native-arm64-utils-shipping-03\\fixture\\usr\\bin\\msys-2.0.dll",
+      "sha256": "907afa099a69aa3c13d4e3b30eeba18c4a6b1766d5fa39b4746fae23c3f9e76c"
+    },
+    "cygpath": {
+      "path": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\native-arm64-utils-shipping-03\\fixture\\usr\\bin\\msys-2.0.dll",
+      "sha256": "907afa099a69aa3c13d4e3b30eeba18c4a6b1766d5fa39b4746fae23c3f9e76c"
+    }
+  },
+  "behavior_proofs": {
+    "ps": [
+      "help.txt",
+      "version.txt",
+      "pid-proof.json",
+      "perl-cat-proof.json",
+      "parent.txt",
+      "child.txt",
+      "session.txt",
+      "windows.txt"
+    ],
+    "mount": [
+      "mount-help.txt",
+      "mount-version.txt",
+      "mount-output.txt",
+      "mount-proof.json"
+    ],
+    "cygpath": [
+      "cygpath-help.txt",
+      "cygpath-version.txt",
+      "cygpath-proof.json"
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "timestamp_utc": "2026-09-11T15:57:55.1765183Z",
+  "exit_code": 0,
+  "output": [
+    "      PID    PPID    PGID     WINPID   TTY         UID    STIME COMMAND",
+    "     1729       1    1729      22476  ?         197609 08:57:51 /usr/bin/bash907-pty",
+    "     1743       1    1743      15024  ?         197609 08:57:55 /usr/bin/ps-probe",
+    "     1742    1730    1741      27680  pty0      197609 08:57:54 /usr/bin/cat",
+    "     1730    1729    1730      22156  pty0      197609 08:57:51 /usr/bin/bash",
+    "     1741    1730    1741       3012  pty0      197609 08:57:54 /usr/bin/sleep"
+  ]
+}

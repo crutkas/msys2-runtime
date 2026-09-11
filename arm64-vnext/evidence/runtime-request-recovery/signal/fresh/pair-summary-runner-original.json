@@ -1,0 +1,136 @@
+{
+  "schema": 1,
+  "generated_utc": "2026-09-11T15:58:09.4700471Z",
+  "repetitions": 3,
+  "probe_runs": true,
+  "results": [
+    {
+      "mode": "907",
+      "iteration": 1,
+      "probed": false,
+      "controller_exit_dword": 0,
+      "foreground_case_seen": true,
+      "foreground_assertion_status": 0,
+      "foreground_shell_status": 130,
+      "sleep_exits": [],
+      "cat_exits": [],
+      "remaining_count": 0,
+      "root": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-unprobed-01"
+    },
+    {
+      "mode": "d70",
+      "iteration": 1,
+      "probed": false,
+      "controller_exit_dword": 0,
+      "foreground_case_seen": true,
+      "foreground_assertion_status": 0,
+      "foreground_shell_status": 130,
+      "sleep_exits": [],
+      "cat_exits": [],
+      "remaining_count": 0,
+      "root": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\d70-unprobed-01"
+    },
+    {
+      "mode": "907",
+      "iteration": 2,
+      "probed": false,
+      "controller_exit_dword": 0,
+      "foreground_case_seen": true,
+      "foreground_assertion_status": 0,
+      "foreground_shell_status": 130,
+      "sleep_exits": [],
+      "cat_exits": [],
+      "remaining_count": 0,
+      "root": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-unprobed-02"
+    },
+    {
+      "mode": "d70",
+      "iteration": 2,
+      "probed": false,
+      "controller_exit_dword": 0,
+      "foreground_case_seen": true,
+      "foreground_assertion_status": 0,
+      "foreground_shell_status": 130,
+      "sleep_exits": [],
+      "cat_exits": [],
+      "remaining_count": 0,
+      "root": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\d70-unprobed-02"
+    },
+    {
+      "mode": "907",
+      "iteration": 3,
+      "probed": false,
+      "controller_exit_dword": 0,
+      "foreground_case_seen": true,
+      "foreground_assertion_status": 0,
+      "foreground_shell_status": 130,
+      "sleep_exits": [],
+      "cat_exits": [],
+      "remaining_count": 0,
+      "root": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-unprobed-03"
+    },
+    {
+      "mode": "d70",
+      "iteration": 3,
+      "probed": false,
+      "controller_exit_dword": 0,
+      "foreground_case_seen": true,
+      "foreground_assertion_status": 0,
+      "foreground_shell_status": 130,
+      "sleep_exits": [],
+      "cat_exits": [],
+      "remaining_count": 0,
+      "root": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\d70-unprobed-03"
+    },
+    {
+      "mode": "907",
+      "iteration": 1,
+      "probed": true,
+      "controller_exit_dword": 0,
+      "foreground_case_seen": true,
+      "foreground_assertion_status": 0,
+      "foreground_shell_status": 130,
+      "sleep_exits": [
+        {
+          "process_id": null,
+          "creation_date": null,
+          "windows_exit_dword": null
+        }
+      ],
+      "cat_exits": [
+        {
+          "process_id": null,
+          "creation_date": null,
+          "windows_exit_dword": null
+        }
+      ],
+      "remaining_count": 0,
+      "root": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-probed-01"
+    },
+    {
+      "mode": "d70",
+      "iteration": 1,
+      "probed": true,
+      "controller_exit_dword": 0,
+      "foreground_case_seen": true,
+      "foreground_assertion_status": 0,
+      "foreground_shell_status": 130,
+      "sleep_exits": [
+        {
+          "process_id": null,
+          "creation_date": null,
+          "windows_exit_dword": null
+        }
+      ],
+      "cat_exits": [
+        {
+          "process_id": null,
+          "creation_date": null,
+          "windows_exit_dword": null
+        }
+      ],
+      "remaining_count": 0,
+      "root": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\d70-probed-01"
+    }
+  ]
+}

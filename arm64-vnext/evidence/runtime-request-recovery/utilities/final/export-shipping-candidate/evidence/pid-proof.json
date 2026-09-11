@@ -1,0 +1,26 @@
+{
+  "parent_windows_pid": 15572,
+  "parent_cygwin_pid": 1063,
+  "child_windows_pid": 12468,
+  "child_cygwin_pid": 1065,
+  "parent_line": "     1063       1    1063      15572  ?         197609 07:39:50 /usr/bin/bash",
+  "child_line": "     1065    1063    1063      12468  ?         197609 07:39:51 /usr/bin/sleep",
+  "perl_regex_matched": true,
+  "parent_process": {
+    "ProcessId": 15572,
+    "ParentProcessId": 21868,
+    "Name": "bash.exe",
+    "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\native-arm64-utils-shipping-03\\fixture\\usr\\bin\\bash.exe",
+    "CreationDate": "2026-09-11T07:39:50.904952-07:00",
+    "CommandLine": "\"C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\native-arm64-utils-shipping-03\\fixture\\usr\\bin\\bash.exe\" /usr/bin/qualify-ps.sh"
+  },
+  "child_process": {
+    "ProcessId": 12468,
+    "ParentProcessId": 5744,
+    "Name": "sleep.exe",
+    "ExecutablePath": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\native-arm64-utils-shipping-03\\fixture\\usr\\bin\\sleep.exe",
+    "CreationDate": "2026-09-11T07:39:51.099144-07:00",
+    "CommandLine": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\native-arm64-utils-shipping-03\\fixture\\usr\\bin\\sleep.exe 20"
+  },
+  "exit_code": 0
+}

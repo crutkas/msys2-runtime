@@ -1,0 +1,101 @@
+{
+  "schema": 1,
+  "mode": "907",
+  "iteration": 1,
+  "probed": false,
+  "root": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\runtime-signal-recovery-03\\907-unprobed-01",
+  "controller_sha256": "e4bf9ab340f57dcb1c6456c2e8d0454cb31fac0762fdc0447d75759447aa493a",
+  "bash_sha256": "39ef42f62906be249b650dd9e0760109161c40c5b4e047093ef7e16b138c5d6a",
+  "runtime_sha256": "907afa099a69aa3c13d4e3b30eeba18c4a6b1766d5fa39b4746fae23c3f9e76c",
+  "iconv_sha256": "86aa5600dd67dc8985ed4f218420549ed46539ae739dbbeaf11f68d0c1db4215",
+  "intl_sha256": "44c50b20168751f4b5a0107a7b85c7e9ff9565062b1be2b86c65eb5beeaa339c",
+  "controller_pid": 544,
+  "controller_exit_dword": 0,
+  "controller_stdout": "",
+  "controller_stderr": "",
+  "foreground_case_seen": true,
+  "foreground_assertion_status": 0,
+  "foreground_shell_status": 130,
+  "cases": [
+    {
+      "name": "native-shell-identity",
+      "status": "PASS"
+    },
+    {
+      "name": "pipeline-status-default",
+      "status": "PASS"
+    },
+    {
+      "name": "pipefail-status",
+      "status": "PASS"
+    },
+    {
+      "name": "subshell-command-substitution",
+      "status": "PASS"
+    },
+    {
+      "name": "heredoc-expansion",
+      "status": "PASS"
+    },
+    {
+      "name": "heredoc-quoted",
+      "status": "PASS"
+    },
+    {
+      "name": "globbing",
+      "status": "PASS"
+    },
+    {
+      "name": "quoted-space-unicode-path",
+      "status": "PASS"
+    },
+    {
+      "name": "msys-windows-path-roundtrip",
+      "status": "PASS"
+    },
+    {
+      "name": "msys-native-path-translation",
+      "status": "PASS"
+    },
+    {
+      "name": "readline-unicode-edit",
+      "status": "PASS"
+    },
+    {
+      "name": "readline-history",
+      "status": "PASS"
+    },
+    {
+      "name": "ctrl-c-at-prompt",
+      "status": "PASS"
+    },
+    {
+      "name": "window-resize",
+      "status": "PASS"
+    },
+    {
+      "name": "job-suspend",
+      "status": "PASS"
+    },
+    {
+      "name": "job-background-resume",
+      "status": "PASS"
+    },
+    {
+      "name": "job-foreground-ctrl-c-pipeline",
+      "status": "PASS"
+    },
+    {
+      "name": "background-wait-status",
+      "status": "PASS"
+    },
+    {
+      "name": "normal-exit-terminal-restored",
+      "status": "PASS"
+    }
+  ],
+  "generations": [],
+  "raw_exits": [],
+  "remaining_before_cleanup": [],
+  "snapshot_count": 0
+}

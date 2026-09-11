@@ -1,0 +1,8 @@
+{
+  "posix_root": "/",
+  "windows_root": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\native-arm64-utils-shipping-03\\fixture\\",
+  "windows_root_roundtrip": "/",
+  "drive_input": "C:",
+  "drive_output": "/cygdrive/c",
+  "derived_cygdrive_prefix": "/cygdrive"
+}

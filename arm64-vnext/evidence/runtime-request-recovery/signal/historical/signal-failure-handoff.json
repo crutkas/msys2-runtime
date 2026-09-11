@@ -1,0 +1,239 @@
+{
+  "schema": 1,
+  "status": "runtime-dependent-interactive-foreground-pipeline-failure-reproduced",
+  "full_Bash907_qualification": false,
+  "upstream_suite": "Still running separately; no completed86-count claim in this receipt",
+  "subject_contract": {
+    "path": "C:\\ap11-native-provider-intake\\bash-runtime907-qualification-input-v1.json",
+    "sha256": "4dc1ff625c82d762d25f157538146288758b7ffa2a150e09c6c4e8b28e137162",
+    "size": 9598
+  },
+  "subject_inputs": {
+    "path": "C:\\ag-bash907-20260911-02\\inputs.json",
+    "sha256": "ca11ee6b4860d034c88f4a1dd7799768a293d3e60b7094ba13a20abe1c4dd0be",
+    "size": 622598
+  },
+  "bash_sha256": "39ef42f62906be249b650dd9e0760109161c40c5b4e047093ef7e16b138c5d6a",
+  "controller_sha256": "e4bf9ab340f57dcb1c6456c2e8d0454cb31fac0762fdc0447d75759447aa493a",
+  "only_binary_difference": [
+    "usr/bin/msys-2.0.dll"
+  ],
+  "runtime907": {
+    "sha256": "907afa099a69aa3c13d4e3b30eeba18c4a6b1766d5fa39b4746fae23c3f9e76c",
+    "result": {
+      "path": "C:\\ag-bash907-20260911-02\\original-controller-907-01\\result.json",
+      "sha256": "741e3727b83bfcc09bc0ab37fe95c9503db9a7e41ab8c33a8458621b5e366d70",
+      "size": 519301
+    },
+    "counts": {
+      "total": 19,
+      "passed": 16,
+      "failed": 1,
+      "not_reached": 2
+    },
+    "foreground_pipeline_shell_status": 0,
+    "sleep_windows_exit_DWORD": 2,
+    "cat_windows_exit_DWORD": 0
+  },
+  "baseline_d70": {
+    "sha256": "d70cfb46ed6bfa643a6ab557a71008e86043d8a04e5ce2d33549e4e95a49117d",
+    "result": {
+      "path": "C:\\ag-bash907-20260911-02\\original-controller-d70-01\\result.json",
+      "sha256": "33ec2bc225eb7172b35b890fb2fc68592d5a8cc20fdab11acef95726193186c1",
+      "size": 519890
+    },
+    "counts": {
+      "total": 19,
+      "passed": 19,
+      "failed": 0,
+      "not_reached": 0
+    },
+    "foreground_pipeline_shell_status": 130,
+    "sleep_windows_exit_DWORD": 2,
+    "cat_windows_exit_DWORD": 2
+  },
+  "interpretation": [
+    "Bash reports the last pipeline member's status correctly when cat exits zero; no demonstrated Bash arithmetic/status-decoding error.",
+    "The unchanged compiled controller reproduces the failure on907 and passes onD70 in this finite controlled pair, with every other runtime-tree file byte-identical.",
+    "A separate instrumented907 run passes19/19 after foreground/member startup synchronization. This is timing-sensitive, not proof the original failure vanished.",
+    "Every measured external/builtin member PGID matches the master foreground PGID; missing exec group membership is not supported by those captures.",
+    "A separate sleep|read case gives shell PIPESTATUS130 1 with both members in one foreground PGID; retain as failure against expected130, with EOF/signal ordering mechanism unresolved.",
+    "Exact GetExitCodeProcess DWORDs are retained. They are not normalised to POSIX wait words or shell exit codes."
+  ],
+  "controls": {
+    "interactive-01": {
+      "result": {
+        "path": "C:\\ag-bash907-20260911-02\\interactive-01\\result.json",
+        "sha256": "153a99323923208e6d8175337dc0bbe3f8a7209bc907d39bf249cb5414726aa3",
+        "size": 25940
+      },
+      "counts": {
+        "total": 19,
+        "passed": 19,
+        "failed": 0,
+        "not_reached": 0
+      },
+      "module_capture": {
+        "path": "C:\\ag-bash907-20260911-02\\interactive-01\\held-modules.json",
+        "sha256": "510a2240b4cb15c842b21bb38385fcdb0bd439d47ad8523021b17d17b096c980",
+        "size": 12177
+      },
+      "group_members": {
+        "path": "C:\\ag-bash907-20260911-02\\interactive-01\\group-members.tsv",
+        "sha256": "3b6ed59b15f5bbe95bf426397ccc02c91feae99ca4fd3224d1c14af5650da723",
+        "size": 399
+      }
+    },
+    "group-direct-01": {
+      "result": {
+        "path": "C:\\ag-bash907-20260911-02\\group-direct-01\\result.json",
+        "sha256": "4dc28264b5b7ece271a0e56cafca63847df825c0500137807179048757b53b4b",
+        "size": 19357
+      },
+      "counts": {
+        "total": 4,
+        "passed": 4,
+        "failed": 0,
+        "not_reached": 0
+      },
+      "module_capture": {
+        "path": "C:\\ag-bash907-20260911-02\\group-direct-01\\held-modules.json",
+        "sha256": "852b0a5b5a0ee615b0e82cabde1c3ef9fd618b173895dda05a1d2de9b5403f0d",
+        "size": 11927
+      },
+      "group_members": {
+        "path": "C:\\ag-bash907-20260911-02\\group-direct-01\\group-members.tsv",
+        "sha256": "43a9fa1a17c3cd0501eb9e65dd80c2f9aa7bac25a3051492442e00544a7720a6",
+        "size": 401
+      }
+    },
+    "group-mixed-sleep-read-01": {
+      "result": {
+        "path": "C:\\ag-bash907-20260911-02\\group-mixed-sleep-read-01\\result.json",
+        "sha256": "92d271a27dbbea85bb240ce50c4e8aadcce78a36c08eb7998e98f814b9f32ad6",
+        "size": 19630
+      },
+      "counts": {
+        "total": 4,
+        "passed": 3,
+        "failed": 1,
+        "not_reached": 0
+      },
+      "module_capture": {
+        "path": "C:\\ag-bash907-20260911-02\\group-mixed-sleep-read-01\\held-modules.json",
+        "sha256": "c9130835f27be3a951c629c9a0af55d49ae8d1ab20f44eb5f33f15d97d0b9196",
+        "size": 12079
+      },
+      "group_members": {
+        "path": "C:\\ag-bash907-20260911-02\\group-mixed-sleep-read-01\\group-members.tsv",
+        "sha256": "188594ad8ad94c03388f85941ca175738fb46ee5897a5d19fe5579403ad21978",
+        "size": 407
+      }
+    },
+    "group-mixed-read-cat-01": {
+      "result": {
+        "path": "C:\\ag-bash907-20260911-02\\group-mixed-read-cat-01\\result.json",
+        "sha256": "503d9f3535310af91c4b6da4be9112a365e27777b6359d6b1ef2ab48a6781222",
+        "size": 19262
+      },
+      "counts": {
+        "total": 4,
+        "passed": 4,
+        "failed": 0,
+        "not_reached": 0
+      },
+      "module_capture": {
+        "path": "C:\\ag-bash907-20260911-02\\group-mixed-read-cat-01\\held-modules.json",
+        "sha256": "935869f119419ca9bdd06f91d1aa79743ec834e710c746e225b0ff2d5d32132a",
+        "size": 12037
+      },
+      "group_members": {
+        "path": "C:\\ag-bash907-20260911-02\\group-mixed-read-cat-01\\group-members.tsv",
+        "sha256": "a815eda915aa8c82e1f7cd34ac687c1ad6c85ccb0c37cad6a995b330f99432f6",
+        "size": 403
+      }
+    },
+    "group-two-sleeps-01": {
+      "result": {
+        "path": "C:\\ag-bash907-20260911-02\\group-two-sleeps-01\\result.json",
+        "sha256": "fc213d2638e6fff7afb092bdd64a66fb19875455c95fb366d5d50e9646e4c87d",
+        "size": 19432
+      },
+      "counts": {
+        "total": 4,
+        "passed": 4,
+        "failed": 0,
+        "not_reached": 0
+      },
+      "module_capture": {
+        "path": "C:\\ag-bash907-20260911-02\\group-two-sleeps-01\\held-modules.json",
+        "sha256": "84c29d65a87faa7f28ce83117c8f7e203b01feda75718e93b90fcea3374f202f",
+        "size": 11964
+      },
+      "group_members": {
+        "path": "C:\\ag-bash907-20260911-02\\group-two-sleeps-01\\group-members.tsv",
+        "sha256": "a5d2dba0c313e85ad87a78db8d8a942858c67aadb829cc3f3d4366831b228cba",
+        "size": 437
+      }
+    },
+    "group-reversed-01": {
+      "result": {
+        "path": "C:\\ag-bash907-20260911-02\\group-reversed-01\\result.json",
+        "sha256": "5c747c171a650385dbd8e4f5314cb00f4af54c4cdcfd966c74b20689d08fb796",
+        "size": 19352
+      },
+      "counts": {
+        "total": 4,
+        "passed": 4,
+        "failed": 0,
+        "not_reached": 0
+      },
+      "module_capture": {
+        "path": "C:\\ag-bash907-20260911-02\\group-reversed-01\\held-modules.json",
+        "sha256": "b4e9fb7491d89e3844f775199eb29f9a958cb5622eb8b1a38a9e38cf16bcc621",
+        "size": 11922
+      },
+      "group_members": {
+        "path": "C:\\ag-bash907-20260911-02\\group-reversed-01\\group-members.tsv",
+        "sha256": "8d2e93eff56cef5a42779bd09480cefacbd671b4632807d708072a01a13f266e",
+        "size": 435
+      }
+    },
+    "group-builtin-01": {
+      "result": {
+        "path": "C:\\ag-bash907-20260911-02\\group-builtin-01\\result.json",
+        "sha256": "3ba83f2267673165b33590ca86bd5b46f8e487f4d1902853b8d4df84ffc210db",
+        "size": 18834
+      },
+      "counts": {
+        "total": 4,
+        "passed": 4,
+        "failed": 0,
+        "not_reached": 0
+      },
+      "module_capture": {
+        "path": "C:\\ag-bash907-20260911-02\\group-builtin-01\\held-modules.json",
+        "sha256": "6c881505954cbb1d44cbdf9583329bc3172984ae519281cc91aeb48fdf532b59",
+        "size": 11931
+      },
+      "group_members": {
+        "path": "C:\\ag-bash907-20260911-02\\group-builtin-01\\group-members.tsv",
+        "sha256": "2b35004f3ce95dd1d354964689510ea0dd2bb365d0535b7537d2436114de63c7",
+        "size": 435
+      }
+    }
+  },
+  "failure_classification": {
+    "original_controller907": "Behavioral regression evidence under current runtime, timing-sensitive signal delivery/EOF ordering unresolved; not a confirmed Bash source defect.",
+    "missing_or_non_native_helper": false,
+    "earlier_slave_tcgetpgrp_failure": "Harness vantage-point assumption: controller slave returned ENOTTY25; master ioctl successfully measures foreground PGID."
+  },
+  "invalid_selection_history": {
+    "path": "C:\\ag-bash907-20260911-01\\invalid-selection.json",
+    "sha256": "3116c150a98b2f2098c984295489e1d66ab8beb4874e8ea5a690dbd77762e588",
+    "size": 1996
+  },
+  "payload_or_provider_mutations": false,
+  "runtime_or_Bash_rebuilds": false,
+  "next_owner": "Runtime integration67 for causal investigation; this worker continues unchanged full upstream Bash suite and reports raw three-bucket counts."
+}

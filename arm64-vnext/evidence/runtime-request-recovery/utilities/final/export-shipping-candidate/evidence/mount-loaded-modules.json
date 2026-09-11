@@ -1,0 +1,65 @@
+{
+  "attempts": 2,
+  "modules": [
+    {
+      "name": "mount.exe",
+      "path": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\native-arm64-utils-shipping-03\\fixture\\usr\\bin\\mount.exe",
+      "sha256": "4bd418ec00f6db840897f86fbf79dcbbcb6044774a3abf7dfde9d9178b2d2c6d"
+    },
+    {
+      "name": "ntdll.dll",
+      "path": "C:\\Windows\\SYSTEM32\\ntdll.dll",
+      "sha256": "81f9d523d199ba1a8bb5fb6081b39e62cdb3289aa2346880c4db43edc6922f9b"
+    },
+    {
+      "name": "KERNEL32.DLL",
+      "path": "C:\\Windows\\System32\\KERNEL32.DLL",
+      "sha256": "98f44d4a53a503ae1e94bb128675491bd05143177809626dea3e5caebdb7f2d3"
+    },
+    {
+      "name": "KERNELBASE.dll",
+      "path": "C:\\Windows\\System32\\KERNELBASE.dll",
+      "sha256": "4666d0eb010a0023a37b2e1318ba284a92171b37d2abc09828b4fa6d3dc43011"
+    },
+    {
+      "name": "msys-2.0.dll",
+      "path": "C:\\Users\\crutkasLocal\\.copilot\\session-state\\85c409ca-0b3d-45da-90a0-c624251ff624\\files\\native-arm64-utils-shipping-03\\fixture\\usr\\bin\\msys-2.0.dll",
+      "sha256": "907afa099a69aa3c13d4e3b30eeba18c4a6b1766d5fa39b4746fae23c3f9e76c"
+    },
+    {
+      "name": "advapi32.dll",
+      "path": "C:\\Windows\\System32\\advapi32.dll",
+      "sha256": "cadebff57e2f902855e521cdfbfdf6fbde908ce3d7e6f9edb8457d7aa15eed7d"
+    },
+    {
+      "name": "msvcrt.dll",
+      "path": "C:\\Windows\\System32\\msvcrt.dll",
+      "sha256": "ccece3c2c0ab2118e84ac75b5ab0cdcd377ef273318352fd8d684e20d9c5c4a6"
+    },
+    {
+      "name": "sechost.dll",
+      "path": "C:\\Windows\\System32\\sechost.dll",
+      "sha256": "8a3a3003bfec3484e7dccdc5803228e1f9b50b5fa2987cba6849d97cc59d89ad"
+    },
+    {
+      "name": "RPCRT4.dll",
+      "path": "C:\\Windows\\System32\\RPCRT4.dll",
+      "sha256": "e45e2e423b4d06c6a33d84cbcfe8fbc55b5c1fa7f259ff30ce7a1170163794ff"
+    },
+    {
+      "name": "CRYPTBASE.DLL",
+      "path": "C:\\Windows\\SYSTEM32\\CRYPTBASE.DLL",
+      "sha256": "34c1b99c81db881341b91977d66d84893cc791f0588932e6242f6f6cb30e3785"
+    },
+    {
+      "name": "bcryptPrimitives.dll",
+      "path": "C:\\Windows\\System32\\bcryptPrimitives.dll",
+      "sha256": "aff5685748adb1537a243098f7ddc693b9cfd8e197ce4e62fb83c79b794e5dfd"
+    },
+    {
+      "name": "netapi32.dll",
+      "path": "C:\\Windows\\system32\\netapi32.dll",
+      "sha256": "db3d52664ff28ce89a5da8cc739770a669222b16607c21485d9072163b42b90f"
+    }
+  ]
+}

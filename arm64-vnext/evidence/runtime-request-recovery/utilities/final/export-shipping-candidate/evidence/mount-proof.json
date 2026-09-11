@@ -1,0 +1,11 @@
+{
+  "literal_path": "/usr/bin/mount",
+  "bin_mode": "binary",
+  "root_flags": "binary,noacl,auto",
+  "cygdrive_flags": "binary,noacl,posix=0,user,noumount,auto",
+  "output": [
+    "C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/fixture on / type ntfs (binary,noacl,auto)",
+    "C:/Users/crutkasLocal/.copilot/session-state/85c409ca-0b3d-45da-90a0-c624251ff624/files/native-arm64-utils-shipping-03/fixture/usr/bin on /bin type ntfs (binary,noacl,auto)",
+    "C: on /cygdrive/c type ntfs (binary,noacl,posix=0,user,noumount,auto)"
+  ]
+}
