@@ -31,6 +31,19 @@ details. */
 #include "gcc_seh.h"
 #include "cygwin/exit_process.h"
 
+#ifdef __aarch64__
+#include "signal-frame-arm64.h"
+
+extern "C" void __attribute__ ((noreturn))
+arm64_restore_signal_frame (const arm64_signal_frame *frame, uintptr_t pc)
+{
+  CONTEXT context = {};
+  arm64_signal_context (context, *frame, pc);
+  RtlRestoreContext (&context, NULL);
+  api_fatal ("RtlRestoreContext returned from ARM64 signal delivery");
+}
+#endif
+
 /* Define macros for CPU-agnostic register access.  The _CX_foo
    macros are for access into CONTEXT, the _MC_foo ones for access into
    mcontext. The idea is to access the registers in terms of their job,
@@ -44,6 +57,18 @@ details. */
 #define _MC_instPtr	rip
 #define _MC_stackPtr	rsp
 #define _MC_uclinkReg	rbx	/* MUST be callee-saved reg */
+#elif defined (__aarch64__)
+/* Validated against the Win32 ARM64 CONTEXT (winnt.h ARM64_NT_CONTEXT):
+   Pc is at offset 0x108, Sp at 0x100 and Fp (x29) at 0x0f0. */
+#define _CX_instPtr	Pc
+#define _CX_stackPtr	Sp
+#define _CX_framePtr	Fp
+/* For special register access inside mcontext. */
+#define _MC_retReg	x0	/* AAPCS64 result register */
+#define _MC_instPtr	pc
+#define _MC_stackPtr	sp
+#define _MC_uclinkReg	x19	/* MUST be callee-saved reg; x19-x28 are
+				   callee-saved under AAPCS64 */
 #else
 #error unimplemented for this target
 #endif
@@ -251,6 +276,35 @@ cygwin_exception::dump_exception ()
   small_printf ("cs=%04x ds=%04x es=%04x fs=%04x gs=%04x ss=%04x\r\n",
 		ctx->SegCs, ctx->SegDs, ctx->SegEs, ctx->SegFs,
 		ctx->SegGs, ctx->SegSs);
+#elif defined (__aarch64__)
+  if (exception_name)
+    small_printf ("Exception: %s at pc=%012X\r\n", exception_name, ctx->Pc);
+  else
+    small_printf ("Signal %d at pc=%012X\r\n", e->ExceptionCode, ctx->Pc);
+  small_printf ("x0 =%016X x1 =%016X x2 =%016X\r\n",
+		ctx->X0, ctx->X1, ctx->X2);
+  small_printf ("x3 =%016X x4 =%016X x5 =%016X\r\n",
+		ctx->X3, ctx->X4, ctx->X5);
+  small_printf ("x6 =%016X x7 =%016X x8 =%016X\r\n",
+		ctx->X6, ctx->X7, ctx->X8);
+  small_printf ("x9 =%016X x10=%016X x11=%016X\r\n",
+		ctx->X9, ctx->X10, ctx->X11);
+  small_printf ("x12=%016X x13=%016X x14=%016X\r\n",
+		ctx->X12, ctx->X13, ctx->X14);
+  small_printf ("x15=%016X x16=%016X x17=%016X\r\n",
+		ctx->X15, ctx->X16, ctx->X17);
+  small_printf ("x18=%016X x19=%016X x20=%016X\r\n",
+		ctx->X18, ctx->X19, ctx->X20);
+  small_printf ("x21=%016X x22=%016X x23=%016X\r\n",
+		ctx->X21, ctx->X22, ctx->X23);
+  small_printf ("x24=%016X x25=%016X x26=%016X\r\n",
+		ctx->X24, ctx->X25, ctx->X26);
+  small_printf ("x27=%016X x28=%016X\r\n", ctx->X27, ctx->X28);
+  small_printf ("fp =%016X lr =%016X sp =%016X\r\n",
+		ctx->Fp, ctx->Lr, ctx->Sp);
+  small_printf ("program=%W, pid %u, thread %s\r\n",
+		myself->progname, myself->pid, mythreadname ());
+  small_printf ("cpsr=%08x\r\n", ctx->Cpsr);
 #else
 #error unimplemented for this target
 #endif
@@ -314,11 +368,12 @@ __unwind_single_frame (PCONTEXT ctx)
 {
   PRUNTIME_FUNCTION f;
   ULONG64 imagebase;
-  UNWIND_HISTORY_TABLE hist = {0};
   DWORD64 establisher;
   PVOID hdl;
 
-  f = RtlLookupFunctionEntry (ctx->_CX_instPtr, &imagebase, &hist);
+  /* A history table is useful only across lookups.  Do not clear a fresh
+     cache on the caller's stack for this single-frame operation. */
+  f = RtlLookupFunctionEntry (ctx->_CX_instPtr, &imagebase, NULL);
   if (f)
     RtlVirtualUnwind (0, imagebase, ctx->_CX_instPtr, f, ctx, &hdl,
 		      &establisher, NULL);
@@ -610,6 +665,17 @@ EXCEPTION_DISPOSITION
 exception::myfault (EXCEPTION_RECORD *e, exception_list *frame, CONTEXT *in,
 		    PDISPATCHER_CONTEXT dispatch)
 {
+#ifdef __aarch64__
+  /* ARM64's language handler is also invoked during the unwind phase. */
+  if (e->ExceptionFlags & (EXCEPTION_UNWINDING | EXCEPTION_EXIT_UNWIND))
+    return ExceptionContinueSearch;
+
+  /* RtlUnwindEx overwrites its context argument.  The incoming ARM64
+     context can be the saved dispatcher frame needed during that unwind. */
+  CONTEXT unwind_context = *in;
+  in = &unwind_context;
+#endif
+
   PSCOPE_TABLE table = (PSCOPE_TABLE) dispatch->HandlerData;
   RtlUnwindEx (frame,
 	       (char *) dispatch->ImageBase + table->ScopeRecord[0].JumpTarget,
@@ -1816,6 +1882,8 @@ _cygtls::call_signal_handler ()
 		{
 #ifdef __x86_64__
 		  context1.uc_mcontext.rip = retaddr ();
+#elif defined (__aarch64__)
+		  context1.uc_mcontext.pc = retaddr ();
 #else
 #error unimplemented for this target
 #endif
@@ -1935,6 +2003,45 @@ _cygtls::call_signal_handler ()
 		       [FUNC]	"o" (thisfunc),
 		       [WRAPPER] "o" (altstack_wrapper)
 		   : "memory");
+#elif defined (__aarch64__)
+	  /* Unlike the x86_64 block, which hand-saves eight registers
+	     because it cannot declare rsp clobbered, the AArch64 version
+	     declares the call-clobbered registers to the compiler and only
+	     has to preserve sp and the frame pointer by hand.  The operands
+	     are "r" rather than "o" because AArch64 has no lea equivalent
+	     for taking the address of a memory operand; they are copied into
+	     scratch registers first so that setting up x0-x3 cannot clobber
+	     an operand that has not been read yet.  */
+	  __asm__ ("\n\
+		   mov   x9,  %[NEW_SP]	// read all operands first	\n\
+		   mov   w10, %w[SIG]					\n\
+		   mov   x11, %[SI]					\n\
+		   mov   x12, %[CTX]					\n\
+		   mov   x13, %[FUNC]					\n\
+		   mov   x14, %[WRAPPER]				\n\
+		   sub   x9, x9, #32	// room for old sp and fp	\n\
+					// (new_sp is already 16 aligned)\n\
+		   mov   x15, sp					\n\
+		   str   x15, [x9]	// save old sp			\n\
+		   str   x29, [x9, #8]	// save old frame pointer	\n\
+		   mov   w0, w10	// thissig      -> arg 1	\n\
+		   mov   x1, x11	// &thissi      -> arg 2	\n\
+		   mov   x2, x12	// thiscontext  -> arg 3	\n\
+		   mov   x3, x13	// thisfunc     -> arg 4	\n\
+		   mov   sp, x9		// move to alternate stack	\n\
+		   blr   x14		// call wrapper			\n\
+		   ldr   x29, [sp, #8]	// revert frame pointer		\n\
+		   ldr   x15, [sp]	// and stack pointer		\n\
+		   mov   sp, x15					\n"
+		   : : [NEW_SP]	"r" (new_sp),
+		       [SIG]	"r" (thissig),
+		       [SI]	"r" (&thissi),
+		       [CTX]	"r" (thiscontext),
+		       [FUNC]	"r" (thisfunc),
+		       [WRAPPER] "r" (altstack_wrapper)
+		   : "memory", "cc", "x0", "x1", "x2", "x3", "x4", "x5",
+		     "x6", "x7", "x8", "x9", "x10", "x11", "x12", "x13",
+		     "x14", "x15", "x16", "x17", "x30");
 #else
 #error unimplemented for this target
 #endif
@@ -2013,8 +2120,20 @@ extern "C" int
 setcontext (const ucontext_t *ucp)
 {
   PCONTEXT ctx = (PCONTEXT) &ucp->uc_mcontext;
+#ifdef __aarch64__
+  sigset_t oldmask = _my_tls.sigmask;
+#endif
   set_signal_mask (_my_tls.sigmask, ucp->uc_sigmask);
+#ifdef __aarch64__
+  /* RtlRestoreContext rejects stacks outside the TEB stack bounds.  POSIX
+     contexts may use caller-provided stacks; do not change StackBase,
+     since it also anchors Cygwin's per-thread state. */
+  NTSTATUS status = NtContinue (ctx, FALSE);
+  set_signal_mask (_my_tls.sigmask, oldmask);
+  syscall_printf ("NtContinue returned, status %y", status);
+#else
   RtlRestoreContext (ctx, NULL);
+#endif
   /* If we got here, something was wrong. */
   set_errno (EINVAL);
   return -1;
@@ -2076,18 +2195,35 @@ __cont_link_context:			\n\
 	.seh_endproc			\n\
 	");
 
+#elif defined (__aarch64__)
+/* _MC_uclinkReg == x19.  x19 holds the address of the stack slot which
+   holds the uc_link pointer, exactly as rbx does on x86_64. */
+__asm__ ("				\n\
+	.global	__cont_link_context	\n\
+	.seh_proc __cont_link_context	\n\
+__cont_link_context:			\n\
+	.seh_endprologue		\n\
+	ldr	x0, [x19]		\n\
+	# switch to the prepared stack, keeping sp 16-byte aligned	\n\
+	mov	x9, x19			\n\
+	and	x9, x9, #-16		\n\
+	mov	sp, x9			\n\
+	cbz	x0, 1f			\n\
+	bl	setcontext		\n\
+	mov	x0, #0xff		\n\
+1:					\n\
+	bl	cygwin_exit		\n\
+	nop				\n\
+	.seh_endproc			\n\
+	");
+
 #else
 #error unimplemented for this target
 #endif
 
-/* makecontext is modelled after GLibc's makecontext.  The stack from uc_stack
-   is prepared so that it starts with a pointer to the linked context uc_link,
-   followed by the arguments to func, and finally at the bottom the "return"
-   address set to __cont_link_context.  In the ucp context, rbx/ebx is set to
-   point to the stack address where the pointer to uc_link is stored.  The
-   requirement to make this work is that rbx/ebx are callee-saved registers
-   per the ABI.  If any function is called which doesn't follow the ABI
-   conventions, e.g. assembler code, this method will break.  But that's ok. */
+/* Keep the uc_link pointer above the stack arguments, addressed through
+   _MC_uclinkReg, which the target ABI requires the callee to preserve.
+   Returning from func enters __cont_link_context. */
 extern "C" void
 makecontext (ucontext_t *ucp, void (*func) (void), int argc, ...)
 {
@@ -2097,6 +2233,13 @@ makecontext (ucontext_t *ucp, void (*func) (void), int argc, ...)
 
   /* Initialize sp to the top of the stack. */
   sp = (uintptr_t *) ((uintptr_t) ucp->uc_stack.ss_sp + ucp->uc_stack.ss_size);
+#ifdef __aarch64__
+  /* Only arguments beyond x0-x7 occupy the stack.  ARM64 returns through
+     LR, so there is no pushed return address or x86 shadow space. */
+  int stack_args = argc > 8 ? argc - 8 : 0;
+  sp -= stack_args + 1;
+  sp = (uintptr_t *) ((uintptr_t) sp & ~0xf);
+#else
   /* Subtract slots required for arguments and the pointer to uc_link. */
   sp -= (argc + 1);
   /* Align. */
@@ -2105,6 +2248,7 @@ makecontext (ucontext_t *ucp, void (*func) (void), int argc, ...)
   --sp;
   /* Set return address to the trampolin function __cont_link_context. */
   sp[0] = (uintptr_t) __cont_link_context;
+#endif
   /* Fetch arguments and store them on the stack.
 
      x86_64:
@@ -2141,12 +2285,53 @@ makecontext (ucontext_t *ucp, void (*func) (void), int argc, ...)
 	sp[i + 1] = va_arg (ap, uintptr_t);
 	break;
       }
+#elif defined (__aarch64__)
+    /* AAPCS64 passes the first eight integer arguments in x0-x7; the
+       remainder go on the stack. */
+    switch (i)
+      {
+      case 0:
+	ucp->uc_mcontext.x0 = va_arg (ap, uintptr_t);
+	break;
+      case 1:
+	ucp->uc_mcontext.x1 = va_arg (ap, uintptr_t);
+	break;
+      case 2:
+	ucp->uc_mcontext.x2 = va_arg (ap, uintptr_t);
+	break;
+      case 3:
+	ucp->uc_mcontext.x3 = va_arg (ap, uintptr_t);
+	break;
+      case 4:
+	ucp->uc_mcontext.x4 = va_arg (ap, uintptr_t);
+	break;
+      case 5:
+	ucp->uc_mcontext.x5 = va_arg (ap, uintptr_t);
+	break;
+      case 6:
+	ucp->uc_mcontext.x6 = va_arg (ap, uintptr_t);
+	break;
+      case 7:
+	ucp->uc_mcontext.x7 = va_arg (ap, uintptr_t);
+	break;
+      default:
+	sp[i - 8] = va_arg (ap, uintptr_t);
+	break;
+      }
 #else
 #error unimplemented for this target
 #endif
   va_end (ap);
   /* Store pointer to uc_link at the top of the stack. */
+#ifdef __aarch64__
+  sp[stack_args] = (uintptr_t) ucp->uc_link;
+  ucp->uc_mcontext.lr = (uintptr_t) __cont_link_context;
+  ucp->uc_mcontext.fp = 0;
+  ucp->uc_mcontext._MC_uclinkReg = (uintptr_t) (sp + stack_args);
+#else
   sp[argc + 1] = (uintptr_t) ucp->uc_link;
+  ucp->uc_mcontext._MC_uclinkReg = (uint64_t) (sp + argc + 1);
+#endif
   /* Last but not least set the register in the context at ucp so that a
      subsequent setcontext or swapcontext picks up the right values:
      - Set instruction pointer to the target function.
@@ -2155,5 +2340,4 @@ makecontext (ucontext_t *ucp, void (*func) (void), int argc, ...)
        to uc_link. */
   ucp->uc_mcontext._MC_instPtr = (uint64_t) func;
   ucp->uc_mcontext._MC_stackPtr = (uint64_t) sp;
-  ucp->uc_mcontext._MC_uclinkReg = (uint64_t) (sp + argc + 1);
 }

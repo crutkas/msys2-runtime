@@ -40,7 +40,11 @@
 	.text
 	.p2align \p2align
 	.global \f
+#if defined(__CYGWIN__) || defined(_WIN32)  /* __pe_asm_fixed__ */
+	.def \f; .scl 2; .type 32; .endef
+#else
 	.type \f, %function
+#endif
 \f:
 	.endm
 
@@ -63,6 +67,8 @@ L(do_strlen):
 	ret	x15
 	.cfi_endproc
 
+#if !(defined(__CYGWIN__) || defined(_WIN32))  /* __pe_asm_fixed__ */
 	.size   rawmemchr, . - rawmemchr
+#endif
 #endif
 

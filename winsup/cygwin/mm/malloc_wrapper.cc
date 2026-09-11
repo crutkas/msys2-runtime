@@ -50,6 +50,31 @@ import_address (void *imp)
 {
   __try
     {
+#ifdef __aarch64__
+      /* __aarch64_import_thunk_decode__
+	 mkimport emits, for each imported symbol:
+	     adrp x16, __imp_sym
+	     ldr  x16, [x16, #:lo12:__imp_sym]
+	     br   x16
+	 Recover the IAT slot from the adrp/ldr pair and read the target.
+	 The x86 path below keys off the literal opcode bytes FF 25, which
+	 can never match AArch64 code, so without this the caller concludes
+	 "not an import" and malloc recurses into itself.  */
+      const uint32_t *insn = (const uint32_t *) imp;
+      if ((insn[0] & 0x9f00001f) == 0x90000010		/* adrp x16, ...     */
+	  && (insn[1] & 0xffc003ff) == 0xf9400210	/* ldr x16, [x16,#n] */
+	  && insn[2] == 0xd61f0200)			/* br  x16           */
+	{
+	  int64_t immlo = (insn[0] >> 29) & 0x3;
+	  int64_t immhi = (insn[0] >> 5) & 0x7ffff;
+	  int64_t imm = (immhi << 2) | immlo;
+	  imm = (imm << 43) >> 43;			/* sign-extend 21 bits */
+	  uintptr_t page = ((uintptr_t) imp & ~(uintptr_t) 0xfff)
+			   + (uintptr_t) (imm << 12);
+	  uintptr_t off = ((insn[1] >> 10) & 0xfff) * 8;
+	  return *(void **) (page + off);
+	}
+#else
       if (*((uint16_t *) imp) == 0x25ff)
 	{
 	  const char *ptr = (const char *) imp;
@@ -57,6 +82,7 @@ import_address (void *imp)
 				   (ptr + 6 + *(int32_t *)(ptr + 2));
 	  return (void *) *jmpto;
 	}
+#endif
     }
   __except (NO_ERROR) {}
   __endtry

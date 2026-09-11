@@ -87,6 +87,10 @@ __FLT_ABI (sqrt) (__FLT_TYPE x)
    return __FLT_CST (1.0);
 #if defined(__arm__) || defined(_ARM_)
   __fsqrt_internal(x);
+#elif defined(__aarch64__)
+  /* AArch64 has no x87; __builtin_sqrt lowers to the fsqrt instruction.
+     long double is the same 64-bit IEEE double as double on this target. */
+  res = (__FLT_TYPE) __builtin_sqrt ((double) x);
 #elif defined(_X86_) || defined(__i386__) || defined(_AMD64_) || defined(__x86_64__)
   asm volatile ("fsqrt" : "=t" (res) : "0" (x));
 #else

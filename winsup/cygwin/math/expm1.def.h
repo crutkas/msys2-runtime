@@ -64,9 +64,17 @@ __FLT_ABI(expm1) (__FLT_TYPE x)
   }
   if (__FLT_ABI (fabs) (x) < __FLT_LOGE2)
     {
+#ifdef __aarch64__
+      /* AArch64 has no x87 f2xm1.  The sequence below computes exactly
+	 expm1; delegate to the double-precision expm1, which comes from
+	 newlib and is not built from this header, so it does not
+	 recurse. */
+      return (__FLT_TYPE) __builtin_expm1 ((double) x);
+#else
       x /= __FLT_LOGE2;
       __asm__ __volatile__ ("f2xm1" : "=t" (x) : "0" (x));
       return x;
+#endif
     }
   return __FLT_ABI (exp) (x) - __FLT_CST (1.0);
 }

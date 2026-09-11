@@ -23,9 +23,10 @@ class av
  public:
   int argc;
   bool win16_exe;
-  av () : argv (NULL), argc (0) {}
+  bool same_arch;
+  av () : argv (NULL), argc (0), same_arch (false) {}
   av (int ac_in, const char * const *av_in)
-  : calloced (0), win16_exe (false)
+  : calloced (0), win16_exe (false), same_arch (false)
   {
     argv = (char **) cmalloc (HEAP_1_ARGV, (ac_in + 5) * sizeof (char *));
     if (argv)

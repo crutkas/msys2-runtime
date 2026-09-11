@@ -51,13 +51,41 @@
 /* If set then the GNU Property Note section will be added to
    mark objects to support BTI and PAC-RET.  */
 #ifndef WANT_GNU_PROPERTY
-#define WANT_GNU_PROPERTY 1
+# if defined(__CYGWIN__) || defined(_WIN32)
+#  define WANT_GNU_PROPERTY 0   /* PE/COFF has no .note.gnu.property */
+# else
+#  define WANT_GNU_PROPERTY 1
+# endif
 #endif
 
 #if WANT_GNU_PROPERTY
 /* Add property note with supported features to all asm files.  */
 GNU_PROPERTY (FEATURE_1_AND, FEATURE_1_BTI|FEATURE_1_PAC)
 #endif
+
+/* __aarch64_pe_asmdefs__ : PE/COFF has no %function type nor .size, and
+   uses .def/.scl/.type/.endef instead.  */
+#if defined(__CYGWIN__) || defined(_WIN32)
+
+#define ENTRY_ALIGN(name, alignment)	\
+  .global name;		\
+  .def name; .scl 2; .type 32; .endef;	\
+  .p2align alignment;	\
+  name:			\
+  .cfi_startproc;	\
+  BTI_C;
+
+#define ENTRY(name)	ENTRY_ALIGN(name, 6)
+
+#define ENTRY_ALIAS(name)	\
+  .global name;		\
+  .def name; .scl 2; .type 32; .endef;	\
+  name:
+
+#define END(name)	\
+  .cfi_endproc;
+
+#else
 
 #define ENTRY_ALIGN(name, alignment)	\
   .global name;		\
@@ -77,6 +105,8 @@ GNU_PROPERTY (FEATURE_1_AND, FEATURE_1_BTI|FEATURE_1_PAC)
 #define END(name)	\
   .cfi_endproc;		\
   .size name, .-name;
+
+#endif
 
 #define L(l) .L ## l
 

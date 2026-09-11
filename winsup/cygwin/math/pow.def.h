@@ -91,7 +91,7 @@ internal_modf (__FLT_TYPE value, __FLT_TYPE *iptr)
     "frndint\n"
     "fldcw 4(%%rsp)\n"
     "addq $8, %%rsp\npopq %%rax" : "=t" (int_part) : "0" (value)); /* round */
-#else
+#elif defined (__i386__)
   asm volatile ("push %%eax\n\tsubl $8, %%esp\n"
     "fnstcw 4(%%esp)\n"
     "movzwl 4(%%esp), %%eax\n"
@@ -101,6 +101,12 @@ internal_modf (__FLT_TYPE value, __FLT_TYPE *iptr)
     "frndint\n"
     "fldcw 4(%%esp)\n"
     "addl $8, %%esp\n\tpop %%eax\n" : "=t" (int_part) : "0" (value)); /* round */
+#else
+  /* The x87 sequences above set the rounding mode to truncate-toward-zero
+     (orb $12,%ah sets RC=11) and then call frndint, i.e. they compute
+     trunc().  AArch64 has no x87; __builtin_trunc lowers to a single
+     frintz instruction. */
+  int_part = (__FLT_TYPE) __builtin_trunc ((double) value);
 #endif
   if (iptr)
     *iptr = int_part;
@@ -204,7 +210,13 @@ __FLT_ABI(pow) (__FLT_TYPE x, __FLT_TYPE y)
 	}
       if (y == __FLT_CST(0.5))
 	{
+#ifdef __x86_64__
 	  asm volatile ("fsqrt" : "=t" (rslt) : "0" (x));
+#else
+	  /* AArch64 has no x87 fsqrt; __builtin_sqrt lowers to the fsqrt
+	     instruction directly. */
+	  rslt = (__FLT_TYPE) __builtin_sqrt ((double) x);
+#endif
 	  return rslt;
 	}
     }

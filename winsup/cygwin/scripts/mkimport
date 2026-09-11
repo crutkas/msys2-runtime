@@ -24,6 +24,7 @@ my %import = ();
 my %symfile = ();
 
 my $is_x86_64 = ($cpu eq 'x86_64' ? 1 : 0);
+my $is_aarch64 = ($cpu eq 'aarch64' ? 1 : 0);
 # FIXME? Do other (non-32 bit) arches on Windows still use symbol prefixes?
 my $sym_prefix = '';
 
@@ -58,7 +59,20 @@ for my $f (keys %text) {
     } else {
 	$text{$f} = 1;
 	open my $as_fd, '|-', $as, '-o', "$dir/t-$f", "-";
-	if ($is_x86_64) {
+	if ($is_aarch64) {
+	    # __aarch64_import_thunk__ : AArch64 has no jmp-through-memory, so
+	    # form the IAT slot address with adrp/ldr and branch via x16 (IP0),
+	    # the inter-procedure scratch register reserved for exactly this.
+	    print $as_fd <<EOF;
+	.text
+	.extern	$imp_sym
+	.global	$glob_sym
+$glob_sym:
+	adrp	x16, $imp_sym
+	ldr	x16, [x16, #:lo12:$imp_sym]
+	br	x16
+EOF
+	} elsif ($is_x86_64) {
 	    print $as_fd <<EOF;
 	.text
 	.extern	$imp_sym

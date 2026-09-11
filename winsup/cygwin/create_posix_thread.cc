@@ -99,6 +99,37 @@ pthread_wrapper (PVOID arg)
 	   call  *%%r12			# Call thread func		\n"
 	   : : [WRAPPER_ARG] "o" (wrapper_arg),
 	       [CYGTLS] "i" (__CYGTLS_PADSIZE__));
+#elif defined (__aarch64__)
+  /* The wrapper address must not share a register with any of the loads or
+     calls below; in particular, x0 is replaced before the stackbase load. */
+  __asm__ ("\n\
+	   ldr   x19, [%[WRAPPER_ARG]]		// thread func		\n\
+	   ldr   x20, [%[WRAPPER_ARG], #8]	// thread arg		\n\
+	   ldr   x0,  [%[WRAPPER_ARG], #16]	// stackaddr -> arg 1	\n\
+	   ldr   x9,  [%[WRAPPER_ARG], #24]	// stackbase		\n\
+	   mov   x10, %[CYGTLS]			// __CYGTLS_PADSIZE__	\n\
+	   sub   x9, x9, x10						\n\
+	   and   x9, x9, #-16			// AAPCS64: sp 16-aligned\n\
+	   mov   sp, x9						\n\
+	   mov   x29, #0			// clear frame pointer	\n\
+	   # We moved to the new stack.					\n\
+	   # Now it's safe to release the OS stack.			\n\
+	   # Windows ARM64 has no shadow space, so nothing to reserve.	\n\
+	   mov   x1, #0				// dwSize:     0	\n\
+	   mov   x2, #0x8000			// dwFreeType: MEM_RELEASE\n\
+	   bl    VirtualFree						\n\
+	   # All set.  Copy the thread arg from the callee-saved	\n\
+	   # register x20 and call the function in x19.			\n\
+	   mov   x0, x20			// thread arg -> arg 1	\n\
+	   blr   x19			 	// call thread func	\n"
+	   : : [WRAPPER_ARG] "r" (&wrapper_arg),
+	       [CYGTLS] "i" (__CYGTLS_PADSIZE__)
+	   : "x0", "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8",
+	     "x9", "x10", "x11", "x12", "x13", "x14", "x15", "x16", "x17",
+	     "x19", "x20", "x30", "v0", "v1", "v2", "v3", "v4", "v5",
+	     "v6", "v7", "v16", "v17", "v18", "v19", "v20", "v21",
+	     "v22", "v23", "v24", "v25", "v26", "v27", "v28", "v29",
+	     "v30", "v31", "cc", "memory");
 #else
 #error unimplemented for this target
 #endif

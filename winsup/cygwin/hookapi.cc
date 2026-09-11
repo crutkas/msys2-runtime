@@ -44,6 +44,7 @@ PEHeaderFromHModule (HMODULE hModule)
   switch (pNTHeader->FileHeader.Machine)
     {
     case IMAGE_FILE_MACHINE_AMD64:
+    case IMAGE_FILE_MACHINE_ARM64:
       break;
     default:
       return NULL;
@@ -330,15 +331,25 @@ out:
 
 // Top level routine to find the EXE's imports and redirect them
 void *
-hook_or_detect_cygwin (const char *name, const void *fn, WORD& subsys, HANDLE h)
+hook_or_detect_cygwin (const char *name, const void *fn, WORD& subsys, HANDLE h,
+		      bool *same_arch)
 {
+  if (same_arch)
+    *same_arch = false;
   HMODULE hm = fn ? GetModuleHandle (NULL) : (HMODULE) name;
   PIMAGE_NT_HEADERS pExeNTHdr = PEHeaderFromHModule (hm);
 
-  /* Shortcut.  We don't have to do anything further from here, if the
-     executable's architecture doesn't match. */
+  /* The import personality can be recognized across architectures, but
+     passing private process data requires a matching architecture. */
   if (!pExeNTHdr)
     return NULL;
+
+  if (same_arch)
+#ifdef __aarch64__
+    *same_arch = pExeNTHdr->FileHeader.Machine == IMAGE_FILE_MACHINE_ARM64;
+#else
+    *same_arch = pExeNTHdr->FileHeader.Machine == IMAGE_FILE_MACHINE_AMD64;
+#endif
 
   DWORD importRVA, importRVASize;
   subsys = pExeNTHdr->OptionalHeader.Subsystem;

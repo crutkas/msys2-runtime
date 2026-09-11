@@ -23,6 +23,76 @@ reasons, of course).
 "make check" will only work if you run it *on* an NT machine.  Cross-checking is
 not supported.
 
+Host-side build-script tests in build/ can also be run directly without a built
+DLL or cross compiler, for example:
+
+$ bash winsup/testsuite/build/gentls_offsets.sh
+
+In a configured cross build, the same host-only test can be run through the
+Automake driver without building Windows test executables or invoking the
+Windows-only check-local setup:
+
+$ make -C BUILD/winsup/testsuite check-TESTS TESTS=build/gentls_offsets.sh check_PROGRAMS=
+
+This exercises gentls_offsets with controlled preprocessor and assembly output,
+including x86_64 .long, AArch64 .word, and compiler/parser failures.  It is not
+a substitute for compiling cygtls.h with the target compiler or running the DLL.
+An optional argument selects another copy of the generator for comparison.
+
+The preprocessing fixture also requires cygtls.h to be included from a C++
+translation unit rather than compiled as a main header, keeping pragma-once
+diagnostics from breaking target generation with warnings treated as errors.
+
+winsup.api/setjmp covers zero, positive and negative longjmp/siglongjmp return
+values, both sigsetjmp mask modes, and AArch64 x20 preservation.
+sigjmp-mask checks public-buffer guard bytes, the macro save-mask slot, and
+repeated protected-page faults recovered through both the macro and function
+sigsetjmp/siglongjmp interfaces.  A compiler/header/runtime cohort must agree
+on these buffer layouts; an ARM64 Cygwin jmp_buf has a 256-byte register area.
+ARM64 consumers built with the former 176-byte definition must be recompiled:
+replacing only their DLL cannot enlarge embedded buffers or move macro mask
+slots.  Rebuild runtime/newlib as a coherent cohort as well, because fork
+startup records embed jmp_buf.  Preserve old cohort evidence separately.
+ucontext-arm64 checks aligned context entry, register and stack arguments,
+32 coroutine yields with signal-mask and floating-point rounding restoration,
+return through uc_link, and process exit after returning with a null uc_link.
+Its --layout-only mode inspects prepared contexts without restoring them.
+environment-handoff checks same-runtime spawn environment transport.  Its
+--exec, --spawn and --spawn-nowait modes take an inherited/mutated/large phase
+and a child command; --inspect reports synthetic POSIX and Windows variables
+separately.  Use it with an actual foreign-architecture MSYS interpreter and
+a native Windows child to check the Windows-block fallback without changing
+POSIX argv handling.  Matching architecture is a necessary condition for
+the private-envp optimization, not proof of arbitrary runtime-version
+compatibility.  Keep raw Windows exit codes separate from POSIX wait status.
+winsup.api/signal-context-arm64 delivers a signal from another pthread while
+q31 is live without intervening calls; it checks actual asynchronous floating
+point context restoration and skips other architectures.
+The ARM64-only signal-registers-arm64 target links its C driver with
+signal-registers-arm64-asm.S and checks 16 asynchronous deliveries across
+integer, full vector, stack/link and floating-point control state.
+signal-myfault-arm64 checks eight protected-page uname calls return EFAULT.
+It exercises the runtime's internal myfault personality, not the public
+sigjmp signal handler.  Ordinary and debugger executions are separate
+qualification surfaces; an ordinary pass does not prove debugger parity.
+The uname-machine test checks the current uname import, the uname_x export
+and the legacy uname export against the test executable's architecture.
+An x86_64 executable must still report x86_64 under ARM64 emulation.
+ctype-table checks the imported _ctype_ array's C-locale byte layout and stable
+identity, separately from the locale-selected table pointer.  After installing
+genuine hosted libstdc++ headers/libraries, build the optional
+winsup.api/ctype-hosted target to exercise std::ctype<char>::classic_table(),
+locale facets and iostream parsing/formatting against that same data export.
+This optional target is not part of the freestanding runtime bootstrap.
+winsup.api/runtime-process covers nested fork with heap and pipes, inherited
+signals, byte-for-byte quoted arguments of lengths 1-40 across exec, signals
+after exec, and pthread TLS/mutex isolation.  Its --direct-exec mode exits 55
+only after the successor validates its arguments and handles its signal;
+--native-exec FILE expects a native Windows fixture that exits 73.
+winsup.api/process-group checks setpgid, WIFSTOPPED before WSTOPSIG, group
+SIGCONT, and WIFEXITED before WEXITSTATUS.  These are process-group checks,
+not a claim about interactive terminal job control.
+
 Tests whose name is mentioned in XFAIL_TESTS are expected to fail, effectively
 reversing the result of those.
 

@@ -14,6 +14,7 @@ long double asinl (long double x);
 
 long double asinl (long double x)
 {
+#ifdef __x86_64__
   long double res = 0.0L;
 
   asm volatile (
@@ -25,4 +26,10 @@ long double asinl (long double x)
 	"fpatan"
 	: "=t" (res) : "0" (x) : "st(1)");
   return res;
+#else
+  /* AArch64 has no x87.  long double is the same 64-bit IEEE double as
+     double here, so delegate to the double-precision asin, which comes
+     from newlib and therefore does not recurse. */
+  return __builtin_asin ((double) x);
+#endif
 }

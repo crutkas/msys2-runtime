@@ -13,7 +13,7 @@
 long double
 truncl (long double _x)
 {
-#if defined(_ARM_) || defined(__arm__)
+#if defined(_ARM_) || defined(__arm__) || defined(__aarch64__)
   return trunc(_x);
 #else
   long double retval = 0.0L;

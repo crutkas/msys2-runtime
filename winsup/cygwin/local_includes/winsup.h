@@ -8,6 +8,10 @@ details. */
 
 #include "config.h"
 
+#ifndef __MSYS__
+#error The MSYS runtime must be built with its configured MSYS personality
+#endif
+
 #define __INSIDE_CYGWIN__
 
 /* Use "static NO_COPY_RO" instead of "static const", if the datastructure
@@ -197,7 +201,8 @@ ino_t hash_path_name (ino_t hash, PCWSTR name);
 ino_t hash_path_name (ino_t hash, const char *name);
 void nofinalslash (const char *src, char *dst);
 
-void *hook_or_detect_cygwin (const char *, const void *, WORD&, HANDLE h = NULL);
+void *hook_or_detect_cygwin (const char *, const void *, WORD&, HANDLE h = NULL,
+			    bool *same_arch = NULL);
 void *hook_api (const char *mname, const char *name, const void *fn);
 
 /* Time related */

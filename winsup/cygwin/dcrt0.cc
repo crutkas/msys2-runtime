@@ -162,9 +162,15 @@ quoted (char *cmd, int winshell, int glob)
   if (!winshell || !glob)
     {
       char *p;
-      strcpy (cmd, cmd + 1);
+      /* NB: source and destination overlap, so strcpy() is undefined
+	 behaviour here.  x86_64's byte-forward strcpy happens to produce
+	 the intended left-shift; AArch64's reads 16-byte NEON blocks from
+	 a down-aligned source and re-reads bytes its own stores already
+	 overwrote, duplicating one character and dropping another.  Use
+	 memmove, which is defined for overlapping regions.  */
+      memmove (cmd, cmd + 1, strlen (cmd + 1) + 1);
       if (*(p = strchrnul (cmd, quote)))
-	strcpy (p, p + 1);
+	memmove (p, p + 1, strlen (p + 1) + 1);
       return p;
     }
 
@@ -632,7 +638,13 @@ child_info_fork::handle_fork ()
 bool
 child_info_spawn::get_parent_handle ()
 {
+  /* Close the handle being replaced, on success only.  Leaving it open leaks
+     one process handle per call.  On failure keep the previous behaviour
+     exactly: parent is NULL and we report failure.  */
+  HANDLE prev = parent;
   parent = OpenProcess (PROCESS_VM_READ, FALSE, parent_winpid);
+  if (parent && prev && prev != parent)
+    CloseHandle (prev);
   return !!parent;
 }
 
@@ -1050,6 +1062,19 @@ _dll_crt0 ()
 		       movq %[ADDR], %%rsp \n\
 		       movq  %%rsp, %%rbp  \n\
 		       subq  $32,%%rsp     \n"
+		       : : [ADDR] "r" (stackaddr));
+#elif defined (__aarch64__)
+	      /* Set stack pointer to new address and point the frame pointer
+	         (x29) at it.  ARM64 has no shadow space, but a subtraction is
+	         still required here: AArch64 addresses frame slots at positive
+	         offsets from sp, so leaving sp at the very top of the stack
+	         area lets this function's own register spills write above it,
+	         into the cygheap, whose base is exactly this thread's
+	         StackBase.  */
+	      __asm__ ("\n\
+		       mov  sp, %[ADDR]  \n\
+		       sub  sp, sp, #64  \n\
+		       mov  x29, sp      \n"
 		       : : [ADDR] "r" (stackaddr));
 #else
 #error unimplemented for this target

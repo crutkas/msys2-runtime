@@ -43,7 +43,11 @@
 
 // int setjmp (jmp_buf)
 	.global	setjmp
+#if defined(__CYGWIN__) || defined(_WIN32)  /* __pe_asm_fixed__ */
+	.def setjmp; .scl 2; .type 32; .endef
+#else
 	.type	setjmp, %function
+#endif
 setjmp:
 	mov	x16, sp
 #define REG_PAIR(REG1, REG2, OFFS)	stp REG1, REG2, [x0, OFFS]
@@ -54,11 +58,17 @@ setjmp:
 #undef REG_ONE
 	mov	w0, #0
 	ret
+#if !(defined(__CYGWIN__) || defined(_WIN32))  /* __pe_asm_fixed__ */
 	.size	setjmp, .-setjmp
+#endif
 
 // void longjmp (jmp_buf, int) __attribute__ ((noreturn))
 	.global	longjmp
+#if defined(__CYGWIN__) || defined(_WIN32)  /* __pe_asm_fixed__ */
+	.def longjmp; .scl 2; .type 32; .endef
+#else
 	.type	longjmp, %function
+#endif
 longjmp:
 #define REG_PAIR(REG1, REG2, OFFS)	ldp REG1, REG2, [x0, OFFS]
 #define REG_ONE(REG1, OFFS)		ldr REG1, [x0, OFFS]
@@ -71,4 +81,6 @@ longjmp:
 	cinc	w0, w1, eq
 	// use br not ret, as ret is guaranteed to mispredict
 	br	x30
+#if !(defined(__CYGWIN__) || defined(_WIN32))  /* __pe_asm_fixed__ */
 	.size	longjmp, .-longjmp
+#endif

@@ -98,13 +98,79 @@ struct __attribute__ ((__aligned__ (16))) __mcontext
   __uint64_t cr2;
 };
 
+#elif defined (__aarch64__)
+
+struct _uc_neon128
+{
+  __uint64_t low;
+  __int64_t high;
+};
+
+/* This mirrors the Win32 ARM64 CONTEXT (see winnt.h ARM64_NT_CONTEXT)
+   field for field, with oldmask and cr2 appended as on x86_64.  The
+   offsets in the comments are the CONTEXT offsets this layout must stay
+   in sync with; cr2 has no ARM64 meaning and exists only so that the
+   generic code which references it keeps compiling. */
+struct __attribute__ ((__aligned__ (16))) __mcontext
+{
+  __uint32_t ctxflags;			/* 000 */
+  __uint32_t cpsr;			/* 004 */
+  __uint64_t x0;			/* 008 */
+  __uint64_t x1;			/* 010 */
+  __uint64_t x2;			/* 018 */
+  __uint64_t x3;			/* 020 */
+  __uint64_t x4;			/* 028 */
+  __uint64_t x5;			/* 030 */
+  __uint64_t x6;			/* 038 */
+  __uint64_t x7;			/* 040 */
+  __uint64_t x8;			/* 048 */
+  __uint64_t x9;			/* 050 */
+  __uint64_t x10;			/* 058 */
+  __uint64_t x11;			/* 060 */
+  __uint64_t x12;			/* 068 */
+  __uint64_t x13;			/* 070 */
+  __uint64_t x14;			/* 078 */
+  __uint64_t x15;			/* 080 */
+  __uint64_t x16;			/* 088 */
+  __uint64_t x17;			/* 090 */
+  __uint64_t x18;			/* 098 */
+  __uint64_t x19;			/* 0a0 */
+  __uint64_t x20;			/* 0a8 */
+  __uint64_t x21;			/* 0b0 */
+  __uint64_t x22;			/* 0b8 */
+  __uint64_t x23;			/* 0c0 */
+  __uint64_t x24;			/* 0c8 */
+  __uint64_t x25;			/* 0d0 */
+  __uint64_t x26;			/* 0d8 */
+  __uint64_t x27;			/* 0e0 */
+  __uint64_t x28;			/* 0e8 */
+  __uint64_t fp;			/* 0f0 */
+  __uint64_t lr;			/* 0f8 */
+  __uint64_t sp;			/* 100 */
+  __uint64_t pc;			/* 108 */
+  struct _uc_neon128 vregs[32];		/* 110 */
+  __uint32_t fpcr;			/* 310 */
+  __uint32_t fpsr;			/* 314 */
+  __uint32_t bcr[8];			/* 318 */
+  __uint64_t bvr[8];			/* 338 */
+  __uint32_t wcr[2];			/* 378 */
+  __uint64_t wvr[2];			/* 380 */
+  __uint64_t oldmask;			/* 390 */
+  __uint64_t cr2;			/* 398 */
+};
+
 #else
 #error unimplemented for this target
 #endif
 
 /* Needed for GDB.  It only compiles in the context copy code if this macro is
    defined.  This is not sizeof(CONTEXT) due to historical accidents. */
+#ifdef __x86_64__
 #define __COPY_CONTEXT_SIZE 816
+#else
+/* ARM64 CONTEXT is 0x390 bytes and carries no such historical discrepancy. */
+#define __COPY_CONTEXT_SIZE 912
+#endif
 
 typedef union sigval
 {

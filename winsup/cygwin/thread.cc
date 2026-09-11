@@ -647,9 +647,17 @@ pthread::cancel ()
 	  if ((context.Rsp & 8) == 0)
 	    context.Rsp -= 8;
 	  context.Rip = (ULONG_PTR) pthread::static_cancel_self;
-#else
-#error unimplemented for this target
-#endif
+	  #elif defined (__aarch64__)
+	  /* AAPCS64 requires sp to be 16-byte aligned at all times.  Unlike
+	     x86_64 there is no return address pushed by the call, so the
+	     16n + 8 adjustment used above has no ARM64 counterpart; the
+	     return address lives in lr.  static_cancel_self() must not
+	     return, so lr is left as-is. */
+	  context.Sp &= ~0xfUL;
+	  context.Pc = (ULONG_PTR) pthread::static_cancel_self;
+	  #else
+	  #error unimplemented for this target
+	  #endif
 	  SetThreadContext (win32_obj_id, &context);
 	}
       cygheap->unlock_tls (tl_entry);
@@ -1966,7 +1974,11 @@ pthread_spinlock::lock ()
       else if (spins < FAST_SPINS_LIMIT)
         {
           ++spins;
+#ifdef __aarch64__
+          __asm__ volatile ("yield":::);
+#else
           __asm__ volatile ("pause":::);
+#endif
         }
       else
 	{

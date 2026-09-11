@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+preprocess=false
+output=
+include=
+last=
+while (( $# ))
+do
+  last=$1
+  case "$1" in
+    -E) preprocess=true ;;
+    -include) shift; include=$1 ;;
+    -o) shift; output=$1 ;;
+  esac
+  shift
+done
+
+if $preprocess
+then
+  if [[ $GENTLS_MODE == preprocess-require-include ]] \
+     && [[ $include != "$GENTLS_HEADER" || $last != /dev/null ]]
+  then
+    echo "fixture: header must be included, not compiled as the main file" >&2
+    exit 25
+  fi
+  cat "$GENTLS_HEADER"
+  if [[ $GENTLS_MODE == preprocess-failure ]]
+  then
+    echo "fixture: preprocessing failed" >&2
+    exit 23
+  fi
+else
+  cat > "$GENTLS_COMPILE_INPUT"
+  if [[ $GENTLS_MODE == compile-no-output ]]
+  then
+    exit 0
+  fi
+  cat "$GENTLS_ASSEMBLY" > "$output"
+  if [[ $GENTLS_MODE == compile-failure ]]
+  then
+    echo "fixture: compilation failed" >&2
+    exit 24
+  fi
+fi
