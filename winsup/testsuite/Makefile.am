@@ -38,6 +38,7 @@ check_PROGRAMS = \
 	winsup.api/devdsp \
 	winsup.api/devzero \
 	winsup.api/execvp-path \
+	winsup.api/exit-status-contract \
 	winsup.api/iospeed \
 	winsup.api/mmaptest01 \
 	winsup.api/mmaptest02 \

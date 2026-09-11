@@ -229,6 +229,10 @@ pinfo::exit (DWORD n)
   fill_rusage (&r, GetCurrentProcess ());
   add_rusage (&self->rusage_self, &r);
   int exitcode = self->exitcode & 0xffff;
+  /* Registered Cygwin children expose this POSIX wait word through the
+     Windows process exit code so their Cygwin parent can retain signal and
+     core-dump state.  Native Windows parents expect an ordinary exit byte,
+     so only unregistered launches receive the byte-swapped value. */
   if (!self->cygstarted)
     exitcode = ((exitcode & 0xff) << 8) | ((exitcode >> 8) & 0xff);
   sigproc_printf ("Calling dlls.cleanup_forkables n %y, exitcode %y", n, exitcode);
