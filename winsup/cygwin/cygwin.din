@@ -15,7 +15,9 @@ _check_for_executable DATA
 _ctype_ DATA
 _daylight DATA
 _fe_dfl_env DATA
+#ifndef __aarch64__
 _fe_nomask_env DATA
+#endif
 _impure_ptr DATA
 _sys_errlist DATA
 _sys_nerr DATA
@@ -135,7 +137,9 @@ __xdrrec_getrec SIGFE
 __xdrrec_setnonblock SIGFE
 __xpg_sigpause SIGFE
 __xpg_strerror_r SIGFE
+#ifndef __aarch64__
 _alloca = __alloca NOSIGFE
+#endif
 _dll_crt0 NOSIGFE
 _Exit SIGFE
 _exit SIGFE
@@ -532,7 +536,9 @@ feenableexcept SIGFE
 fegetenv NOSIGFE
 fegetexcept NOSIGFE
 fegetexceptflag NOSIGFE
+#ifndef __aarch64__
 fegetprec NOSIGFE
+#endif
 fegetround NOSIGFE
 feholdexcept SIGFE
 feof SIGFE
@@ -542,7 +548,9 @@ ferror SIGFE
 ferror_unlocked SIGFE
 fesetenv SIGFE
 fesetexceptflag SIGFE
+#ifndef __aarch64__
 fesetprec NOSIGFE
+#endif
 fesetround NOSIGFE
 fetestexcept NOSIGFE
 feupdateenv SIGFE

@@ -16,7 +16,7 @@ override CC = @MINGW_CC@
 override CXX = @MINGW_CXX@
 AM_CPPFLAGS =
 
-noinst_PROGRAMS = cygrun cygload
+noinst_PROGRAMS = cygrun cygload argv-conv-win
 
 cygrun_SOURCES = \
 	../cygrun.c
@@ -24,3 +24,6 @@ cygrun_SOURCES = \
 cygload_SOURCES = \
 	../winsup.api/cygload.cc
 cygload_LDFLAGS=-static -Wl,-e,cygloadCRTStartup
+
+argv_conv_win_SOURCES = \
+	../winsup.api/argv-conv-win.c
