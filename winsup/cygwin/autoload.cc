@@ -83,6 +83,28 @@ bool NO_COPY wsock_started;
   .set		" #dllname "_primed, 1			\n\
 .endif							\n\
 ");
+#elif defined (__aarch64__)
+/* The AArch64 assembler has no .string16 directive, so emit the DLL name
+   explicitly as little-endian UTF-16. */
+#define LoadDLLprime(dllname, init_also, no_resolve_on_fork) __asm__ ("	\n\
+.ifndef " #dllname "_primed				\n\
+  .section	.data_cygwin_nocopy,\"w\"		\n\
+  .balign	8					\n\
+."#dllname "_info:					\n\
+  .quad		_std_dll_init				\n\
+  .quad		" #no_resolve_on_fork "			\n\
+  .long		-1					\n\
+  .balign	8					\n\
+  .quad		" #init_also "				\n\
+  .irpc		c, " #dllname ".dll			\n\
+    .ascii	\"\\c\"					\n\
+    .byte	0					\n\
+  .endr							\n\
+  .hword	0					\n\
+  .text							\n\
+  .set		" #dllname "_primed, 1			\n\
+.endif							\n\
+");
 #else
 #error unimplemented for this target
 #endif
@@ -121,6 +143,41 @@ _win32_" #name ":					\n\
   .hword	((" #err ") & 0xffff)			\n\
 3:.quad		1b					\n\
   .asciz	\"" #name "\"				\n\
+  .text							\n\
+");
+#elif defined (__aarch64__)
+/* Keep the payload naturally aligned and identical to struct func_info:
+   dll@0, decoration@8, func_addr@16, and name@24. */
+#define LoadDLLfuncEx3(name, dllname, notimp, err, no_resolve_on_fork) \
+  LoadDLLprime (dllname, dll_func_load, no_resolve_on_fork) \
+  __asm__ ("						\n\
+  .section	." #dllname "_autoload_text,\"wx\"	\n\
+  .global	" #name "				\n\
+  .global	_win32_" #name "			\n\
+  .balign	16					\n\
+" #name ":						\n\
+_win32_" #name ":					\n\
+  ldr		x16, 3f					\n\
+  br		x16					\n\
+1:							\n\
+  stp		x0, x1, [sp, #-80]!			\n\
+  stp		x2, x3, [sp, #16]			\n\
+  stp		x4, x5, [sp, #32]			\n\
+  stp		x6, x7, [sp, #48]			\n\
+  stp		x8, x30, [sp, #64]			\n\
+  adr		x16, 2f					\n\
+  ldr		x17, [x16]				\n\
+  ldr		x17, [x17]				\n\
+  nop							\n\
+  blr		x17					\n\
+2:.quad		." #dllname "_info			\n\
+  .hword	" #notimp "				\n\
+  .hword	((" #err ") & 0xffff)			\n\
+  .hword	0					\n\
+  .hword	0					\n\
+3:.quad		1b					\n\
+4:.asciz	\"" #name "\"				\n\
+  .balign	8					\n\
   .text							\n\
 ");
 #else
@@ -203,6 +260,61 @@ dll_chain:								\n\
 	push	%rax		# Restore 'return address'		\n\
 	jmp	*%rdx		# Jump to next init function		\n\
 ");
+#elif defined (__aarch64__)
+__asm__ ("								\n\
+	 .section .rdata,\"r\"						\n\
+msg1:									\n\
+	.ascii	\"couldn't dynamically determine load address for '%s' (handle %p), %E\\0\"\n\
+									\n\
+	 .text								\n\
+	.p2align 4							\n\
+noload:									\n\
+	ldr	w0, [x19, #8]						\n\
+	tbz	w0, #0, 1f						\n\
+	asr	w20, w0, #16						\n\
+	mov	w0, #127						\n\
+	bl	SetLastError						\n\
+	mov	w0, w20							\n\
+	ldp	x19, x20, [sp], #16					\n\
+	ldp	x2, x3, [sp, #16]					\n\
+	ldp	x4, x5, [sp, #32]					\n\
+	ldp	x6, x7, [sp, #48]					\n\
+	ldp	x8, x30, [sp, #64]					\n\
+	add	sp, sp, #80						\n\
+	ret								\n\
+1:									\n\
+	ldr	x1, [x19]						\n\
+	ldr	x2, [x1, #8]						\n\
+	add	x1, x19, #24						\n\
+	adrp	x0, msg1						\n\
+	add	x0, x0, :lo12:msg1					\n\
+	bl	api_fatal						\n\
+									\n\
+	.globl	dll_func_load						\n\
+dll_func_load:								\n\
+	stp	x19, x20, [sp, #-16]!					\n\
+	mov	x19, x30						\n\
+	ldr	x0, [x19]						\n\
+	ldr	x0, [x0, #8]						\n\
+	add	x1, x19, #24						\n\
+	bl	GetProcAddress						\n\
+	cbz	x0, noload						\n\
+	str	x0, [x19, #16]						\n\
+	mov	x16, x0							\n\
+	ldp	x19, x20, [sp], #16					\n\
+	ldp	x0, x1, [sp]						\n\
+	ldp	x2, x3, [sp, #16]					\n\
+	ldp	x4, x5, [sp, #32]					\n\
+	ldp	x6, x7, [sp, #48]					\n\
+	ldp	x8, x30, [sp, #64]					\n\
+	add	sp, sp, #80						\n\
+	br	x16							\n\
+									\n\
+	.global	dll_chain						\n\
+dll_chain:								\n\
+	mov	x30, x0							\n\
+	br	x1							\n\
+");
 #else
 #error unimplemented for this target
 #endif
@@ -226,6 +338,17 @@ struct func_info
   UINT_PTR func_addr;
   char name[];
 };
+
+#ifdef __aarch64__
+static_assert (offsetof (struct func_info, dll) == 0,
+	       "autoload asm expects func_info.dll at offset 0");
+static_assert (offsetof (struct func_info, decoration) == 8,
+	       "autoload asm expects func_info.decoration at offset 8");
+static_assert (offsetof (struct func_info, func_addr) == 16,
+	       "autoload asm expects func_info.func_addr at offset 16");
+static_assert (offsetof (struct func_info, name) == 24,
+	       "autoload asm expects func_info.name at offset 24");
+#endif
 
 /* Mechanism for setting up info for passing to dll_chain routines. */
 typedef __uint128_t two_addr_t;
@@ -300,6 +423,30 @@ _" #func ":								\n\
 
 INIT_WRAPPER (std_dll_init)
 
+#elif defined (__aarch64__)
+#define INIT_WRAPPER(func) \
+__asm__ ("								\n\
+	.text								\n\
+	.p2align 4							\n\
+	.seh_proc _" #func "						\n\
+_" #func ":								\n\
+	stp	x29, x30, [sp, #-16]!					\n\
+	.seh_save_fplr_x 16						\n\
+	mov	x29, sp							\n\
+	.seh_set_fp							\n\
+	.seh_endprologue						\n\
+	mov	x0, x30							\n\
+	bl	" #func "						\n\
+	.seh_startepilogue						\n\
+	ldp	x29, x30, [sp], #16					\n\
+	.seh_save_fplr_x 16						\n\
+	.seh_endepilogue						\n\
+	b	dll_chain						\n\
+	.seh_endproc							\n\
+");
+
+INIT_WRAPPER (std_dll_init)
+
 #else
 #error unimplemented for this target
 #endif
@@ -360,7 +507,7 @@ std_dll_init (struct func_info *func)
 
 /* Initialization function for winsock stuff. */
 
-#ifdef __x86_64__
+#if defined (__x86_64__) || defined (__aarch64__)
 /* See above comment preceeding std_dll_init. */
 INIT_WRAPPER (wsock_init)
 #else
