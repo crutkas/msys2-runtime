@@ -1,0 +1,351 @@
+{
+  "schema": 1,
+  "status": "failed",
+  "makefile_sha256": "5f9c81f28476049b3cfebacca46483b8200dbce4f31100c8681c512dc8d32d90",
+  "source_makefile_sha256": "b32b91ce0f1c0ed20b0adfaf2c6ca4b69ab53035eec43fba3b32e340e6b80b42",
+  "guard_sha256": "e713a9aca592a5aa4c310741793f0dab5f2a85feeee30fff3561cc94318163d8",
+  "stale_generator_sha256": "74f502440493f2406435006bce46674adcfda59b269f0da98586a7b87e0127fb",
+  "cases": [
+    {
+      "name": "initial-valid-generation",
+      "command": [
+        "make",
+        "-C",
+        "/root/arm64-vnext-20260905/runtime/atomic-generation-20260911-3fc49c8a/build/winsup/cygwin",
+        "-j1",
+        "V=1",
+        "sigfe.o"
+      ],
+      "exit": 0,
+      "expectedSuccess": true,
+      "outputs": {
+        "tlsoffsets": "49ac682b8f5ed4295d03abc2dab5953fc472684d42eb0b87d779057942b23566",
+        "msys.def": "0ae964429679c5a406e04e8a31628a76e4223c723f5c06d72d851ce3f4642171",
+        "sigfe.s": "d7045af187e7e666cec44fc69065a0f76b93dbe9749dd74eac5e8b0241e864e7",
+        "sigfe.o": "58ae4318d856af5833c52cca00bf100978eafe75fd990faf7698e8ec08f26bdd",
+        "tlsoffsets.generation.json": "1304061bd3c512c2eecaa27ea6a2a4960e7b3de6ec4c8d857c1958d4562bab9e",
+        "sigfe.s.generation.json": "69f208bfee899c942004664b8bec5ae5b241aae76e453ecef7cc55a4e2e26ee2"
+      },
+      "stdout_sha256": "19251e4dce4290c209462bfcc07b3e52e5df6b32e5ad8c44023566cb5f894e3a",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "unchanged-repeat",
+      "command": [
+        "make",
+        "-C",
+        "/root/arm64-vnext-20260905/runtime/atomic-generation-20260911-3fc49c8a/build/winsup/cygwin",
+        "-j1",
+        "V=1",
+        "sigfe.o"
+      ],
+      "exit": 0,
+      "expectedSuccess": true,
+      "outputs": {
+        "tlsoffsets": "49ac682b8f5ed4295d03abc2dab5953fc472684d42eb0b87d779057942b23566",
+        "msys.def": "0ae964429679c5a406e04e8a31628a76e4223c723f5c06d72d851ce3f4642171",
+        "sigfe.s": "d7045af187e7e666cec44fc69065a0f76b93dbe9749dd74eac5e8b0241e864e7",
+        "sigfe.o": "58ae4318d856af5833c52cca00bf100978eafe75fd990faf7698e8ec08f26bdd",
+        "tlsoffsets.generation.json": "1304061bd3c512c2eecaa27ea6a2a4960e7b3de6ec4c8d857c1958d4562bab9e",
+        "sigfe.s.generation.json": "69f208bfee899c942004664b8bec5ae5b241aae76e453ecef7cc55a4e2e26ee2"
+      },
+      "stdout_sha256": "f91678d4f847f87fe6f36f9fe42a405c1aa7e31a108c4317f8e302ac238dd225",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "real-stale-x86-generator",
+      "command": [
+        "make",
+        "-C",
+        "/root/arm64-vnext-20260905/runtime/atomic-generation-20260911-3fc49c8a/build/winsup/cygwin",
+        "-j1",
+        "V=1",
+        "sigfe.o",
+        "SIGNAL_GENERATOR=/mnt/c/agtc-signal-01/baseline-source/winsup/cygwin/scripts/gendef"
+      ],
+      "exit": 2,
+      "expectedSuccess": false,
+      "outputs": {
+        "tlsoffsets": "49ac682b8f5ed4295d03abc2dab5953fc472684d42eb0b87d779057942b23566",
+        "msys.def": "0ae964429679c5a406e04e8a31628a76e4223c723f5c06d72d851ce3f4642171",
+        "sigfe.s": "d7045af187e7e666cec44fc69065a0f76b93dbe9749dd74eac5e8b0241e864e7",
+        "sigfe.o": "58ae4318d856af5833c52cca00bf100978eafe75fd990faf7698e8ec08f26bdd",
+        "tlsoffsets.generation.json": "1304061bd3c512c2eecaa27ea6a2a4960e7b3de6ec4c8d857c1958d4562bab9e",
+        "sigfe.s.generation.json": "69f208bfee899c942004664b8bec5ae5b241aae76e453ecef7cc55a4e2e26ee2"
+      },
+      "stdout_sha256": "f031c52e222868e021c067db71d715c98d4bf9831c7ac11bba13c61bfeccca35",
+      "stderr_sha256": "d0d87dafdca0b461d1581497451668df2116dead4e6f6b4d6245b20f66125221"
+    },
+    {
+      "name": "empty-assembly-after-zero-exit",
+      "command": [
+        "make",
+        "-C",
+        "/root/arm64-vnext-20260905/runtime/atomic-generation-20260911-3fc49c8a/build/winsup/cygwin",
+        "-j1",
+        "V=1",
+        "sigfe.o",
+        "SIGNAL_GENERATOR=/root/arm64-vnext-20260905/runtime/atomic-generation-20260911-3fc49c8a/make-controls-receipt-gap-before/fixtures/empty-signal"
+      ],
+      "exit": 2,
+      "expectedSuccess": false,
+      "outputs": {
+        "tlsoffsets": "49ac682b8f5ed4295d03abc2dab5953fc472684d42eb0b87d779057942b23566",
+        "msys.def": "0ae964429679c5a406e04e8a31628a76e4223c723f5c06d72d851ce3f4642171",
+        "sigfe.s": "d7045af187e7e666cec44fc69065a0f76b93dbe9749dd74eac5e8b0241e864e7",
+        "sigfe.o": "58ae4318d856af5833c52cca00bf100978eafe75fd990faf7698e8ec08f26bdd",
+        "tlsoffsets.generation.json": "1304061bd3c512c2eecaa27ea6a2a4960e7b3de6ec4c8d857c1958d4562bab9e",
+        "sigfe.s.generation.json": "69f208bfee899c942004664b8bec5ae5b241aae76e453ecef7cc55a4e2e26ee2"
+      },
+      "stdout_sha256": "8125e2ff2eb0ebc76737e7589c2628324ac538be46c3aca653177a28d061654d",
+      "stderr_sha256": "a36cb74e2ce16b720d190bde43b8ca9446eff099da02a387fbfe0063dbe7c573"
+    },
+    {
+      "name": "generator-fails-after-writing",
+      "command": [
+        "make",
+        "-C",
+        "/root/arm64-vnext-20260905/runtime/atomic-generation-20260911-3fc49c8a/build/winsup/cygwin",
+        "-j1",
+        "V=1",
+        "sigfe.o",
+        "SIGNAL_GENERATOR=/root/arm64-vnext-20260905/runtime/atomic-generation-20260911-3fc49c8a/make-controls-receipt-gap-before/fixtures/failed-signal"
+      ],
+      "exit": 2,
+      "expectedSuccess": false,
+      "outputs": {
+        "tlsoffsets": "49ac682b8f5ed4295d03abc2dab5953fc472684d42eb0b87d779057942b23566",
+        "msys.def": "0ae964429679c5a406e04e8a31628a76e4223c723f5c06d72d851ce3f4642171",
+        "sigfe.s": "d7045af187e7e666cec44fc69065a0f76b93dbe9749dd74eac5e8b0241e864e7",
+        "sigfe.o": "58ae4318d856af5833c52cca00bf100978eafe75fd990faf7698e8ec08f26bdd",
+        "tlsoffsets.generation.json": "1304061bd3c512c2eecaa27ea6a2a4960e7b3de6ec4c8d857c1958d4562bab9e",
+        "sigfe.s.generation.json": "69f208bfee899c942004664b8bec5ae5b241aae76e453ecef7cc55a4e2e26ee2"
+      },
+      "stdout_sha256": "ff77a95a7ea99fb759e2682d5941c81eaac149d5c68d341a809c53662cfb925b",
+      "stderr_sha256": "4a84af652add073e1ddf4ffdc0b8f6e2a54daec4b36d9853d04cd0c6468b48d7"
+    },
+    {
+      "name": "missing-trampoline-label",
+      "command": [
+        "make",
+        "-C",
+        "/root/arm64-vnext-20260905/runtime/atomic-generation-20260911-3fc49c8a/build/winsup/cygwin",
+        "-j1",
+        "V=1",
+        "sigfe.o",
+        "SIGNAL_GENERATOR=/root/arm64-vnext-20260905/runtime/atomic-generation-20260911-3fc49c8a/make-controls-receipt-gap-before/fixtures/missing-label"
+      ],
+      "exit": 2,
+      "expectedSuccess": false,
+      "outputs": {
+        "tlsoffsets": "49ac682b8f5ed4295d03abc2dab5953fc472684d42eb0b87d779057942b23566",
+        "msys.def": "0ae964429679c5a406e04e8a31628a76e4223c723f5c06d72d851ce3f4642171",
+        "sigfe.s": "d7045af187e7e666cec44fc69065a0f76b93dbe9749dd74eac5e8b0241e864e7",
+        "sigfe.o": "58ae4318d856af5833c52cca00bf100978eafe75fd990faf7698e8ec08f26bdd",
+        "tlsoffsets.generation.json": "1304061bd3c512c2eecaa27ea6a2a4960e7b3de6ec4c8d857c1958d4562bab9e",
+        "sigfe.s.generation.json": "69f208bfee899c942004664b8bec5ae5b241aae76e453ecef7cc55a4e2e26ee2"
+      },
+      "stdout_sha256": "ee305db354d88a95fef1323a6f1fc7769264daaba66e5c5f4aa714a77d219ca6",
+      "stderr_sha256": "200e39902a09d798ea26fca71b1a70f902bf33427b3fe8470e94baea318fb871"
+    },
+    {
+      "name": "missing-public-provider",
+      "command": [
+        "make",
+        "-C",
+        "/root/arm64-vnext-20260905/runtime/atomic-generation-20260911-3fc49c8a/build/winsup/cygwin",
+        "-j1",
+        "V=1",
+        "sigfe.o",
+        "SIGNAL_GENERATOR=/root/arm64-vnext-20260905/runtime/atomic-generation-20260911-3fc49c8a/make-controls-receipt-gap-before/fixtures/missing-public"
+      ],
+      "exit": 2,
+      "expectedSuccess": false,
+      "outputs": {
+        "tlsoffsets": "49ac682b8f5ed4295d03abc2dab5953fc472684d42eb0b87d779057942b23566",
+        "msys.def": "0ae964429679c5a406e04e8a31628a76e4223c723f5c06d72d851ce3f4642171",
+        "sigfe.s": "d7045af187e7e666cec44fc69065a0f76b93dbe9749dd74eac5e8b0241e864e7",
+        "sigfe.o": "58ae4318d856af5833c52cca00bf100978eafe75fd990faf7698e8ec08f26bdd",
+        "tlsoffsets.generation.json": "1304061bd3c512c2eecaa27ea6a2a4960e7b3de6ec4c8d857c1958d4562bab9e",
+        "sigfe.s.generation.json": "69f208bfee899c942004664b8bec5ae5b241aae76e453ecef7cc55a4e2e26ee2"
+      },
+      "stdout_sha256": "56d879b0c0ddda507d7ef82f54469f295beb87b4871151f3cb4257f35df0ec11",
+      "stderr_sha256": "54d451bbbfe674e50b1bc96ce9f3781b1b7957bd4fde5ff74efce57e193d35f9"
+    },
+    {
+      "name": "dropped-source-export-from-both",
+      "command": [
+        "make",
+        "-C",
+        "/root/arm64-vnext-20260905/runtime/atomic-generation-20260911-3fc49c8a/build/winsup/cygwin",
+        "-j1",
+        "V=1",
+        "sigfe.o",
+        "SIGNAL_GENERATOR=/root/arm64-vnext-20260905/runtime/atomic-generation-20260911-3fc49c8a/make-controls-receipt-gap-before/fixtures/dropped-export"
+      ],
+      "exit": 2,
+      "expectedSuccess": false,
+      "outputs": {
+        "tlsoffsets": "49ac682b8f5ed4295d03abc2dab5953fc472684d42eb0b87d779057942b23566",
+        "msys.def": "0ae964429679c5a406e04e8a31628a76e4223c723f5c06d72d851ce3f4642171",
+        "sigfe.s": "d7045af187e7e666cec44fc69065a0f76b93dbe9749dd74eac5e8b0241e864e7",
+        "sigfe.o": "58ae4318d856af5833c52cca00bf100978eafe75fd990faf7698e8ec08f26bdd",
+        "tlsoffsets.generation.json": "1304061bd3c512c2eecaa27ea6a2a4960e7b3de6ec4c8d857c1958d4562bab9e",
+        "sigfe.s.generation.json": "69f208bfee899c942004664b8bec5ae5b241aae76e453ecef7cc55a4e2e26ee2"
+      },
+      "stdout_sha256": "c82dac4f74ec7173bd17846262d32c8895a7e433a11274a510808228fe7e46f1",
+      "stderr_sha256": "d0d87dafdca0b461d1581497451668df2116dead4e6f6b4d6245b20f66125221"
+    },
+    {
+      "name": "zero-offsets",
+      "command": [
+        "make",
+        "-C",
+        "/root/arm64-vnext-20260905/runtime/atomic-generation-20260911-3fc49c8a/build/winsup/cygwin",
+        "-j1",
+        "V=1",
+        "sigfe.o",
+        "GENTLS_OFFSETS=/root/arm64-vnext-20260905/runtime/atomic-generation-20260911-3fc49c8a/make-controls-receipt-gap-before/fixtures/zero-offsets"
+      ],
+      "exit": 2,
+      "expectedSuccess": false,
+      "outputs": {
+        "tlsoffsets": "49ac682b8f5ed4295d03abc2dab5953fc472684d42eb0b87d779057942b23566",
+        "msys.def": "0ae964429679c5a406e04e8a31628a76e4223c723f5c06d72d851ce3f4642171",
+        "sigfe.s": "d7045af187e7e666cec44fc69065a0f76b93dbe9749dd74eac5e8b0241e864e7",
+        "sigfe.o": "58ae4318d856af5833c52cca00bf100978eafe75fd990faf7698e8ec08f26bdd",
+        "tlsoffsets.generation.json": "1304061bd3c512c2eecaa27ea6a2a4960e7b3de6ec4c8d857c1958d4562bab9e",
+        "sigfe.s.generation.json": "69f208bfee899c942004664b8bec5ae5b241aae76e453ecef7cc55a4e2e26ee2"
+      },
+      "stdout_sha256": "f8e346ab7ce6383616e4ef4e277f221219046c45527b973249abe88bba4527f9",
+      "stderr_sha256": "713c5c9f93002e1f0fbe3e703ff0c958465656d81443886ac5e05cdc04ed0b8d"
+    },
+    {
+      "name": "malformed-offsets",
+      "command": [
+        "make",
+        "-C",
+        "/root/arm64-vnext-20260905/runtime/atomic-generation-20260911-3fc49c8a/build/winsup/cygwin",
+        "-j1",
+        "V=1",
+        "sigfe.o",
+        "GENTLS_OFFSETS=/root/arm64-vnext-20260905/runtime/atomic-generation-20260911-3fc49c8a/make-controls-receipt-gap-before/fixtures/malformed-offsets"
+      ],
+      "exit": 2,
+      "expectedSuccess": false,
+      "outputs": {
+        "tlsoffsets": "49ac682b8f5ed4295d03abc2dab5953fc472684d42eb0b87d779057942b23566",
+        "msys.def": "0ae964429679c5a406e04e8a31628a76e4223c723f5c06d72d851ce3f4642171",
+        "sigfe.s": "d7045af187e7e666cec44fc69065a0f76b93dbe9749dd74eac5e8b0241e864e7",
+        "sigfe.o": "58ae4318d856af5833c52cca00bf100978eafe75fd990faf7698e8ec08f26bdd",
+        "tlsoffsets.generation.json": "1304061bd3c512c2eecaa27ea6a2a4960e7b3de6ec4c8d857c1958d4562bab9e",
+        "sigfe.s.generation.json": "69f208bfee899c942004664b8bec5ae5b241aae76e453ecef7cc55a4e2e26ee2"
+      },
+      "stdout_sha256": "1d1edfa96d2e138f2e6648939d9ec03d2c4253b87019e4ce39ffa935bd9f421d",
+      "stderr_sha256": "5947509f11a756621c6239b17a7b8dcec16a3f0d88417800aca71a24fbe184d8"
+    },
+    {
+      "name": "compiler-failure",
+      "command": [
+        "make",
+        "-C",
+        "/root/arm64-vnext-20260905/runtime/atomic-generation-20260911-3fc49c8a/build/winsup/cygwin",
+        "-j1",
+        "V=1",
+        "tlsoffsets",
+        "CXXCOMPILE=false"
+      ],
+      "exit": 2,
+      "expectedSuccess": false,
+      "outputs": {
+        "tlsoffsets": "49ac682b8f5ed4295d03abc2dab5953fc472684d42eb0b87d779057942b23566",
+        "msys.def": "0ae964429679c5a406e04e8a31628a76e4223c723f5c06d72d851ce3f4642171",
+        "sigfe.s": "d7045af187e7e666cec44fc69065a0f76b93dbe9749dd74eac5e8b0241e864e7",
+        "sigfe.o": "58ae4318d856af5833c52cca00bf100978eafe75fd990faf7698e8ec08f26bdd",
+        "tlsoffsets.generation.json": "1304061bd3c512c2eecaa27ea6a2a4960e7b3de6ec4c8d857c1958d4562bab9e",
+        "sigfe.s.generation.json": "69f208bfee899c942004664b8bec5ae5b241aae76e453ecef7cc55a4e2e26ee2"
+      },
+      "stdout_sha256": "42df34c8d8bc843f023532044cb46f7353200ea7d14fabbf88324c73f810d6a8",
+      "stderr_sha256": "ae0528e91dc963a4f110525b7418ba2009c4c3759cf69ee49f948deaef2f688d"
+    },
+    {
+      "name": "real-long-only-tls-generator",
+      "command": [
+        "make",
+        "-C",
+        "/root/arm64-vnext-20260905/runtime/atomic-generation-20260911-3fc49c8a/build/winsup/cygwin",
+        "-j1",
+        "V=1",
+        "sigfe.o",
+        "GENTLS_OFFSETS=/mnt/c/agtc-signal-01/old-long-only-gentls_offsets"
+      ],
+      "exit": 2,
+      "expectedSuccess": false,
+      "outputs": {
+        "tlsoffsets": "49ac682b8f5ed4295d03abc2dab5953fc472684d42eb0b87d779057942b23566",
+        "msys.def": "0ae964429679c5a406e04e8a31628a76e4223c723f5c06d72d851ce3f4642171",
+        "sigfe.s": "d7045af187e7e666cec44fc69065a0f76b93dbe9749dd74eac5e8b0241e864e7",
+        "sigfe.o": "58ae4318d856af5833c52cca00bf100978eafe75fd990faf7698e8ec08f26bdd",
+        "tlsoffsets.generation.json": "1304061bd3c512c2eecaa27ea6a2a4960e7b3de6ec4c8d857c1958d4562bab9e",
+        "sigfe.s.generation.json": "69f208bfee899c942004664b8bec5ae5b241aae76e453ecef7cc55a4e2e26ee2"
+      },
+      "stdout_sha256": "b887bab410ac15b9c77f3532b3ab956d2b0707e2009dc2f63b7cb75defd38a81",
+      "stderr_sha256": "35dd41883d9f7d1fc725aee421e7fb32de929cdaee5b5ba0bbbb8ddedbc02f62"
+    },
+    {
+      "name": "real-long-only-parser-with-relative-output",
+      "command": [
+        "make",
+        "-C",
+        "/root/arm64-vnext-20260905/runtime/atomic-generation-20260911-3fc49c8a/build/winsup/cygwin",
+        "-j1",
+        "V=1",
+        "sigfe.o",
+        "GENTLS_OFFSETS=/root/arm64-vnext-20260905/runtime/atomic-generation-20260911-3fc49c8a/make-controls-receipt-gap-before/fixtures/historical-tls-basename"
+      ],
+      "exit": 2,
+      "expectedSuccess": false,
+      "outputs": {
+        "tlsoffsets": "49ac682b8f5ed4295d03abc2dab5953fc472684d42eb0b87d779057942b23566",
+        "msys.def": "0ae964429679c5a406e04e8a31628a76e4223c723f5c06d72d851ce3f4642171",
+        "sigfe.s": "d7045af187e7e666cec44fc69065a0f76b93dbe9749dd74eac5e8b0241e864e7",
+        "sigfe.o": "58ae4318d856af5833c52cca00bf100978eafe75fd990faf7698e8ec08f26bdd",
+        "tlsoffsets.generation.json": "1304061bd3c512c2eecaa27ea6a2a4960e7b3de6ec4c8d857c1958d4562bab9e",
+        "sigfe.s.generation.json": "69f208bfee899c942004664b8bec5ae5b241aae76e453ecef7cc55a4e2e26ee2"
+      },
+      "stdout_sha256": "2b77153c6eb4be552221aee69eebe596b6e9341d20f38a5d1f6371b867bafcd7",
+      "stderr_sha256": "c0374d42159afa6e653ce6d479d85eaaf2469dc7484584c6266667c84f901886"
+    },
+    {
+      "name": "reject-changed-input-corrupt-sigfe-s",
+      "command": [
+        "make",
+        "-C",
+        "/root/arm64-vnext-20260905/runtime/atomic-generation-20260911-3fc49c8a/build/winsup/cygwin",
+        "-j1",
+        "V=1",
+        "sigfe.o",
+        "SIGNAL_GENERATOR=/root/arm64-vnext-20260905/runtime/atomic-generation-20260911-3fc49c8a/make-controls-receipt-gap-before/fixtures/unchanged-signal"
+      ],
+      "exit": 0,
+      "expectedSuccess": false,
+      "outputs": {
+        "tlsoffsets": "49ac682b8f5ed4295d03abc2dab5953fc472684d42eb0b87d779057942b23566",
+        "msys.def": "0ae964429679c5a406e04e8a31628a76e4223c723f5c06d72d851ce3f4642171",
+        "sigfe.s": "d7045af187e7e666cec44fc69065a0f76b93dbe9749dd74eac5e8b0241e864e7",
+        "sigfe.o": "58ae4318d856af5833c52cca00bf100978eafe75fd990faf7698e8ec08f26bdd",
+        "tlsoffsets.generation.json": "1304061bd3c512c2eecaa27ea6a2a4960e7b3de6ec4c8d857c1958d4562bab9e",
+        "sigfe.s.generation.json": "1ff51ca0788ae3836d3ae68ded241e2f4cbfb08fd526d77df9edf0e6266be78f"
+      },
+      "stdout_sha256": "fd4f4061e74e0cdce1084273007d311548eeeb21390a8e1f0ba88f224d96e067",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "historical_tls_payload": {
+    "path": "/root/arm64-vnext-20260905/runtime/atomic-generation-20260911-3fc49c8a/make-controls-receipt-gap-before/fixtures/historical-tls-output",
+    "bytes": 56,
+    "sha256": "95e965fc1beea943c3eadc2cd941c34b01a3151968a0ffbe6917b354d2f0d8a5",
+    "text": ".equ _cygtls.local_clib, 0\n.equ _cygtls.local_clib_p, 0\n",
+    "scope": "Unmodified old parser; wrapper only adapts its basename-only output convention."
+  }
+}
