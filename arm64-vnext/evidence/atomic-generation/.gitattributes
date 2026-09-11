@@ -1,0 +1,2 @@
+# Hash-bound historical evidence must survive checkout without EOL conversion.
+* -text

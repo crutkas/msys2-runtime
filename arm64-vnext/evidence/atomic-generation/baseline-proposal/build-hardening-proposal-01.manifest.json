@@ -1,0 +1,205 @@
+{
+  "schema": 1,
+  "files": {
+    "existing-tls-controls.log": {
+      "sha256": "7d1a3d7b09523ba3c8ed2b166c7f99bde5e953be4afaad097a9bde284cc2f806",
+      "bytes": 1221
+    },
+    "handoff.json": {
+      "sha256": "f8429c52a5599f4f1e4601358b564f3dd3d2ee2774dce2ee91760477726f0fed",
+      "bytes": 3080
+    },
+    "README.txt": {
+      "sha256": "0a3330a4b96b831bc84d77e24c2546306404b6e4db1b74f22185e1de21035d5a",
+      "bytes": 3592
+    },
+    "runtime-generation-guards.patch": {
+      "sha256": "50736b8ccbdbca6df589a5d514db0d55fc27e698a1fab547dc374a612175dbd7",
+      "bytes": 21873
+    },
+    "tlsoffsets.good": {
+      "sha256": "49ac682b8f5ed4295d03abc2dab5953fc472684d42eb0b87d779057942b23566",
+      "bytes": 1822
+    },
+    "make-controls/clean-regeneration.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "make-controls/clean-regeneration.stdout": {
+      "sha256": "2684d8a4b36920b9c32cc2dab6801fdf1c3a8107fe985dec14668945b6a8cf74",
+      "bytes": 18835
+    },
+    "make-controls/compiler-failure.stderr": {
+      "sha256": "ae0528e91dc963a4f110525b7418ba2009c4c3759cf69ee49f948deaef2f688d",
+      "bytes": 131
+    },
+    "make-controls/compiler-failure.stdout": {
+      "sha256": "4fa5ca73104d97670f98b58cac5cd610d706c5e4b7a9d143f757fc4a3e743849",
+      "bytes": 15936
+    },
+    "make-controls/copied-sigfe.o": {
+      "sha256": "cebcf326bf6997d3724401f90fabcd030ebd0238754f846d9009b5b9f74b3cdd",
+      "bytes": 148128
+    },
+    "make-controls/dropped-source-export-from-both.stderr": {
+      "sha256": "d0d87dafdca0b461d1581497451668df2116dead4e6f6b4d6245b20f66125221",
+      "bytes": 88
+    },
+    "make-controls/dropped-source-export-from-both.stdout": {
+      "sha256": "cf71dc4ba7168ffd2de2f517c93c0c9b951757b6506176ddec7728158253f073",
+      "bytes": 18215
+    },
+    "make-controls/empty-assembly-after-zero-exit.stderr": {
+      "sha256": "a36cb74e2ce16b720d190bde43b8ca9446eff099da02a387fbfe0063dbe7c573",
+      "bytes": 87
+    },
+    "make-controls/empty-assembly-after-zero-exit.stdout": {
+      "sha256": "34bc8183caa9768d8f9df63e5e08dc1aa12b233b4e7b623b57a0809506dc768d",
+      "bytes": 18213
+    },
+    "make-controls/generator-fails-after-writing.stderr": {
+      "sha256": "4a84af652add073e1ddf4ffdc0b8f6e2a54daec4b36d9853d04cd0c6468b48d7",
+      "bytes": 118
+    },
+    "make-controls/generator-fails-after-writing.stdout": {
+      "sha256": "c72f4fbae298657f12812be25798710483e4dbf0b9a6fcb81cb1bfb9598d929d",
+      "bytes": 18214
+    },
+    "make-controls/initial-valid-generation.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "make-controls/initial-valid-generation.stdout": {
+      "sha256": "b0a1c0f2945bb91c37452dd7cd3f1d995e112a599fc13b14216c8a67fd82401a",
+      "bytes": 23662
+    },
+    "make-controls/malformed-offsets.stderr": {
+      "sha256": "5947509f11a756621c6239b17a7b8dcec16a3f0d88417800aca71a24fbe184d8",
+      "bytes": 87
+    },
+    "make-controls/malformed-offsets.stdout": {
+      "sha256": "ed4b33a75d4b64ec7b755a128c68dea7d29a697957867d8e53fe46fca128e6d2",
+      "bytes": 17733
+    },
+    "make-controls/missing-trampoline-label.stderr": {
+      "sha256": "200e39902a09d798ea26fca71b1a70f902bf33427b3fe8470e94baea318fb871",
+      "bytes": 86
+    },
+    "make-controls/missing-trampoline-label.stdout": {
+      "sha256": "093d61b778cd3d022bfc6fe44bd97260d3fabb41e3f07c60c430f93ef15e47a5",
+      "bytes": 18214
+    },
+    "make-controls/real-long-only-parser-with-relative-output.stderr": {
+      "sha256": "c0374d42159afa6e653ce6d479d85eaaf2469dc7484584c6266667c84f901886",
+      "bytes": 180
+    },
+    "make-controls/real-long-only-parser-with-relative-output.stdout": {
+      "sha256": "a766f266a3da65aab428b6094d58c6a609df7d908c116dff4fa379c8f5c7122e",
+      "bytes": 17739
+    },
+    "make-controls/real-long-only-tls-generator.stderr": {
+      "sha256": "043cde659d4a8f83ebb1fdf87f803dd86a5ead8c86e43eed85c0ff14061449ee",
+      "bytes": 758
+    },
+    "make-controls/real-long-only-tls-generator.stdout": {
+      "sha256": "057c0c9f35df24d8539c65bf86befdc3228fca2707f2b585af342e8b68c4f3df",
+      "bytes": 17663
+    },
+    "make-controls/real-stale-x86-generator.stderr": {
+      "sha256": "d0d87dafdca0b461d1581497451668df2116dead4e6f6b4d6245b20f66125221",
+      "bytes": 88
+    },
+    "make-controls/real-stale-x86-generator.stdout": {
+      "sha256": "2b4acfda9d74ab332be225874dbc2361036a8e150fae860677fe9ac5db11ffc0",
+      "bytes": 18164
+    },
+    "make-controls/reject-newer-corrupt-msys-def.stderr": {
+      "sha256": "ef6c65b647e39f0d62ead769ca1c018f54d4c7cf32c9cd90655c03a356d2a425",
+      "bytes": 241
+    },
+    "make-controls/reject-newer-corrupt-msys-def.stdout": {
+      "sha256": "ef3d805368da653165c577e43bef1f5733205870f08857f2ead3315b3c837e67",
+      "bytes": 18210
+    },
+    "make-controls/reject-newer-corrupt-sigfe-s.stderr": {
+      "sha256": "d16680bd26697286d87422044584cd5d73cc08c930727336283b5d5fff99801d",
+      "bytes": 240
+    },
+    "make-controls/reject-newer-corrupt-sigfe-s.stdout": {
+      "sha256": "ef3d805368da653165c577e43bef1f5733205870f08857f2ead3315b3c837e67",
+      "bytes": 18210
+    },
+    "make-controls/reject-newer-corrupt-tlsoffsets.stderr": {
+      "sha256": "882cda45ddb4c3b771417f15d51c676f15bf3e9e59472cd87fead4ca1da1549c",
+      "bytes": 245
+    },
+    "make-controls/reject-newer-corrupt-tlsoffsets.stdout": {
+      "sha256": "08d6d2cf599b4eaef7cc66347d47a0ddf9c97fce649928c5a0c06997d4e05eab",
+      "bytes": 17733
+    },
+    "make-controls/result.json": {
+      "sha256": "f0c91360abb63805e900360a9e9cf33cf5a28dcafff7d003a943f70dc9038018",
+      "bytes": 20223
+    },
+    "make-controls/unchanged-repeat.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "make-controls/unchanged-repeat.stdout": {
+      "sha256": "ef3d805368da653165c577e43bef1f5733205870f08857f2ead3315b3c837e67",
+      "bytes": 18210
+    },
+    "make-controls/zero-offsets.stderr": {
+      "sha256": "713c5c9f93002e1f0fbe3e703ff0c958465656d81443886ac5e05cdc04ed0b8d",
+      "bytes": 85
+    },
+    "make-controls/zero-offsets.stdout": {
+      "sha256": "406e0f0cc07d779b6aa9bbdc956a993359474404f3d5acf8a785b2fe5d18777a",
+      "bytes": 17728
+    },
+    "make-controls/fixtures/dropped-export": {
+      "sha256": "0b722c6a0e9d14ff168168e88540a822914fcc9ad1261e34cd0ea17273f45f28",
+      "bytes": 630
+    },
+    "make-controls/fixtures/empty-signal": {
+      "sha256": "801cab2182a75aa24d8b0a4c8a99bd9238f042ae7ea7754f8707fe14e79e46ff",
+      "bytes": 364
+    },
+    "make-controls/fixtures/failed-signal": {
+      "sha256": "4b9a31a29a861af30af05aaaae751855c68b1898144b55cb1393e80bdd83f881",
+      "bytes": 353
+    },
+    "make-controls/fixtures/historical-tls-basename": {
+      "sha256": "4652242df48706eb8028d58be5f60dd00fbacc18c9b6dbba52d699a31e209f07",
+      "bytes": 381
+    },
+    "make-controls/fixtures/historical-tls-output": {
+      "sha256": "95e965fc1beea943c3eadc2cd941c34b01a3151968a0ffbe6917b354d2f0d8a5",
+      "bytes": 56
+    },
+    "make-controls/fixtures/malformed-offsets": {
+      "sha256": "84cd693f7ea6b7e24d9ad0a4d35ffcc860a775ec1b6c4b4e6bdb53ea4dd7dd52",
+      "bytes": 67
+    },
+    "make-controls/fixtures/missing-label": {
+      "sha256": "be23209552c52aed22160f17913f23e392446c8779355b781a76aba35f32f8d1",
+      "bytes": 492
+    },
+    "make-controls/fixtures/zero-offsets": {
+      "sha256": "7a03fc0f83d29d5036818a9814cede2c61facbc8b202efe328ee3d4e09e72226",
+      "bytes": 79
+    },
+    "source/winsup/cygwin/Makefile.am": {
+      "sha256": "b32b91ce0f1c0ed20b0adfaf2c6ca4b69ab53035eec43fba3b32e340e6b80b42",
+      "bytes": 20493
+    },
+    "source/winsup/cygwin/scripts/guard-runtime-generation": {
+      "sha256": "e713a9aca592a5aa4c310741793f0dab5f2a85feeee30fff3561cc94318163d8",
+      "bytes": 9195
+    },
+    "source/winsup/testsuite/build/runtime-generation-make.py": {
+      "sha256": "78987638bb4514bc3adc0c65c8e3a2878bac7792d6f2f99d912c66e4b52ef8a2",
+      "bytes": 9554
+    }
+  }
+}
