@@ -546,6 +546,70 @@ jobs:
             grep -Eq "[[:space:]][Tt] ${symbol}$" aarch64-sigfe.symbols
           done
 
+          # SIGFE_MAYBE must route initialized TLS through _sigfe.  Without
+          # TLS it must pop the saved implementation target, restore the
+          # wrapper's 16-byte allocation, and tail-branch without touching LR.
+          awk '
+            /^_sigfe_maybe:/ { found = 1; print; next }
+            found && /^_sigfe:/ { exit }
+            found { print }
+          ' "$build_dir/sigfe.s" | tee aarch64-sigfe-maybe.s
+          test -s aarch64-sigfe-maybe.s
+          for instruction in \
+              'movz[[:space:]]+w13, #0x173f' \
+              'movk[[:space:]]+w13, #0xc763, lsl #16' \
+              'b[.]eq[[:space:]]+_sigfe' \
+              'ldr[[:space:]]+x9, \[sp\], #16' \
+              'br[[:space:]]+x9'; do
+            test "$(grep -Ec "^[[:space:]]*${instruction}([[:space:]]|$)" \
+              aarch64-sigfe-maybe.s)" -eq 1
+          done
+          if grep -Eq '^[[:space:]]*(ret|bl|blr)([[:space:]]|$)' \
+              aarch64-sigfe-maybe.s; then
+            exit 1
+          fi
+          if grep -Eq '(^|[^[:alnum:]_])x(29|30)([^[:alnum:]_]|$)' \
+              aarch64-sigfe-maybe.s; then
+            exit 1
+          fi
+
+          "$objdump" -dr --disassemble=_sigfe_maybe "$sigfe" \
+            | tee aarch64-sigfe-maybe.dis
+          test -s aarch64-sigfe-maybe.dis
+          for instruction in \
+              'mov[[:space:]]+w13, #0x173f' \
+              'movk[[:space:]]+w13, #0xc763, lsl #16' \
+              'b[.]eq[[:space:]].*<_sigfe>' \
+              'ldr[[:space:]]+x9, \[sp\], #16' \
+              'br[[:space:]]+x9'; do
+            test "$(grep -Ec "[[:space:]]${instruction}([[:space:]]|$)" \
+              aarch64-sigfe-maybe.dis)" -eq 1
+          done
+          if grep -Eq '[[:space:]](ret|bl|blr)([[:space:]]|$)' \
+              aarch64-sigfe-maybe.dis; then
+            exit 1
+          fi
+          if grep -Eq '(^|[^[:alnum:]_])x(29|30)([^[:alnum:]_]|$)' \
+              aarch64-sigfe-maybe.dis; then
+            exit 1
+          fi
+          for opcode in \
+              5282e7ed \
+              72b8ec6d \
+              6b0d019f \
+              54000060 \
+              f84107e9 \
+              d61f0120; do
+            test "$(grep -Ec ":[[:space:]]+${opcode}[[:space:]]" \
+              aarch64-sigfe-maybe.dis)" -eq 1
+          done
+          for stale_opcode in 5298ec6d 72a2e7ed; do
+            if grep -Eq ":[[:space:]]+${stale_opcode}[[:space:]]" \
+                aarch64-sigfe-maybe.dis; then
+              exit 1
+            fi
+          done
+
           # The generated entry stub preserves every register clobbered before
           # RtlCaptureContext and reserves an aligned ARM64 CONTEXT frame.
           grep -Eq '[[:space:]]sub[[:space:]]+sp, sp, #0x390' \
@@ -985,6 +1049,114 @@ jobs:
             -lkernel32 \
             -lntdll
 
+          for source in module smoke; do
+            aarch64-pc-cygwin-gcc \
+              -D__MSYS__ \
+              -std=gnu11 \
+              -O2 \
+              -Wall \
+              -Wextra \
+              -Werror \
+              -c ".github/checks/aarch64-dll-unload-${source}.c" \
+              -o "$cygwin_build/aarch64-dll-unload-${source}.o"
+          done
+          aarch64-pc-cygwin-gcc \
+            -shared \
+            -nostdlib \
+            -Wl,--no-insert-timestamp \
+            -Wl,-e,_msys_dll_entry \
+            -o "$cygwin_build/aarch64-dll-unload-module.dll" \
+            "$gccdir/crtbeginS.o" \
+            "$cygwin_build/aarch64-dll-unload-module.o" \
+            -L"$cygwin_build" \
+            -Wl,--start-group \
+            -lmsys-2.0 \
+            -lgcc \
+            -Wl,--end-group \
+            "$gccdir/crtend.o" \
+            -lkernel32 \
+            -lntdll
+          aarch64-pc-cygwin-gcc \
+            -shared \
+            -nostdlib \
+            -Wl,--no-insert-timestamp \
+            -Wl,-e,0 \
+            -o "$cygwin_build/aarch64-dll-unload-entry0.dll" \
+            "$gccdir/crtbeginS.o" \
+            "$cygwin_build/aarch64-dll-unload-module.o" \
+            -L"$cygwin_build" \
+            -Wl,--start-group \
+            -lmsys-2.0 \
+            -lgcc \
+            -Wl,--end-group \
+            "$gccdir/crtend.o" \
+            -lkernel32 \
+            -lntdll
+          aarch64-pc-cygwin-gcc \
+            -nostdlib \
+            -Wl,--no-insert-timestamp \
+            -Wl,--subsystem,console \
+            -Wl,-e,mainCRTStartup \
+            -o "$cygwin_build/aarch64-dll-unload-smoke.exe" \
+            "$cygwin_build/crt0.o" \
+            "$gccdir/crtbegin.o" \
+            "$cygwin_build/aarch64-dll-unload-smoke.o" \
+            -L"$cygwin_build" \
+            -Wl,--start-group \
+            -lmsys-2.0 \
+            -lgcc \
+            -Wl,--end-group \
+            "$gccdir/crtend.o" \
+            /opt/aarch64-pc-cygwin/lib/default-manifest.o \
+            -lkernel32 \
+            -lntdll
+          aarch64-pc-cygwin-objdump -p \
+            "$cygwin_build/aarch64-dll-unload-entry0.dll" \
+            | grep -Eq 'AddressOfEntryPoint[[:space:]]+0+$'
+          mkdir -p aarch64-dll-unload-static
+          while IFS=$'\t' read -r pe expected_bytes policy; do
+            test -n "$pe"
+            policy="${policy%$'\r'}"
+            aarch64-pc-cygwin-objdump -f -p -h -x "$cygwin_build/$pe" \
+              > "aarch64-dll-unload-static/$pe.txt"
+            grep -Fq 'file format pei-aarch64-little' \
+              "aarch64-dll-unload-static/$pe.txt"
+            grep -Fq 'architecture: aarch64' \
+              "aarch64-dll-unload-static/$pe.txt"
+            grep -Fq 'DLL Name: msys-2.0.dll' \
+              "aarch64-dll-unload-static/$pe.txt"
+            for section in .pdata .xdata; do
+              grep -Eq \
+                "^[[:space:]]*[0-9]+[[:space:]]+\\$section[[:space:]]" \
+                "aarch64-dll-unload-static/$pe.txt"
+            done
+            aarch64-pc-cygwin-strings -a "$cygwin_build/$pe" \
+              > "aarch64-dll-unload-static/$pe.strings.txt"
+            if grep -Eiq \
+                '([a-z]:\\Users\\|[a-z]:/Users/|/home/runner/|/Users/runneradmin/)' \
+                "aarch64-dll-unload-static/$pe.strings.txt"; then
+              exit 1
+            fi
+            aarch64-pc-cygwin-nm -n "$cygwin_build/$pe" \
+              > "aarch64-dll-unload-static/$pe.symbols.txt"
+            start="$(awk \
+              '$3 == "__RUNTIME_PSEUDO_RELOC_LIST__" { print $1; exit }' \
+              "aarch64-dll-unload-static/$pe.symbols.txt")"
+            end="$(awk \
+              '$3 == "__RUNTIME_PSEUDO_RELOC_LIST_END__" { print $1; exit }' \
+              "aarch64-dll-unload-static/$pe.symbols.txt")"
+            test -n "$start"
+            test -n "$end"
+            actual_bytes="$((16#$end - 16#$start))"
+            test "$actual_bytes" -eq "$expected_bytes"
+            if test "$policy" = empty; then
+              test "$actual_bytes" -eq 0
+            else
+              test "$policy" = nonempty
+              test "$actual_bytes" -gt 0
+            fi
+          done < .github/checks/aarch64-pseudo-reloc-manifest.tsv
+
           cp "$cygwin_build/new-msys-2.0.dll" \
             "$cygwin_build/new-msys-2.0.first.dll"
           cp "$cygwin_build/libmsys-2.0.a" \
@@ -1004,6 +1176,20 @@ jobs:
           ./.github/checks/validate-aarch64-public-abi.sh \
             build-aarch64-runtime \
             aarch64-runtime-validation
+          awk '
+            /^_sigfe_maybe:/ { found = 1; print; next }
+            found && /^_sigfe:/ { exit }
+            found { print }
+          ' "$cygwin_build/sigfe.s" \
+            > aarch64-runtime-validation/_sigfe_maybe.generated.s
+          (
+            cd "$cygwin_build"
+            aarch64-pc-cygwin-gcc -c sigfe.s \
+              -o "$OLDPWD/aarch64-runtime-validation/aarch64-sigfe.o"
+          )
+          aarch64-pc-cygwin-objdump -dr --disassemble=_sigfe_maybe \
+            aarch64-runtime-validation/aarch64-sigfe.o \
+            > aarch64-runtime-validation/_sigfe_maybe.generated.dis
           cp "$cygwin_build/new-msys-2.0.dll" \
             aarch64-runtime-validation/msys-2.0.dll
           cp "$cygwin_build/libmsys-2.0.a" \
@@ -1016,6 +1202,27 @@ jobs:
             aarch64-runtime-validation/
           cp "$cygwin_build/aarch64-ucontext-model.exe" \
             aarch64-runtime-validation/
+          cp "$cygwin_build/aarch64-dll-unload-smoke.exe" \
+            "$cygwin_build/aarch64-dll-unload-module.dll" \
+            "$cygwin_build/aarch64-dll-unload-entry0.dll" \
+            aarch64-runtime-validation/
+          mkdir -p aarch64-runtime-package/usr/bin \
+            aarch64-runtime-package/usr/lib
+          cp "$cygwin_build/new-msys-2.0.dll" \
+            aarch64-runtime-package/usr/bin/msys-2.0.dll
+          cp "$cygwin_build/libmsys-2.0.a" \
+            aarch64-runtime-package/usr/lib/
+          printf '%s\n' \
+            'pkgname=msys2-runtime-aarch64-unload-candidate' \
+            'pkgver=${{ github.sha }}' \
+            'arch=aarch64' \
+            > aarch64-runtime-package/.PKGINFO
+          tar --zstd -cf \
+            aarch64-runtime-validation/msys2-runtime-aarch64-unload-candidate.pkg.tar.zst \
+            -C aarch64-runtime-package .
+          sha256sum \
+            aarch64-runtime-validation/msys2-runtime-aarch64-unload-candidate.pkg.tar.zst \
+            > aarch64-runtime-validation/PACKAGE_SHA256SUMS
 
       - name: Upload AArch64 runtime validation
         if: always()
@@ -1024,6 +1231,7 @@ jobs:
           name: aarch64-runtime-validation
           path: |
             aarch64-linker-validation/
+            aarch64-dll-unload-static/
             aarch64-runtime-validation/
 
   aarch64-runtime-smoke:
@@ -1031,15 +1239,14 @@ jobs:
     runs-on: windows-11-arm
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
       - name: Download AArch64 runtime
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh run download $env:GITHUB_RUN_ID `
-            --repo $env:GITHUB_REPOSITORY `
-            --name aarch64-runtime-validation `
-            --dir aarch64-runtime-validation
+        uses: actions/download-artifact@v8
+        with:
+          name: aarch64-runtime-validation
+          path: aarch64-runtime-validation
 
       - name: Run AArch64 runtime startup smoke test
         shell: pwsh
@@ -1050,10 +1257,21 @@ jobs:
           }
           $runtime = (Resolve-Path `
             aarch64-runtime-validation/aarch64-runtime-validation).Path
-          & (Join-Path $runtime "aarch64-runtime-smoke.exe")
+          & (Join-Path $runtime "aarch64-runtime-smoke.exe") `
+            "plain-argument" "argument with spaces"
           if ($LASTEXITCODE -ne 0) {
             throw "AArch64 runtime smoke test failed with exit code $LASTEXITCODE"
           }
+
+      - name: Run AArch64 DLL unload lifecycle regression
+        shell: pwsh
+        run: |
+          $runtime = (Resolve-Path `
+            aarch64-runtime-validation/aarch64-runtime-validation).Path
+          $evidence = Join-Path $PWD "aarch64-dll-unload-evidence"
+          ./.github/checks/run-aarch64-dll-unload.ps1 `
+            -RuntimeDirectory $runtime `
+            -EvidenceDirectory $evidence
 
       - name: Run AArch64 wsock autoload regression probe
         shell: pwsh
@@ -1117,6 +1335,13 @@ jobs:
               throw "$probe failed with exit code $LASTEXITCODE"
             }
           }
+
+      - name: Upload AArch64 DLL unload evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: aarch64-dll-unload-evidence
+          path: aarch64-dll-unload-evidence/
 
   configure-winsup:
     runs-on: ubuntu-latest

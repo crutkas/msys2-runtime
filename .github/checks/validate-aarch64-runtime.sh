@@ -17,11 +17,13 @@ dll="$cygwin/new-msys-2.0.dll"
 implib="$cygwin/libmsys-2.0.a"
 map="$cygwin/msys.map"
 def="$cygwin/msys.def"
+pseudo_reloc_manifest="$repo_root/.github/checks/aarch64-pseudo-reloc-manifest.tsv"
 
 cc="${CC:-$target-gcc}"
 ar="${AR:-$target-ar}"
 nm="${NM:-$target-nm}"
 objdump="${OBJDUMP:-$target-objdump}"
+strings="${STRINGS:-$target-strings}"
 
 if test "$#" -eq 2; then
   report="$2"
@@ -31,7 +33,7 @@ else
   trap 'rm -rf "$report"' EXIT
 fi
 
-for tool in "$cc" "$ar" "$nm" "$objdump"; do
+for tool in "$cc" "$ar" "$nm" "$objdump" "$strings"; do
   command -v "$tool" >/dev/null
 done
 
@@ -91,6 +93,7 @@ for file in \
     "$def"; do
   test -s "$file"
 done
+test -s "$pseudo_reloc_manifest"
 
 "$cc" -D__MSYS__ -dM -E - </dev/null > "$report/compiler-macros.txt"
 for macro in __aarch64__ __CYGWIN__ __MSYS__ _WIN64; do
@@ -148,8 +151,122 @@ if "$ar" t "$implib" | grep -Eq '(^|/)pthreadconst\.o$'; then
 fi
 sha256sum "$dll" "$implib" > "$report/SHA256SUMS"
 
+printf 'image\texpected_bytes\tactual_bytes\tpolicy\tresult\n' \
+  > "$report/pseudo-reloc-manifest.tsv"
+while IFS=$'\t' read -r image expected_bytes policy; do
+  policy="${policy%$'\r'}"
+  if test -z "$image" || { test "$policy" != empty \
+      && test "$policy" != nonempty; }; then
+    echo "Invalid AArch64 pseudo-reloc manifest row: $image $expected_bytes $policy" >&2
+    exit 1
+  fi
+  pe_image="$cygwin/$image"
+  if ! test -s "$pe_image"; then
+    echo "Missing AArch64 pseudo-reloc manifest image: $pe_image" >&2
+    exit 1
+  fi
+  "$objdump" -f -p -h "$pe_image" > "$report/$image.pe.txt"
+  grep -Fq 'file format pei-aarch64-little' "$report/$image.pe.txt"
+  grep -Fq 'architecture: aarch64' "$report/$image.pe.txt"
+  grep -Fq 'DLL Name: msys-2.0.dll' "$report/$image.pe.txt"
+  for section in .pdata .xdata; do
+    grep -Eq "^[[:space:]]*[0-9]+[[:space:]]+\\$section[[:space:]]" \
+      "$report/$image.pe.txt"
+  done
+  "$strings" -a "$pe_image" > "$report/$image.strings.txt"
+  if grep -Eiq \
+      '([a-z]:\\Users\\|[a-z]:/Users/|/home/runner/|/Users/runneradmin/)' \
+      "$report/$image.strings.txt"; then
+    echo "$image contains a private host path" >&2
+    exit 1
+  fi
+  "$nm" -n "$pe_image" > "$report/$image.symbols.txt"
+  start="$(awk '$3 == "__RUNTIME_PSEUDO_RELOC_LIST__" { print $1; exit }' \
+    "$report/$image.symbols.txt")"
+  end="$(awk '$3 == "__RUNTIME_PSEUDO_RELOC_LIST_END__" { print $1; exit }' \
+    "$report/$image.symbols.txt")"
+  if test -z "$start" || test -z "$end"; then
+    echo "Missing pseudo-reloc boundary in $image" >&2
+    exit 1
+  fi
+  actual_bytes="$((16#$end - 16#$start))"
+  if test "$actual_bytes" -ne "$expected_bytes"; then
+    echo "$image pseudo-reloc bytes: expected $expected_bytes, got $actual_bytes" >&2
+    exit 1
+  fi
+  if test "$policy" = empty; then
+    test "$actual_bytes" -eq 0
+  else
+    test "$actual_bytes" -gt 0
+  fi
+  printf '%s\t%s\t%s\t%s\tpass\n' \
+    "$image" "$expected_bytes" "$actual_bytes" "$policy" \
+    >> "$report/pseudo-reloc-manifest.tsv"
+done < "$pseudo_reloc_manifest"
+
 pe="$report/msys-2.0.dll.txt"
 symbols="$report/msys-2.0.dll.symbols.txt"
+"$strings" -a "$dll" > "$report/msys-2.0.dll.strings.txt"
+if grep -Eiq \
+    '([a-z]:\\Users\\|[a-z]:/Users/|/home/runner/|/Users/runneradmin/)' \
+    "$report/msys-2.0.dll.strings.txt"; then
+  echo "msys-2.0.dll contains a private host path" >&2
+  exit 1
+fi
+for symbol in \
+    _sigfe_maybe \
+    _sigfe_maybe_msys_detach_dll \
+    msys_detach_dll; do
+  "$objdump" -dr --disassemble="$symbol" "$dll" \
+    > "$report/$symbol.dis"
+  test -s "$report/$symbol.dis"
+done
+
+sigfe_maybe="$report/_sigfe_maybe.dis"
+for instruction in \
+    'mov[[:space:]]+w13, #0x173f' \
+    'movk[[:space:]]+w13, #0xc763, lsl #16' \
+    'b[.]eq[[:space:]].*<_sigfe>' \
+    'ldr[[:space:]]+x9, \[sp\], #(0x10|16)' \
+    'br[[:space:]]+x9'; do
+  test "$(grep -Ec "[[:space:]]${instruction}([[:space:]]|$)" \
+    "$sigfe_maybe")" -eq 1
+done
+if grep -Eq '[[:space:]](ret|bl|blr)([[:space:]]|$)' "$sigfe_maybe"; then
+  echo "_sigfe_maybe can return or call instead of tail-dispatching" >&2
+  exit 1
+fi
+if grep -Eq '(^|[^[:alnum:]_])x(29|30)([^[:alnum:]_]|$)' "$sigfe_maybe"; then
+  echo "_sigfe_maybe clobbers the caller frame pointer or link register" >&2
+  exit 1
+fi
+for opcode in 5282e7ed 72b8ec6d 6b0d019f 54000060 f84107e9 d61f0120; do
+  test "$(grep -Ec ":[[:space:]]+${opcode}[[:space:]]" "$sigfe_maybe")" -eq 1
+done
+for stale_opcode in 5298ec6d 72a2e7ed; do
+  if grep -Eq ":[[:space:]]+${stale_opcode}[[:space:]]" "$sigfe_maybe"; then
+    echo "_sigfe_maybe retained reversed CYGTLS magic opcode $stale_opcode" >&2
+    exit 1
+  fi
+done
+
+detach_wrapper="$report/_sigfe_maybe_msys_detach_dll.dis"
+for instruction in \
+    'sub[[:space:]]+sp, sp, #0x10' \
+    'str[[:space:]]+x9, \[sp\]' \
+    'br[[:space:]]+x9'; do
+  test "$(grep -Ec "[[:space:]]${instruction}([[:space:]]|$)" \
+    "$detach_wrapper")" -eq 1
+done
+if grep -Eq '[[:space:]](ret|bl|blr)([[:space:]]|$)' "$detach_wrapper"; then
+  echo "msys_detach_dll wrapper can return or call before dispatch" >&2
+  exit 1
+fi
+if grep -Eq '(^|[^[:alnum:]_])x(29|30)([^[:alnum:]_]|$)' "$detach_wrapper"; then
+  echo "msys_detach_dll wrapper clobbers the caller frame pointer or link register" >&2
+  exit 1
+fi
+
 grep -Fq 'file format pei-aarch64-little' "$pe"
 grep -Fq 'architecture: aarch64' "$pe"
 grep -Eq 'Magic[[:space:]]+020b' "$pe"

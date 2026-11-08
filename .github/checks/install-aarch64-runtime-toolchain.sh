@@ -14,6 +14,7 @@ cd "$download_dir"
 probe_release="https://github.com/crutkas/msys2-runtime/releases/download/aarch64-linker-probe-toolchain-20260814"
 package_release="https://github.com/crutkas/MSYS2-packages/releases/download"
 static_release="$package_release/cygwinarm64-gcc-static-runtime-20260815"
+binutils_release="$package_release/cygwinarm64-binutils-pr21-3356eec-20260827"
 sysroot_release="$package_release/cygwinarm64-sysroot-pr3-20260813"
 w32api_release="$package_release/cygwinarm64-w32api-20260813"
 libstdcxx_release="$package_release/cygwinarm64-libstdcxx-headers-pr7-20260815"
@@ -24,7 +25,7 @@ download()
     --remote-name "$1/$2"
 }
 
-binutils=mingw-w64-cross-cygwinarm64-binutils-2.44.50-1-x86_64.pkg.tar.zst
+binutils=mingw-w64-cross-cygwinarm64-binutils-2.44.50-2-x86_64.pkg.tar.zst
 headers=mingw-w64-cross-cygwinarm64-headers-3.6.10.r0.gee50e0223-1-x86_64.pkg.tar.zst
 manifest=mingw-w64-cross-cygwinarm64-windows-default-manifest-3.6.10.r0.gee50e0223-1-x86_64.pkg.tar.zst
 w32api=mingw-w64-cross-cygwinarm64-w32api-runtime-14.0.0.r0.g9b3dd0125-1-x86_64.pkg.tar.zst
@@ -34,7 +35,7 @@ libstdcxx=mingw-w64-cross-cygwinarm64-libstdc++-headers-15.0.1dev-1-x86_64.pkg.t
 gcc_libs=mingw-w64-cross-cygwinarm64-gcc-libs-stage1-15.0.1dev-2-x86_64.pkg.tar.zst
 gcc=mingw-w64-cross-cygwinarm64-gcc-stage1-15.0.1dev-2-x86_64.pkg.tar.zst
 
-download "$static_release" "$binutils"
+download "$binutils_release" "$binutils"
 download "$sysroot_release" "$headers"
 download "$sysroot_release" "$manifest"
 download "$w32api_release" "$w32api"
@@ -45,7 +46,7 @@ download "$static_release" "$gcc_libs"
 download "$static_release" "$gcc"
 
 printf '%s\n' \
-  "8908cb690952788153b60bc4fb659826bbd8a03a26c1073f76c0be7ed6f97518  $binutils" \
+  "3c7b47529181dab726d22cf6ed045184260af915eea583488c13c07e478ac02b  $binutils" \
   "5266346cc10b142f871704ce4277699b1a5daa3121dc869990b4bedce69c0611  $headers" \
   "cc089511fede6042a25f83fcb5903fddeede89ddd9655360741513ee9015e3dc  $manifest" \
   "53478f9a60e2fdad7d3b4357fa4fb937a1afab16af16a55e5a25ae9fac308fa7  $w32api" \
