@@ -142,6 +142,10 @@ audit_archive()
 "$objdump" -f -h -p "$dll" > "$report/msys-2.0.dll.txt"
 "$nm" -a "$dll" > "$report/msys-2.0.dll.symbols.txt"
 "$nm" -A "$implib" > "$report/libmsys-2.0.a.symbols.txt"
+"$objdump" -dr --disassemble=_sigfe_maybe "$dll" \
+  > "$report/msys-2.0.dll.sigfe-maybe.dis"
+"$objdump" -dr --disassemble=_sigfe_maybe_msys_detach_dll "$dll" \
+  > "$report/msys-2.0.dll.detach-wrapper.dis"
 if "$ar" t "$implib" | grep -Eq '(^|/)pthreadconst\.o$'; then
   echo "AArch64 import library retained its private pthread initializer object" >&2
   exit 1
@@ -249,6 +253,21 @@ fi
 grep -Eq '[[:space:]]__CTOR_LIST__$' "$symbols"
 grep -Eq '[[:space:]]__DTOR_LIST__$' "$symbols"
 grep -Eq '[[:space:]]_cygtls' "$symbols"
+grep -Eq '[[:space:]]b\.eq[[:space:]]+.*_sigfe' \
+  "$report/msys-2.0.dll.sigfe-maybe.dis"
+grep -Eq '[[:space:]]ldr[[:space:]]+x9, \[sp\], #(0x)?10' \
+  "$report/msys-2.0.dll.sigfe-maybe.dis"
+grep -Eq '[[:space:]]br[[:space:]]+x9' \
+  "$report/msys-2.0.dll.sigfe-maybe.dis"
+if grep -Eq '[[:space:]]ret([[:space:]]|$)|(^|[^[:alnum:]_])x(29|30)([^[:alnum:]_]|$)' \
+    "$report/msys-2.0.dll.sigfe-maybe.dis"; then
+  echo "AArch64 SIGFE_MAYBE clobbers FP/LR or returns without dispatch" >&2
+  exit 1
+fi
+grep -Eq '[[:space:]]sub[[:space:]]+sp, sp, #(0x)?10' \
+  "$report/msys-2.0.dll.detach-wrapper.dis"
+grep -Fq 'msys_detach_dll' "$report/msys-2.0.dll.detach-wrapper.dis"
+grep -Fq '_sigfe_maybe' "$report/msys-2.0.dll.detach-wrapper.dis"
 if grep -Ev '[[:space:]]U[[:space:]]+\$[dx]$' "$symbols" \
     | grep -Eq '[[:space:]]U[[:space:]]'; then
   echo "The linked runtime retained a non-mapping undefined symbol" >&2

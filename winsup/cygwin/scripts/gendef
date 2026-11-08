@@ -363,7 +363,6 @@ stabilize_sig_stack:
 	.seh_endproc
 EOF
 	}
-	# TODO: These are only stubs, they need to be implemented properly for AArch64.
 	if ($is_aarch64) {
 	  $res = <<EOF . longjmp () . $res;
 	.include "tlsoffsets"
@@ -381,10 +380,10 @@ _sigfe_maybe:					# stack is aligned on entry!
 	movz    w13, #0xc763			// Prepare magic value(0xc763173f) lower 16 bits
 	movk    w13, #0x173f, lsl #16		// Add upper 16 bits, full value now in w13
 	cmp     w12, w13			// Compare loaded value with magic
-	b.ne    0f                              // If not equal, not initialized, skip TLS logic
-	ret
+	b.eq    _sigfe				// Use the signal-aware path when TLS is initialized
 0:
-	ret
+	ldr     x9, [sp], #16			// Restore SP and load the real function
+	br      x9				// Preserve LR and tail-branch to the function
 	.seh_endproc
 
     .seh_proc _sigfe

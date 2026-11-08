@@ -534,6 +534,7 @@ jobs:
           for symbol in \
               _sigfe \
               _sigfe_maybe \
+              _sigfe_maybe_msys_detach_dll \
               _sigbe \
               sigdelayed \
               _sigdelayed_end \
@@ -545,6 +546,42 @@ jobs:
               _sigfe_read; do
             grep -Eq "[[:space:]][Tt] ${symbol}$" aarch64-sigfe.symbols
           done
+
+          # SIGFE_MAYBE has two distinct ABI paths.  With initialized TLS it
+          # enters _sigfe; without TLS it removes the generated wrapper's
+          # complete 16-byte frame and tail-branches to the saved target while
+          # leaving FP and LR untouched.
+          sed -n \
+            '/^_sigfe_maybe:/,/^[[:space:]]*\.seh_endproc/p' \
+            "$build_dir/sigfe.s" > aarch64-sigfe-maybe.source
+          "$objdump" -dr --disassemble=_sigfe_maybe "$sigfe" \
+            > aarch64-sigfe-maybe.dis
+          "$objdump" -dr \
+            --disassemble=_sigfe_maybe_msys_detach_dll "$sigfe" \
+            > aarch64-msys-detach-wrapper.dis
+          for file in \
+              aarch64-sigfe-maybe.source \
+              aarch64-sigfe-maybe.dis \
+              aarch64-msys-detach-wrapper.dis; do
+            test -s "$file"
+          done
+          grep -Eq '[[:space:]]b\.eq[[:space:]]+.*_sigfe' \
+            aarch64-sigfe-maybe.dis
+          grep -Eq \
+            '[[:space:]]ldr[[:space:]]+x9, \[sp\], #(0x)?10' \
+            aarch64-sigfe-maybe.dis
+          grep -Eq '[[:space:]]br[[:space:]]+x9' \
+            aarch64-sigfe-maybe.dis
+          if grep -Eq '[[:space:]]ret([[:space:]]|$)|(^|[^[:alnum:]_])x(29|30)([^[:alnum:]_]|$)' \
+              aarch64-sigfe-maybe.dis; then
+            exit 1
+          fi
+          grep -Eq '[[:space:]]sub[[:space:]]+sp, sp, #(0x)?10' \
+            aarch64-msys-detach-wrapper.dis
+          grep -Eq '[[:space:]]str[[:space:]]+x9, \[sp\]' \
+            aarch64-msys-detach-wrapper.dis
+          grep -Fq 'msys_detach_dll' aarch64-msys-detach-wrapper.dis
+          grep -Fq '_sigfe_maybe' aarch64-msys-detach-wrapper.dis
 
           # The generated entry stub preserves every register clobbered before
           # RtlCaptureContext and reserves an aligned ARM64 CONTEXT frame.
@@ -1004,6 +1041,9 @@ jobs:
           ./.github/checks/validate-aarch64-public-abi.sh \
             build-aarch64-runtime \
             aarch64-runtime-validation
+          ./.github/checks/build-aarch64-dll-unload.sh \
+            build-aarch64-runtime \
+            aarch64-runtime-validation/dll-unload
           cp "$cygwin_build/new-msys-2.0.dll" \
             aarch64-runtime-validation/msys-2.0.dll
           cp "$cygwin_build/libmsys-2.0.a" \
@@ -1016,6 +1056,8 @@ jobs:
             aarch64-runtime-validation/
           cp "$cygwin_build/aarch64-ucontext-model.exe" \
             aarch64-runtime-validation/
+          cp "$cygwin_build/new-msys-2.0.dll" \
+            aarch64-runtime-validation/dll-unload/msys-2.0.dll
 
       - name: Upload AArch64 runtime validation
         if: always()
@@ -1116,6 +1158,33 @@ jobs:
             if ($LASTEXITCODE -ne 0) {
               throw "$probe failed with exit code $LASTEXITCODE"
             }
+          }
+
+      - name: Run AArch64 DLL unload regression matrix
+        shell: pwsh
+        run: |
+          if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture -ne
+              [System.Runtime.InteropServices.Architecture]::Arm64) {
+            throw "A native Windows ARM64 runner is required"
+          }
+          $runtime = (Resolve-Path `
+            aarch64-runtime-validation/aarch64-runtime-validation).Path
+          $matrix = Join-Path $runtime "dll-unload"
+          Push-Location $matrix
+          try {
+            & (Join-Path $matrix "aarch64-dll-unload-native.exe")
+            if ($LASTEXITCODE -ne 0) {
+              throw "native LoadLibraryExW/FreeLibrary matrix failed with exit code $LASTEXITCODE"
+            }
+            foreach ($mode in @("now", "lazy")) {
+              & (Join-Path $matrix "aarch64-dll-unload-dlopen.exe") $mode
+              if ($LASTEXITCODE -ne 0) {
+                throw "dlopen/dlclose $mode matrix failed with exit code $LASTEXITCODE"
+              }
+            }
+          }
+          finally {
+            Pop-Location
           }
 
   configure-winsup:
