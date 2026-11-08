@@ -829,6 +829,10 @@ jobs:
         shell: msys2 {0}
         run: ./.github/checks/install-aarch64-runtime-toolchain.sh
 
+      - name: Install published MSYS ARM64 GCC for dynamic C++ validation
+        shell: msys2 {0}
+        run: ./.github/checks/install-msysarm64-gcc-toolchain.sh
+
       - name: Validate AArch64 linker script and PE image
         shell: msys2 {0}
         run: |
@@ -1004,6 +1008,9 @@ jobs:
           ./.github/checks/validate-aarch64-public-abi.sh \
             build-aarch64-runtime \
             aarch64-runtime-validation
+          ./.github/checks/validate-aarch64-pseudo-reloc.sh \
+            build-aarch64-runtime \
+            aarch64-runtime-validation
           cp "$cygwin_build/new-msys-2.0.dll" \
             aarch64-runtime-validation/msys-2.0.dll
           cp "$cygwin_build/libmsys-2.0.a" \
@@ -1116,6 +1123,53 @@ jobs:
             if ($LASTEXITCODE -ne 0) {
               throw "$probe failed with exit code $LASTEXITCODE"
             }
+          }
+
+      - name: Run AArch64 pseudo-relocation mapping probe
+        shell: pwsh
+        run: |
+          if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture -ne
+              [System.Runtime.InteropServices.Architecture]::Arm64) {
+            throw "A native Windows ARM64 runner is required"
+          }
+          $runtime = (Resolve-Path `
+            aarch64-runtime-validation/aarch64-runtime-validation).Path
+          $output = & (Join-Path $runtime "aarch64-pseudo-reloc-native.exe")
+          if ($LASTEXITCODE -ne 0) {
+            throw "AArch64 pseudo-relocation mapping probe failed with exit code $LASTEXITCODE"
+          }
+          if ($output -notmatch '^pseudo-reloc-native-ok image=0x100400000 near=0x140040000 far=0x600040000 delta=0x[0-9a-f]+$') {
+            throw "Unexpected AArch64 pseudo-relocation mapping output: $output"
+          }
+
+      - name: Reject out-of-range AArch64 direct pseudo-relocation
+        shell: pwsh
+        run: |
+          $runtime = (Resolve-Path `
+            aarch64-runtime-validation/aarch64-runtime-validation).Path
+          $output = & (Join-Path $runtime "aarch64-pseudo-reloc-far-addend.exe") 2>&1
+          if ($LASTEXITCODE -ne -536870295) {
+            throw "Expected status 0xe0000269, got $LASTEXITCODE"
+          }
+          if ($output -notmatch 'PAGEBASE target is outside \+/-4GiB') {
+            throw "Unexpected range rejection output: $output"
+          }
+
+      - name: Run dynamic AArch64 C++ import probe
+        shell: pwsh
+        run: |
+          if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture -ne
+              [System.Runtime.InteropServices.Architecture]::Arm64) {
+            throw "A native Windows ARM64 runner is required"
+          }
+          $runtime = (Resolve-Path `
+            aarch64-runtime-validation/aarch64-runtime-validation).Path
+          $output = & (Join-Path $runtime "aarch64-dynamic-cxx.exe")
+          if ($LASTEXITCODE -ne 0) {
+            throw "Dynamic AArch64 C++ import probe failed with exit code $LASTEXITCODE"
+          }
+          if ($output -notmatch '^dynamic-cxx-ok total=42 module-distance=0x[0-9a-f]+$') {
+            throw "Unexpected dynamic AArch64 C++ output: $output"
           }
 
   configure-winsup:

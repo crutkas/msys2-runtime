@@ -21,6 +21,9 @@
 #else
 # include "winsup.h"
 # include <sys/cygwin.h>
+# if defined (__aarch64__)
+#  include "aarch64_pseudo_reloc.h"
+# endif
 #endif
 
 #include <stdio.h>
@@ -128,6 +131,15 @@ __report_error (const char *msg, ...)
  * And it assumes that it is called in LdrpCallInitRoutine.
  * Hence not thread safe.
  */
+static bool
+is_writable_protection (DWORD protection)
+{
+  DWORD access = protection & 0xff;
+  return !(protection & PAGE_GUARD)
+	 && (access == PAGE_EXECUTE_READWRITE || access == PAGE_READWRITE
+	     || access == PAGE_EXECUTE_WRITECOPY || access == PAGE_WRITECOPY);
+}
+
 static void
 auto_protect_for (void* addr)
 {
@@ -138,8 +150,11 @@ auto_protect_for (void* addr)
   if (!addr)
     {
       /* Restore original protection. */
-      if (!(mbi.Protect & (PAGE_EXECUTE_READWRITE | PAGE_READWRITE)))
-        VirtualProtect (mbi.BaseAddress, mbi.RegionSize, oldprot, &oldprot);
+      if (state && !is_writable_protection (mbi.Protect)
+	  && !VirtualProtect (mbi.BaseAddress, mbi.RegionSize, oldprot,
+			      &oldprot))
+	__report_error ("VirtualProtect restore failed with error %lu",
+			GetLastError ());
       state = false;
       return;
     }
@@ -147,22 +162,28 @@ auto_protect_for (void* addr)
     {
       /* We have valid region information.  Are we still within this region?
          If so, just leave. */
-      void *ptr = ((void*) ((ptrdiff_t) mbi.BaseAddress + mbi.RegionSize));
-      if (addr >= mbi.BaseAddress && addr < ptr)
+      uintptr_t offset = (uintptr_t) addr - (uintptr_t) mbi.BaseAddress;
+      if ((uintptr_t) addr >= (uintptr_t) mbi.BaseAddress
+	  && offset < mbi.RegionSize)
 	return;
       /* Otherwise, restore original protection and fall through to querying
          and potentially changing next region. */
-      if (!(mbi.Protect & (PAGE_EXECUTE_READWRITE | PAGE_READWRITE)))
-	VirtualProtect (mbi.BaseAddress, mbi.RegionSize, oldprot, &oldprot);
+      if (!is_writable_protection (mbi.Protect)
+	  && !VirtualProtect (mbi.BaseAddress, mbi.RegionSize, oldprot,
+			      &oldprot))
+	__report_error ("VirtualProtect restore failed with error %lu",
+			GetLastError ());
     }
   else
     state = true;
   /* Query region and temporarily allow write access to read-only protected
      memory.  */
-  VirtualQuery (addr, &mbi, sizeof mbi);
-  if (!(mbi.Protect & (PAGE_EXECUTE_READWRITE | PAGE_READWRITE)))
-    VirtualProtect (mbi.BaseAddress, mbi.RegionSize,
-	PAGE_EXECUTE_READWRITE, &oldprot);
+  if (!VirtualQuery (addr, &mbi, sizeof mbi))
+    __report_error ("VirtualQuery failed with error %lu", GetLastError ());
+  if (!is_writable_protection (mbi.Protect)
+      && !VirtualProtect (mbi.BaseAddress, mbi.RegionSize,
+			  PAGE_EXECUTE_READWRITE, &oldprot))
+    __report_error ("VirtualProtect failed with error %lu", GetLastError ());
 }
 
 /* This function temporarily marks the page containing addr
@@ -192,6 +213,371 @@ __write_memory (void *addr, const void *src, size_t len)
 #define RP_VERSION_V1 0
 #define RP_VERSION_V2 1
 
+#if defined (__aarch64__)
+static size_t
+aarch64_validate_image_and_table (void *start, void *end, void *base)
+{
+  IMAGE_DOS_HEADER *dos = (IMAGE_DOS_HEADER *) base;
+  if (dos->e_magic != IMAGE_DOS_SIGNATURE || dos->e_lfanew < 0)
+    __report_error ("Invalid AArch64 image header");
+
+  IMAGE_NT_HEADERS64 *nt
+    = (IMAGE_NT_HEADERS64 *) ((uintptr_t) base + dos->e_lfanew);
+  if (nt->Signature != IMAGE_NT_SIGNATURE
+      || nt->OptionalHeader.Magic != IMAGE_NT_OPTIONAL_HDR64_MAGIC
+      || nt->OptionalHeader.SizeOfImage < sizeof (IMAGE_DOS_HEADER))
+    __report_error ("Invalid AArch64 PE header");
+
+  size_t image_size = nt->OptionalHeader.SizeOfImage;
+  uintptr_t image = (uintptr_t) base;
+  if (image > UINTPTR_MAX - image_size)
+    __report_error ("AArch64 image address overflow");
+  uintptr_t table_start = (uintptr_t) start;
+  uintptr_t table_end = (uintptr_t) end;
+  if (table_start < image || table_end < table_start
+      || table_end - image > image_size || (table_start - image) & 3)
+    __report_error ("AArch64 pseudo-relocation table is outside the image");
+  return image_size;
+}
+
+static unsigned int
+aarch64_reloc_bits (const runtime_pseudo_reloc_item_v2 *item)
+{
+  return item->flags & 0xff;
+}
+
+static uintptr_t
+aarch64_reloc_address (void *base,
+		       const runtime_pseudo_reloc_item_v2 *item)
+{
+  return (uintptr_t) base + item->target;
+}
+
+static const runtime_pseudo_reloc_item_v2 *
+aarch64_find_low_reloc (const runtime_pseudo_reloc_item_v2 *page,
+			const runtime_pseudo_reloc_item_v2 *end,
+			void *base)
+{
+  if (page + 1 >= end)
+    return NULL;
+
+  unsigned int page_reg
+    = aarch64_page_register (*((uint32_t *) aarch64_reloc_address (base,
+								   page)));
+  const runtime_pseudo_reloc_item_v2 *item = page + 1;
+  if (item->sym != page->sym || aarch64_reloc_bits (item) != 12
+      || item->target & 3)
+    return NULL;
+
+  uint32_t instruction
+    = *((uint32_t *) aarch64_reloc_address (base, item));
+  if (aarch64_page_offset_kind (instruction) == AARCH64_PSEUDO_RELOC_NONE
+      || aarch64_page_offset_base_register (instruction) != page_reg)
+    return NULL;
+  return item;
+}
+
+static const runtime_pseudo_reloc_item_v2 *
+aarch64_find_page_reloc (const runtime_pseudo_reloc_item_v2 *first,
+			 const runtime_pseudo_reloc_item_v2 *low,
+			 void *base)
+{
+  if (low == first)
+    return NULL;
+
+  uint32_t low_instruction
+    = *((uint32_t *) aarch64_reloc_address (base, low));
+  unsigned int base_reg
+    = aarch64_page_offset_base_register (low_instruction);
+  const runtime_pseudo_reloc_item_v2 *item = low - 1;
+  if (item->sym != low->sym || aarch64_reloc_bits (item) != 21
+      || item->target & 3)
+    return NULL;
+
+  uint32_t instruction
+    = *((uint32_t *) aarch64_reloc_address (base, item));
+  if (!aarch64_is_adrp (instruction)
+      || aarch64_page_register (instruction) != base_reg)
+    return NULL;
+  return item;
+}
+
+static size_t
+aarch64_reloc_width (unsigned int bits)
+{
+  switch (bits)
+    {
+    case 8:
+      return 1;
+    case 16:
+      return 2;
+    case 12:
+    case 21:
+    case 32:
+      return 4;
+    case 64:
+      return 8;
+    default:
+      return 0;
+    }
+}
+
+static bool
+aarch64_ranges_overlap (uintptr_t left, size_t left_size,
+			uintptr_t right, size_t right_size)
+{
+  return left < right + right_size && right < left + left_size;
+}
+
+static void ATTRIBUTE_NORETURN
+report_aarch64_reloc_error (aarch64_pseudo_reloc_status status,
+			    uintptr_t page_address,
+			    uintptr_t low_address)
+{
+  switch (status)
+    {
+    case AARCH64_PSEUDO_RELOC_INVALID_PAGE_INSTRUCTION:
+      __report_error ("Invalid AArch64 PAGEBASE instruction at %p",
+		      (void *) page_address);
+    case AARCH64_PSEUDO_RELOC_INVALID_PAGE_OFFSET_INSTRUCTION:
+      __report_error ("Invalid AArch64 PAGEOFFSET instruction at %p",
+		      (void *) low_address);
+    case AARCH64_PSEUDO_RELOC_REGISTER_MISMATCH:
+      __report_error ("Mismatched AArch64 pseudo-relocation pair at %p/%p",
+		      (void *) page_address, (void *) low_address);
+    case AARCH64_PSEUDO_RELOC_ADDRESS_OVERFLOW:
+      __report_error ("AArch64 pseudo-relocation address overflow at %p/%p",
+		      (void *) page_address, (void *) low_address);
+    case AARCH64_PSEUDO_RELOC_OUT_OF_RANGE:
+      __report_error ("AArch64 PAGEBASE target is outside +/-4GiB at %p",
+		      (void *) page_address);
+    case AARCH64_PSEUDO_RELOC_MISALIGNED_PAGE_OFFSET:
+      __report_error ("Misaligned AArch64 PAGEOFFSET target at %p",
+		      (void *) low_address);
+    default:
+      __report_error ("Unknown AArch64 pseudo-relocation failure at %p/%p",
+		      (void *) page_address, (void *) low_address);
+    }
+}
+
+static void
+validate_aarch64_pseudo_relocs (runtime_pseudo_reloc_item_v2 *first,
+				runtime_pseudo_reloc_item_v2 *end,
+				void *base, size_t image_size,
+				uintptr_t table_start, uintptr_t table_end)
+{
+  uintptr_t image = (uintptr_t) base;
+
+  for (runtime_pseudo_reloc_item_v2 *item = first; item < end; ++item)
+    {
+      unsigned int bits = aarch64_reloc_bits (item);
+      size_t width = aarch64_reloc_width (bits);
+      if (!width)
+	__report_error ("Unknown pseudo relocation bit size %u", bits);
+      if (item->sym > image_size - sizeof (ptrdiff_t)
+	  || item->sym & (sizeof (ptrdiff_t) - 1))
+	__report_error ("Invalid AArch64 import slot RVA 0x%x",
+			(unsigned int) item->sym);
+      if (item->target > image_size - width)
+	__report_error ("Invalid AArch64 relocation target RVA 0x%x",
+			(unsigned int) item->target);
+
+      uintptr_t target = image + item->target;
+      if (aarch64_ranges_overlap (target, width, table_start,
+				  table_end - table_start))
+	__report_error ("AArch64 relocation target overlaps its table at %p",
+			(void *) target);
+
+      for (runtime_pseudo_reloc_item_v2 *other = item + 1;
+	   other < end; ++other)
+	{
+	  size_t other_width = aarch64_reloc_width (
+				aarch64_reloc_bits (other));
+	  if (!other_width)
+	    continue;
+	  uintptr_t other_target = image + other->target;
+	  if (other->target <= image_size - other_width
+	      && aarch64_ranges_overlap (target, width, other_target,
+					 other_width))
+	    __report_error ("Overlapping AArch64 pseudo-relocations at %p",
+			    (void *) target);
+	}
+    }
+
+  for (runtime_pseudo_reloc_item_v2 *item = first; item < end; ++item)
+    {
+      unsigned int bits = aarch64_reloc_bits (item);
+      if (bits != 12 && bits != 21)
+	continue;
+
+      uintptr_t address = aarch64_reloc_address (base, item);
+      if (item->target & 3)
+	__report_error ("Unaligned AArch64 pseudo-relocation target %p",
+			(void *) address);
+
+      if (bits == 12)
+	{
+	  uint32_t instruction = *((uint32_t *) address);
+	  if (aarch64_page_offset_kind (instruction)
+	      == AARCH64_PSEUDO_RELOC_NONE)
+	    report_aarch64_reloc_error (
+	      AARCH64_PSEUDO_RELOC_INVALID_PAGE_OFFSET_INSTRUCTION, 0,
+	      address);
+
+	  const runtime_pseudo_reloc_item_v2 *page
+	    = aarch64_find_page_reloc (first, item, base);
+	  if (!page || aarch64_find_low_reloc (page, end, base) != item)
+	    __report_error ("Unpaired AArch64 PAGEOFFSET relocation at %p",
+			    (void *) address);
+	  continue;
+	}
+
+      uint32_t page_instruction = *((uint32_t *) address);
+      if (!aarch64_is_adrp (page_instruction))
+	report_aarch64_reloc_error (
+	  AARCH64_PSEUDO_RELOC_INVALID_PAGE_INSTRUCTION, address, 0);
+
+      const runtime_pseudo_reloc_item_v2 *low
+	= aarch64_find_low_reloc (item, end, base);
+      if (!low || aarch64_find_page_reloc (first, low, base) != item)
+	__report_error ("Unpaired AArch64 PAGEBASE relocation at %p",
+			(void *) address);
+      if (low->target - item->target != 4
+	  && low->target - item->target != 8)
+	__report_error ("Non-local AArch64 pseudo-relocation pair at %p/%p",
+			(void *) address,
+			(void *) aarch64_reloc_address (base, low));
+
+      uintptr_t import_slot = (uintptr_t) base + item->sym;
+
+      uint32_t low_instruction
+	= *((uint32_t *) aarch64_reloc_address (base, low));
+      aarch64_pseudo_reloc_result result;
+      aarch64_pseudo_reloc_status status
+	= aarch64_relocate_pseudo_pair (
+	    &result, page_instruction, low_instruction, address, import_slot,
+	    *((uintptr_t *) import_slot));
+      if (status != AARCH64_PSEUDO_RELOC_OK)
+	report_aarch64_reloc_error (
+	  status, address, aarch64_reloc_address (base, low));
+    }
+}
+
+static void ATTRIBUTE_NORETURN
+rollback_aarch64_pair (uintptr_t page_address, uintptr_t low_address,
+		       uint32_t original_page, uint32_t original_low,
+		       MEMORY_BASIC_INFORMATION *mbi, bool changed,
+		       DWORD old_protection, const char *operation,
+		       DWORD operation_error)
+{
+  memcpy ((void *) page_address, &original_page, sizeof original_page);
+  memcpy ((void *) low_address, &original_low, sizeof original_low);
+
+  uintptr_t flush_start
+    = page_address < low_address ? page_address : low_address;
+  uintptr_t flush_end
+    = page_address > low_address ? page_address : low_address;
+  bool flushed = FlushInstructionCache (
+		   GetCurrentProcess (), (void *) flush_start,
+		   flush_end + sizeof (uint32_t) - flush_start);
+
+  bool restored = true;
+  if (changed)
+    {
+      DWORD unused;
+      restored = VirtualProtect (mbi->BaseAddress, mbi->RegionSize,
+				 old_protection, &unused);
+    }
+
+  if (!flushed || !restored)
+    __report_error ("%s failed with error %lu; rollback cleanup failed",
+		    operation, operation_error);
+  __report_error ("%s failed with error %lu; instructions rolled back",
+		  operation, operation_error);
+}
+
+static void
+write_aarch64_pair (uintptr_t page_address, uintptr_t low_address,
+		    uint32_t relocated_page, uint32_t relocated_low)
+{
+  MEMORY_BASIC_INFORMATION page_mbi;
+  MEMORY_BASIC_INFORMATION low_mbi;
+  if (!VirtualQuery ((void *) page_address, &page_mbi, sizeof page_mbi)
+      || !VirtualQuery ((void *) low_address, &low_mbi, sizeof low_mbi))
+    __report_error ("VirtualQuery failed for AArch64 instruction pair");
+  if (page_mbi.BaseAddress != low_mbi.BaseAddress
+      || page_mbi.RegionSize != low_mbi.RegionSize
+      || page_mbi.Protect != low_mbi.Protect)
+    __report_error ("AArch64 instruction pair crosses memory regions");
+
+  uint32_t original_page = *((uint32_t *) page_address);
+  uint32_t original_low = *((uint32_t *) low_address);
+  DWORD old_protection = page_mbi.Protect;
+  bool changed = !is_writable_protection (page_mbi.Protect);
+  if (changed
+      && !VirtualProtect (page_mbi.BaseAddress, page_mbi.RegionSize,
+			  PAGE_EXECUTE_READWRITE, &old_protection))
+    __report_error ("VirtualProtect failed for AArch64 instruction pair "
+		    "with error %lu", GetLastError ());
+
+  memcpy ((void *) page_address, &relocated_page, sizeof relocated_page);
+  memcpy ((void *) low_address, &relocated_low, sizeof relocated_low);
+
+  uintptr_t flush_start
+    = page_address < low_address ? page_address : low_address;
+  uintptr_t flush_end
+    = page_address > low_address ? page_address : low_address;
+  if (!FlushInstructionCache (
+	GetCurrentProcess (), (void *) flush_start,
+	flush_end + sizeof (uint32_t) - flush_start))
+    {
+      DWORD error = GetLastError ();
+      rollback_aarch64_pair (page_address, low_address, original_page,
+			     original_low, &page_mbi, changed,
+			     old_protection, "FlushInstructionCache", error);
+    }
+
+  if (changed)
+    {
+      DWORD unused;
+      if (!VirtualProtect (page_mbi.BaseAddress, page_mbi.RegionSize,
+			   old_protection, &unused))
+	{
+	  DWORD error = GetLastError ();
+	  rollback_aarch64_pair (page_address, low_address, original_page,
+				 original_low, &page_mbi, changed,
+				 old_protection, "VirtualProtect restore",
+				 error);
+	}
+    }
+}
+
+static void
+apply_aarch64_pseudo_reloc (runtime_pseudo_reloc_item_v2 *page,
+			    runtime_pseudo_reloc_item_v2 *first,
+			    runtime_pseudo_reloc_item_v2 *end,
+			    void *base)
+{
+  const runtime_pseudo_reloc_item_v2 *low
+    = aarch64_find_low_reloc (page, end, base);
+  uintptr_t page_address = aarch64_reloc_address (base, page);
+  uintptr_t low_address = aarch64_reloc_address (base, low);
+  uintptr_t import_slot = (uintptr_t) base + page->sym;
+  aarch64_pseudo_reloc_result result;
+  aarch64_pseudo_reloc_status status
+    = aarch64_relocate_pseudo_pair (
+	&result, *((uint32_t *) page_address), *((uint32_t *) low_address),
+	page_address, import_slot, *((uintptr_t *) import_slot));
+
+  if (status != AARCH64_PSEUDO_RELOC_OK
+      || aarch64_find_page_reloc (first, low, base) != page)
+    report_aarch64_reloc_error (status, page_address, low_address);
+
+  write_aarch64_pair (page_address, low_address, result.page_instruction,
+		      result.page_offset_instruction);
+}
+#endif
+
 static void
 do_pseudo_reloc (void * start, void * end, void * base)
 {
@@ -199,6 +585,9 @@ do_pseudo_reloc (void * start, void * end, void * base)
   ptrdiff_t reloc_target = (ptrdiff_t) ((char *)end - (char*)start);
   runtime_pseudo_reloc_v2 *v2_hdr = (runtime_pseudo_reloc_v2 *) start;
   runtime_pseudo_reloc_item_v2 *r;
+#if defined (__aarch64__)
+  size_t image_size = aarch64_validate_image_and_table (start, end, base);
+#endif
 
   /* A valid relocation list will contain at least one entry, and
    * one v1 data structure (the smallest one) requires two DWORDs.
@@ -278,10 +667,33 @@ do_pseudo_reloc (void * start, void * end, void * base)
   /* Walk over header. */
   r = (runtime_pseudo_reloc_item_v2 *) &v2_hdr[1];
 
+  ptrdiff_t v2_size = (char *) end - (char *) r;
+  if (v2_size < 0
+      || v2_size % (ptrdiff_t) sizeof (runtime_pseudo_reloc_item_v2))
+    __report_error ("Malformed pseudo relocation table size %ld",
+		    (long) v2_size);
+
+#if defined (__aarch64__)
+  validate_aarch64_pseudo_relocs (
+    r, (runtime_pseudo_reloc_item_v2 *) end, base, image_size,
+    (uintptr_t) start, (uintptr_t) end);
+  for (runtime_pseudo_reloc_item_v2 *item = r;
+       item < (runtime_pseudo_reloc_item_v2 *) end; ++item)
+    if (aarch64_reloc_bits (item) == 21)
+      apply_aarch64_pseudo_reloc (
+	item, r, (runtime_pseudo_reloc_item_v2 *) end, base);
+#endif
+
   for (; r < (runtime_pseudo_reloc_item_v2 *) end; r++)
     {
       /* location where new address will be written */
       reloc_target = (ptrdiff_t) base + r->target;
+
+#if defined (__aarch64__)
+      unsigned int bits = aarch64_reloc_bits (r);
+      if (bits == 12 || bits == 21)
+	continue;
+#endif
 
       /* get sym pointer. It points either to the iat entry
        * of the referenced element, or to the stub function.
